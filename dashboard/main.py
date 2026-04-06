@@ -1,4 +1,5 @@
 """Jacob AI Command Center — 통합 대시보드 + Google Sheets API"""
+import hashlib
 import json
 import os
 import secrets
@@ -10,9 +11,8 @@ from typing import Optional, List, Dict
 import httpx
 import requests as req_lib
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Query, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import FastAPI, Request, Query
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -21,10 +21,14 @@ app = FastAPI(title="Command Center")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
-# ===== 기본 인증 (비밀번호 보호) =====
+# ===== 로그인 인증 (쿠키 세션 방식) =====
 DASH_USER = os.getenv("DASH_USER", "")
 DASH_PASS = os.getenv("DASH_PASS", "")
-security = HTTPBasic()
+SESSION_SECRET = os.getenv("SESSION_SECRET", secrets.token_hex(32))
+
+
+def _make_token(user: str) -> str:
+    return hashlib.sha256(f"{user}:{SESSION_SECRET}".encode()).hexdigest()
 
 
 @app.get("/health")
@@ -33,19 +37,67 @@ async def health_check():
     return {"status": "ok"}
 
 
-def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
-    """DASH_USER/DASH_PASS 설정 시 기본 인증 적용. 미설정 시 통과."""
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, error: str = ""):
+    """로그인 폼 페이지"""
+    if not DASH_USER or not DASH_PASS:
+        return RedirectResponse("/", status_code=302)
+    html = f"""<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Login — Jacob AI</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+display:flex;align-items:center;justify-content:center;min-height:100vh}}
+.card{{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px;width:360px;text-align:center}}
+h1{{font-size:24px;margin-bottom:8px;color:#f0883e}}
+.sub{{color:#8b949e;margin-bottom:24px;font-size:14px}}
+input{{width:100%;padding:12px 16px;margin-bottom:12px;background:#0d1117;border:1px solid #30363d;
+border-radius:8px;color:#e6edf3;font-size:15px;outline:none}}
+input:focus{{border-color:#f0883e}}
+button{{width:100%;padding:12px;background:#f0883e;color:#fff;border:none;border-radius:8px;
+font-size:16px;font-weight:600;cursor:pointer;margin-top:4px}}
+button:hover{{background:#d97706}}
+.err{{color:#f85149;font-size:13px;margin-bottom:12px}}
+</style></head><body>
+<div class="card">
+<h1>⚡ Jacob AI</h1>
+<p class="sub">Command Center</p>
+{"<p class='err'>아이디 또는 비밀번호가 틀렸습니다.</p>" if error else ""}
+<form method="post" action="/login">
+<input name="username" placeholder="아이디" required autocomplete="username">
+<input name="password" type="password" placeholder="비밀번호" required autocomplete="current-password">
+<button type="submit">로그인</button>
+</form></div></body></html>"""
+    return HTMLResponse(html)
+
+
+@app.post("/login")
+async def login_submit(request: Request):
+    """로그인 처리"""
+    form = await request.form()
+    username = form.get("username", "")
+    password = form.get("password", "")
+    if secrets.compare_digest(str(username), DASH_USER) and secrets.compare_digest(str(password), DASH_PASS):
+        resp = RedirectResponse("/", status_code=302)
+        resp.set_cookie("session", _make_token(DASH_USER), httponly=True, samesite="lax", max_age=86400 * 7)
+        return resp
+    return RedirectResponse("/login?error=1", status_code=302)
+
+
+@app.get("/logout")
+async def logout():
+    resp = RedirectResponse("/login", status_code=302)
+    resp.delete_cookie("session")
+    return resp
+
+
+def is_authenticated(request: Request) -> bool:
+    """쿠키 세션 기반 인증 확인. DASH_USER 미설정 시 항상 True."""
     if not DASH_USER or not DASH_PASS:
         return True
-    correct_user = secrets.compare_digest(credentials.username, DASH_USER)
-    correct_pass = secrets.compare_digest(credentials.password, DASH_PASS)
-    if not (correct_user and correct_pass):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return True
+    token = request.cookies.get("session", "")
+    return bool(token and secrets.compare_digest(token, _make_token(DASH_USER)))
 DATA_DIR = Path(__file__).parent / "data"
 CHECKLIST_FILE = DATA_DIR / "checklist.json"
 KPI_FILE = DATA_DIR / "kpi_summary.json"
@@ -315,7 +367,9 @@ def save_checklist(data: List[Dict]):
 
 # ===== Routes =====
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, auth=Depends(check_auth)):
+async def dashboard(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/api/status")
