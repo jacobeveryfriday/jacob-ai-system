@@ -104,7 +104,24 @@
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">유입채널별 DB 수</p><div style="position:relative;height:180px"><canvas id="chart-channel-db"></canvas></div></div>
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">담당자별 성과</p><table style="width:100%;border-collapse:collapse"><thead><tr><th style="font-size:9px;color:#4A5568;text-align:left;padding:6px 0">담당자</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">인입DB</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">유효DB</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">전환율</th></tr></thead><tbody id="staff-tbody"><tr><td colspan="4" style="text-align:center;padding:12px;color:#4A5568;font-size:11px">로딩중...</td></tr></tbody></table></div>
   </div>
-  <div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:14px;font-weight:700;color:#E8EBF2">브랜드 영업 파이프라인</p><div style="display:flex;gap:8px;align-items:center"><span id="pipeline-source" style="font-size:10px;color:#4A5568">로딩중...</span><button onclick="loadBrandPipeline()" style="padding:4px 12px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#8B95A6;font-size:10px;cursor:pointer">새로고침</button></div></div><div id="pipeline-board" style="overflow-x:auto;padding-bottom:8px"><div style="text-align:center;padding:40px;color:#4A5568;font-size:12px">파이프라인 로딩중...</div></div></div>
+  <div style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <p style="font-size:14px;font-weight:700;color:#E8EBF2">브랜드 영업 파이프라인</p>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:2px;background:#0F1520;padding:3px;border-radius:6px">
+          <button id="pipe-tab-daily" onclick="setPipeTab('daily')" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#F97316;color:#fff">오늘</button>
+          <button id="pipe-tab-monthly" onclick="setPipeTab('monthly')" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;color:#64748B">이번 달</button>
+        </div>
+        <span id="pipeline-source" style="font-size:10px;color:#4A5568">로딩중...</span>
+        <button onclick="loadBrandPipeline()" style="padding:4px 12px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#8B95A6;font-size:10px;cursor:pointer">새로고침</button>
+      </div>
+    </div>
+    <div id="pipeline-summary-bar" style="display:flex;align-items:center;gap:0;background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden;margin-bottom:12px"></div>
+    <div id="unhandled-alert-box" style="display:none;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px 16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><p style="font-size:12px;font-weight:700;color:#EF4444">미처리 <span id="unhandled-count">0</span>건 — 담당자 배정 또는 컨텍현황 입력 필요</p></div>
+      <div id="unhandled-list" style="display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px"><div style="display:flex;justify-content:space-between;margin-bottom:14px"><p style="font-size:12px;font-weight:700;color:#E8EBF2">실시간 현황</p><span style="font-size:10px;color:#4A5568">방금 전</span></div><div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">오늘 신규 인바운드</span><span style="background:rgba(249,115,22,0.15);color:#F97316;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">3건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">오늘 미팅 예정</span><span style="background:rgba(14,165,233,0.15);color:#0EA5E9;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">2건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">응답 대기 견적</span><span style="background:rgba(245,158,11,0.15);color:#F59E0B;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">4건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">계약 진행중</span><span style="background:rgba(34,197,94,0.15);color:#22C55E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">1건</span></div></div></div>
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">오늘 업무 현황</p><div style="display:flex;flex-direction:column;gap:8px" id="brand-tasks"><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#94A3B8">Growth 패키지 견적 발송 (8건)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#94A3B8">인바운드 리드 1차 응답 (3건)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#94A3B8">비대면 미팅 준비 (오후 2시, 3시)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" checked onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#4A5568;text-decoration:line-through">오전 KPI 확인 완료</span></label></div></div>
@@ -504,7 +521,12 @@ var g=document.createElement('div');g.className='chat-msg agent';g.textContent=a
 
 document.getElementById('chatSendBtn').addEventListener('click',sendChat);
 document.getElementById('chatInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}});
-function sendChat(){var input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;var msgs=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=text;var t=document.createElement('div');t.className='chat-msg-time';t.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});u.appendChild(t);msgs.appendChild(u);input.value='';var agent=AGENTS[currentAgentId]||AGENTS.overview;setTimeout(function(){var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=agent.reply(text);var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight},600);msgs.scrollTop=msgs.scrollHeight}
+function sendChat(){var input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;var msgs=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=text;var t=document.createElement('div');t.className='chat-msg-time';t.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});u.appendChild(t);msgs.appendChild(u);input.value='';msgs.scrollTop=msgs.scrollHeight;
+// AI API call with fallback
+var typing=document.createElement('div');typing.className='chat-msg agent';typing.style.cssText='color:#4A5568;font-style:italic';typing.textContent='분석 중...';msgs.appendChild(typing);
+fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})}).then(function(r){return r.json()}).then(function(data){
+msgs.removeChild(typing);var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=data.reply||'응답 오류';var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=(data.source||'ai')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight
+}).catch(function(){msgs.removeChild(typing);var agent=AGENTS[currentAgentId]||AGENTS.overview;var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=agent.reply(text);var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight})}
 
 document.querySelectorAll('[data-page]').forEach(function(el){el.addEventListener('click',function(e){e.preventDefault();showPage(this.getAttribute('data-page'))})});
 document.getElementById('headerDate').textContent=new Date().toISOString().split('T')[0];
@@ -563,12 +585,53 @@ document.getElementById('brand-tab-monthly').style.background=tab==='monthly'?'#
 document.getElementById('brand-tab-monthly').style.color=tab==='monthly'?'#fff':'#64748B';
 if(_brandData)updateBrandKpiCards(_brandData)}
 
+var _pipeTab='daily';var _brandDataCache=null;
+function setPipeTab(tab){_pipeTab=tab;
+var d1=document.getElementById('pipe-tab-daily'),d2=document.getElementById('pipe-tab-monthly');
+if(d1){d1.style.background=tab==='daily'?'#F97316':'transparent';d1.style.color=tab==='daily'?'#fff':'#64748B'}
+if(d2){d2.style.background=tab==='monthly'?'#F97316':'transparent';d2.style.color=tab==='monthly'?'#fff':'#64748B'}
+if(_brandDataCache)renderPipelineSummary(_brandDataCache)}
+
 function loadBrandPipeline(){
 fetch('/api/brand-pipeline').then(function(r){return r.json()}).then(function(data){
-_brandData=data;updateBrandKpiCards(data);updateBrandCompareTable(data);renderPipelineBoard(data);renderChannelChart(data);renderStaffTable(data);
+_brandData=data;_brandDataCache=data;
+updateBrandKpiCards(data);updateBrandCompareTable(data);renderPipelineSummary(data);renderChannelChart(data);renderStaffTable(data);
 var s=document.getElementById('brand-data-source');if(s)s.textContent=data.source==='live'?'실시간':'샘플';
 var ps=document.getElementById('pipeline-source');if(ps){ps.textContent=data.source==='live'?'실시간':'샘플';ps.style.color=data.source==='live'?'#22C55E':'#4A5568'}
-}).catch(function(e){var b=document.getElementById('pipeline-board');if(b){while(b.firstChild)b.removeChild(b.firstChild);var d=document.createElement('div');d.style.cssText='padding:20px;text-align:center;color:#EF4444;font-size:12px';d.textContent='로드 실패: '+e.message;b.appendChild(d)}})}
+}).catch(function(e){console.error('brand load:',e)})}
+
+function renderPipelineSummary(data){
+var bar=document.getElementById('pipeline-summary-bar');if(!bar)return;
+var isDaily=(_pipeTab==='daily');var src=isDaily?data.today:data.month;
+var stages=[{key:'inbound',label:'인입 DB',color:'#4A5568'},{key:'valid',label:'유효 DB',color:'#F97316'},{key:'meeting',label:'미팅',color:'#0EA5E9'},{key:'contract',label:'계약서',color:'#22C55E'},{key:'renewal',label:'재계약',color:'#7C3AED'}];
+while(bar.firstChild)bar.removeChild(bar.firstChild);
+stages.forEach(function(s,i){
+var val=(src&&src[s.key]!==undefined)?src[s.key]:0;
+var isLast=i===stages.length-1;
+var cell=document.createElement('div');cell.style.cssText='flex:1;padding:16px 12px;text-align:center;position:relative'+(isLast?'':';border-right:1px solid #1E2433');
+var lbl=document.createElement('p');lbl.style.cssText='font-size:10px;color:#8B95A6;margin-bottom:6px;white-space:nowrap';lbl.textContent=s.label;cell.appendChild(lbl);
+var num=document.createElement('p');num.style.cssText='font-family:monospace;font-size:26px;font-weight:700;color:'+(val>0?s.color:'#2D3748');num.textContent=String(val);cell.appendChild(num);
+var unit=document.createElement('p');unit.style.cssText='font-size:9px;color:#4A5568;margin-top:4px';unit.textContent='건';cell.appendChild(unit);
+if(!isLast){var arrow=document.createElement('div');arrow.style.cssText='position:absolute;right:-6px;top:50%;transform:translateY(-50%);color:#2D3748;font-size:12px;z-index:1';arrow.textContent=String.fromCharCode(8594);cell.appendChild(arrow)}
+bar.appendChild(cell)});
+// 미처리 알림 (오늘 탭만)
+var box=document.getElementById('unhandled-alert-box');
+var countEl=document.getElementById('unhandled-count');
+var listEl=document.getElementById('unhandled-list');
+if(!isDaily){if(box)box.style.display='none';return}
+var unhandled=(data.today&&data.today.unhandled)?data.today.unhandled:0;
+if(box)box.style.display=unhandled>0?'block':'none';
+if(countEl)countEl.textContent=String(unhandled);
+if(listEl&&data.unhandled_brands&&data.unhandled_brands.length){
+while(listEl.firstChild)listEl.removeChild(listEl.firstChild);
+data.unhandled_brands.slice(0,10).forEach(function(b){
+var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;background:#161B27;border-radius:6px;padding:7px 12px;align-items:center';
+var nm=document.createElement('span');nm.style.cssText='font-size:11px;color:#E8EBF2;font-weight:600';nm.textContent=b.name||'업체명 없음';row.appendChild(nm);
+var right=document.createElement('div');right.style.cssText='display:flex;gap:6px;align-items:center';
+var ch=document.createElement('span');ch.style.cssText='font-size:10px;color:#8B95A6';ch.textContent=b.channel||'';right.appendChild(ch);
+var reason=document.createElement('span');reason.style.cssText='background:rgba(239,68,68,0.15);color:#EF4444;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600';reason.textContent=b.reason||'미처리';right.appendChild(reason);
+row.appendChild(right);listEl.appendChild(row)});
+if(data.unhandled_brands.length>10){var more=document.createElement('p');more.style.cssText='font-size:10px;color:#4A5568;text-align:center;padding:4px';more.textContent='+'+(data.unhandled_brands.length-10)+'건 더 있음';listEl.appendChild(more)}}}
 
 function updateBrandKpiCards(data){
 var d=_brandTab==='daily'?data.today:data.month;var prev=data.prev_month||{};
@@ -592,28 +655,7 @@ var td=document.createElement('td');td.style.cssText='padding:10px 16px;font-siz
 if(cell.pct&&!isNaN(parseFloat(cell.v)))td.textContent=(parseFloat(cell.v)>=0?'+':'')+cell.v+'%';else td.textContent=cell.v!==undefined?cell.v:'-';
 if(cell.a==='right')td.style.fontFamily='monospace';tr.appendChild(td)});tbody.appendChild(tr)})}
 
-function renderPipelineBoard(data){
-var board=document.getElementById('pipeline-board');if(!board)return;while(board.firstChild)board.removeChild(board.firstChild);
-var stages=['인입DB','유효DB','미팅','계약서','재계약'];var colors={'인입DB':'#4A5568','유효DB':'#F97316','미팅':'#0EA5E9','계약서':'#22C55E','재계약':'#7C3AED'};
-var pipeline=data.pipeline||{};
-var container=document.createElement('div');container.style.cssText='display:flex;gap:16px;min-width:900px';
-stages.forEach(function(stage,si){
-var cards=pipeline[stage]||[];var color=colors[stage];
-var col=document.createElement('div');col.style.cssText='flex:1;min-width:170px';
-var hdr=document.createElement('div');hdr.style.cssText='background:'+color+'18;border-top:3px solid '+color+';border-radius:8px 8px 0 0;padding:10px 14px;display:flex;justify-content:space-between;align-items:center';
-var hn=document.createElement('span');hn.style.cssText='font-size:12px;font-weight:700;color:'+color;hn.textContent=stage;hdr.appendChild(hn);
-var cnt=document.createElement('span');cnt.style.cssText='background:'+color+'30;color:'+color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px';cnt.textContent=cards.length+'건';hdr.appendChild(cnt);col.appendChild(hdr);
-var body=document.createElement('div');body.style.cssText='background:#0F1520;border:1px solid #1E2433;border-top:none;border-radius:0 0 8px 8px;padding:8px;min-height:200px;display:flex;flex-direction:column;gap:8px';
-if(!cards.length){var empty=document.createElement('div');empty.style.cssText='text-align:center;color:#4A5568;font-size:11px;padding:20px 0';empty.textContent='데이터 없음';body.appendChild(empty)}
-else{cards.forEach(function(c){
-var card=document.createElement('div');card.style.cssText='background:#161B27;border:1px solid #1E2433;border-left:3px solid '+color+';border-radius:6px;padding:10px 12px';
-var nm=document.createElement('p');nm.style.cssText='font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:4px';nm.textContent=c.name||'브랜드';card.appendChild(nm);
-if(c.channel){var ch=document.createElement('p');ch.style.cssText='font-size:10px;color:#8B95A6';ch.textContent=c.channel;card.appendChild(ch)}
-if(c.staff){var st=document.createElement('p');st.style.cssText='font-size:10px;color:#8B95A6';st.textContent=c.staff;card.appendChild(st)}
-if(c.amount){var am=document.createElement('p');am.style.cssText='font-size:10px;color:#F97316;font-weight:600';am.textContent=c.amount;card.appendChild(am)}
-if(c.date){var dt=document.createElement('p');dt.style.cssText='font-size:10px;color:#4A5568';dt.textContent=c.date;card.appendChild(dt)}
-body.appendChild(card)})}
-col.appendChild(body);container.appendChild(col)});board.appendChild(container)}
+/* renderPipelineBoard removed — replaced by renderPipelineSummary */
 
 function renderChannelChart(data){var ctx=document.getElementById('chart-channel-db');if(!ctx)return;
 var channels=data.channel_breakdown||[];if(ctx._chart)ctx._chart.destroy();

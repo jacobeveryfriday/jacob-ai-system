@@ -33,8 +33,19 @@ def _make_token(user: str) -> str:
 
 @app.get("/health")
 async def health_check():
-    """Railway 헬스체크용 (인증 불필요)"""
-    return {"status": "ok"}
+    """향상된 헬스체크 — sheets/openai/slack 상태 포함"""
+    status = {"status": "ok", "timestamp": datetime.now().isoformat()}
+    # Sheets
+    status["sheets"] = "connected" if GSHEETS_API_KEY else "not_configured"
+    # OpenAI
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+    status["openai"] = "connected" if openai_key else "not_configured"
+    # Slack
+    slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
+    status["slack"] = "connected" if slack_url else "not_configured"
+    # Cache stats
+    status["cache_entries"] = len(_cache)
+    return status
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -111,7 +122,13 @@ SHEET_ADS = "1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU"
 
 _cache: Dict[str, list] = {}
 _cache_time: Dict[str, float] = {}
-CACHE_TTL = 1800  # 30 min
+CACHE_TTLS = {
+    "inbound": 300,      # 5 min - 인바운드는 빠르게 갱신
+    "contract": 3600,    # 1 hour
+    "influencer": 21600, # 6 hours
+    "ads": 3600,         # 1 hour
+    "default": 1800,     # 30 min fallback
+}
 
 SYSTEMS = [
     {"name": "KPI 집계봇", "icon": "chart", "port": 8001, "desc": "일일 KPI 자동 집계 및 Slack 발송", "company": "공통"},
@@ -125,14 +142,15 @@ SYSTEMS = [
 
 
 # ===== Google Sheets Reader =====
-def fetch_sheet(sheet_id: str, range_name: str, tab_name: str = None) -> list:
+def fetch_sheet(sheet_id: str, range_name: str, tab_name: str = None, ttl_key: str = "default") -> list:
     """Google Sheets API v4로 데이터 읽기. API Key 없으면 빈 리스트."""
     if not GSHEETS_API_KEY:
         return []
     range_str = f"{tab_name}!{range_name}" if tab_name else range_name
     cache_key = f"{sheet_id}:{range_str}"
     now = time.time()
-    if cache_key in _cache and (now - _cache_time.get(cache_key, 0)) < CACHE_TTL:
+    ttl = CACHE_TTLS.get(ttl_key, CACHE_TTLS["default"])
+    if cache_key in _cache and (now - _cache_time.get(cache_key, 0)) < ttl:
         return _cache[cache_key]
     try:
         url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{req_lib.utils.quote(range_str)}?key={GSHEETS_API_KEY}"
@@ -152,8 +170,9 @@ def _dummy_brand_pipeline():
     today_str = datetime.now().strftime("%Y.%m.%d")
     return {
         "source": "dummy",
-        "today": {"inbound": 3, "valid": 12, "meeting": 5, "contract": 1, "renewal": 0},
-        "month": {"inbound": 43, "valid": 127, "meeting": 28, "contract": 6, "renewal": 2},
+        "today": {"inbound": 3, "valid": 12, "meeting": 5, "contract": 1, "renewal": 0, "unhandled": 2, "handled": 1},
+        "month": {"inbound": 43, "valid": 127, "meeting": 28, "contract": 6, "renewal": 2, "unhandled": 15},
+        "unhandled_brands": [{"name": "샘플브랜드A", "channel": "SNS(메타)", "source": "", "date": "오늘", "reason": "담당자 없음"}],
         "prev_month": {"inbound": 38, "valid": 110, "meeting": 25, "contract": 8, "renewal": 3},
         "last_year": {"inbound": 22, "valid": 68, "meeting": 15, "contract": 5, "renewal": 1},
         "conversion": {"valid_rate": 29.5, "meeting_rate": 22.0, "contract_rate": 4.7, "renewal_rate": 0.5},
@@ -237,16 +256,20 @@ def _dummy_ads_performance():
     }
 
 
-# ===== Live Sheets Parsing (2026-04-06 컬럼 확인 반영) =====
+# ===== Live Sheets Parsing (2026-04-06 컬럼 확인 + 미처리 로직) =====
 def _parse_inbound(rows):
-    """인바운드 파센문의 탭 파싱. A=국가,B=월,C=날짜,D=유입채널,...P=컨택현황"""
+    """인바운드 파센문의 탭. J(9)=유입채널, O(14)=담당자, Q(16)=컨택현황. 미처리=담당자or컨택 없음."""
     today = datetime.now()
     this_month = f"{today.year}.{today.month:02d}"
     today_day = f"{today.month}/{today.day}"
     today_day2 = f"{today.month}/{today.day:02d}"
-    skip_kw = ["국가", "주의사항", "본 리스트", "[ ", "*"]
-    result = {"today_inbound": 0, "month_inbound": 0, "today_valid": 0, "month_valid": 0,
+    today_day3 = f"{today.month:02d}/{today.day}"
+    today_day4 = f"{today.month:02d}/{today.day:02d}"
+    skip_kw = ["국가", "주의사항", "본 리스트", "[ ", "*", "brand name", "월"]
+    result = {"today_inbound": 0, "today_valid": 0, "today_unhandled": 0, "today_handled": 0,
+              "month_inbound": 0, "month_valid": 0, "month_unhandled": 0,
               "channel_stats": {}, "staff_stats": {}, "source_stats": {},
+              "unhandled_brands": [],
               "pipeline_items": {"인입DB": [], "유효DB": [], "미팅": [], "계약서": [], "재계약": []}}
     for row in rows:
         if not row or len(row) < 3:
@@ -256,23 +279,49 @@ def _parse_inbound(rows):
             continue
         month_val = str(row[1]).strip() if len(row) > 1 else ""
         date_val = str(row[2]).strip() if len(row) > 2 else ""
-        channel = str(row[3]).strip() if len(row) > 3 else ""
         brand = str(row[4]).strip() if len(row) > 4 else ""
+        channel_j = str(row[9]).strip() if len(row) > 9 else ""
+        channel_d = str(row[3]).strip() if len(row) > 3 else ""
+        channel = channel_j if channel_j else channel_d
         source = str(row[10]).strip() if len(row) > 10 else ""
-        staff = str(row[13]).strip() if len(row) > 13 else ""
-        status = str(row[15]).strip() if len(row) > 15 else ""
-        is_month = this_month in month_val
-        is_today = (date_val == today_day or date_val == today_day2)
+        staff = str(row[14]).strip() if len(row) > 14 else ""
+        status = str(row[16]).strip() if len(row) > 16 else ""
+        # 이번 달 판단: B열 "YYYY.MM" 또는 C열 날짜에서 월 추출
+        is_month_a = this_month in month_val
+        is_month_b = False
+        if not month_val and date_val:
+            try:
+                if "/" in date_val:
+                    is_month_b = (int(date_val.split("/")[0]) == today.month)
+                elif "-" in date_val:
+                    is_month_b = (int(date_val.split("-")[1]) == today.month)
+            except (ValueError, IndexError):
+                pass
+        is_month = is_month_a or is_month_b
+        # 오늘 판단: "4/6" 또는 "2026-04-06..." 타임스탬프
+        today_iso = today.strftime("%Y-%m-%d")
+        is_today = (date_val == today_day or date_val == today_day2 or date_val == today_day3 or date_val == today_day4 or date_val.startswith(today_iso))
         is_valid = "워킹" in status
+        is_unhandled = (not staff) or (not status)
         ch = channel.lower()
-        if any(k in ch for k in ["sns", "메타", "insta", "meta"]):
+        if any(k in ch for k in ["sns", "메타", "insta", "meta", "facebook", "fb"]):
             ch_key = "SNS(메타)"
         elif any(k in ch for k in ["email", "이메일", "mail"]):
             ch_key = "이메일"
-        elif any(k in ch for k in ["cpc", "네이버", "naver", "검색"]):
+        elif any(k in ch for k in ["cpc", "네이버", "naver", "검색", "search"]):
             ch_key = "CPC(네이버)"
+        elif any(k in ch for k in ["google_sa", "google", "구글"]):
+            ch_key = "구글(SA)"
+        elif any(k in ch for k in ["brandthumb", "브랜드썸"]):
+            ch_key = "브랜드썸"
+        elif any(k in ch for k in ["blog", "블로그", "youtube", "유튜브"]):
+            ch_key = "블로그/유튜브"
+        elif channel:
+            ch_key = channel[:10]
         else:
-            ch_key = channel[:8] if channel else "기타"
+            ch_key = "기타"
+        card = {"name": brand, "channel": ch_key, "staff": staff or "미배정", "date": date_val,
+                "source": source, "status": status if status else "미처리", "unhandled": is_unhandled}
         if is_month:
             result["month_inbound"] += 1
             result["channel_stats"][ch_key] = result["channel_stats"].get(ch_key, 0) + 1
@@ -280,9 +329,8 @@ def _parse_inbound(rows):
                 result["source_stats"][source] = result["source_stats"].get(source, 0) + 1
             if staff:
                 if staff not in result["staff_stats"]:
-                    result["staff_stats"][staff] = {"inbound": 0, "valid": 0}
+                    result["staff_stats"][staff] = {"inbound": 0, "valid": 0, "unhandled": 0}
                 result["staff_stats"][staff]["inbound"] += 1
-            card = {"name": brand, "channel": ch_key, "staff": staff or "미배정", "date": date_val, "source": source}
             if is_valid:
                 result["month_valid"] += 1
                 if staff and staff in result["staff_stats"]:
@@ -290,10 +338,18 @@ def _parse_inbound(rows):
                 result["pipeline_items"]["유효DB"].append(card)
             else:
                 result["pipeline_items"]["인입DB"].append(card)
-        if is_today:
+            if is_unhandled:
+                result["month_unhandled"] += 1
+        if is_today and is_month:  # 오늘 AND 이번 달 (다른 연도 4/6 제외)
             result["today_inbound"] += 1
             if is_valid:
                 result["today_valid"] += 1
+            if is_unhandled:
+                result["today_unhandled"] += 1
+                result["unhandled_brands"].append({"name": brand, "channel": ch_key, "source": source,
+                                                    "date": date_val, "reason": "담당자 없음" if not staff else "컨택현황 미입력"})
+            else:
+                result["today_handled"] += 1
     return result
 
 
@@ -434,8 +490,8 @@ async def api_brand_pipeline():
         dummy["not_connected"] = ["광고CPA", "CS", "유효DB(컨택현황 업데이트 필요)"]
         return dummy
     try:
-        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:R", "파센문의")
-        contract_rows = fetch_sheet(SHEET_CONTRACT, "B:U", "계산서발행")
+        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:R", "파센문의", ttl_key="inbound")
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "B:U", "계산서발행", ttl_key="contract")
         ib = _parse_inbound(inbound_rows) if inbound_rows else {}
         ct = _parse_contracts(contract_rows) if contract_rows else {}
         return {
@@ -443,12 +499,15 @@ async def api_brand_pipeline():
             "today": {
                 "inbound": ib.get("today_inbound", 0),
                 "valid": ib.get("today_valid", 0),
+                "unhandled": ib.get("today_unhandled", 0),
+                "handled": ib.get("today_handled", 0),
                 "contract": ct.get("today_contract", 0),
                 "revenue": ct.get("today_revenue", 0),
             },
             "month": {
                 "inbound": ib.get("month_inbound", 0),
                 "valid": ib.get("month_valid", 0),
+                "unhandled": ib.get("month_unhandled", 0),
                 "contract": ct.get("month_contract", 0),
                 "revenue": ct.get("month_revenue", 0),
                 "renewal": ct.get("month_renewal", 0),
@@ -472,6 +531,7 @@ async def api_brand_pipeline():
                 for k, v in ib.get("staff_stats", {}).items()
             ],
             "pipeline": ib.get("pipeline_items", {}),
+            "unhandled_brands": ib.get("unhandled_brands", []),
             "not_connected": ["광고CPA", "CS"],
         }
     except Exception as e:
@@ -492,7 +552,7 @@ async def api_influencer_db(
     if not GSHEETS_API_KEY:
         return _dummy_influencer_db()
     try:
-        rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)")
+        rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
         if not rows:
             return _dummy_influencer_db()
         items = []
@@ -563,7 +623,7 @@ async def api_ads_performance():
     if not GSHEETS_API_KEY:
         return _dummy_ads_performance()
     try:
-        rows = fetch_sheet(SHEET_ADS, "A1:O", "공팔리터B2B")
+        rows = fetch_sheet(SHEET_ADS, "A1:O", "공팔리터B2B", ttl_key="ads")
         if not rows:
             return _dummy_ads_performance()
         monthly = []
@@ -616,6 +676,8 @@ async def api_kpi_summary():
             "revenue": today.get("revenue", 0),
             "inbound_db": today.get("inbound", 0),
             "valid_db": today.get("valid", 0),
+            "unhandled_db": today.get("unhandled", 0),
+            "handled_db": today.get("handled", 0),
             "contract": today.get("contract", 0),
         },
         "month": {
@@ -638,6 +700,7 @@ async def api_kpi_summary():
 async def api_brand_comparison():
     """기간별 비교표"""
     brand = await api_brand_pipeline()
+    t = brand.get("today", {})
     m = brand.get("month", {})
     p = brand.get("prev_month", {})
     ly = brand.get("last_year", {})
@@ -646,11 +709,11 @@ async def api_brand_comparison():
         return round((cur - prev) / max(prev, 1) * 100, 1) if prev else 0
 
     return {"comparison": [
-        {"metric": "인입 DB", "today": brand["today"]["inbound"], "month": m["inbound"], "prev_month": p.get("inbound", 0), "mom_pct": pct(m["inbound"], p.get("inbound", 1)), "last_year": ly.get("inbound", 0), "yoy_pct": pct(m["inbound"], ly.get("inbound", 1))},
-        {"metric": "유효 DB", "today": brand["today"]["valid"], "month": m["valid"], "prev_month": p.get("valid", 0), "mom_pct": pct(m["valid"], p.get("valid", 1)), "last_year": ly.get("valid", 0), "yoy_pct": pct(m["valid"], ly.get("valid", 1))},
-        {"metric": "미팅", "today": brand["today"]["meeting"], "month": m["meeting"], "prev_month": p.get("meeting", 0), "mom_pct": pct(m["meeting"], p.get("meeting", 1)), "last_year": ly.get("meeting", 0), "yoy_pct": pct(m["meeting"], ly.get("meeting", 1))},
-        {"metric": "계약서", "today": brand["today"]["contract"], "month": m["contract"], "prev_month": p.get("contract", 0), "mom_pct": pct(m["contract"], p.get("contract", 1)), "last_year": ly.get("contract", 0), "yoy_pct": pct(m["contract"], ly.get("contract", 1))},
-        {"metric": "재계약", "today": brand["today"]["renewal"], "month": m["renewal"], "prev_month": p.get("renewal", 0), "mom_pct": pct(m["renewal"], p.get("renewal", 1)), "last_year": ly.get("renewal", 0), "yoy_pct": pct(m["renewal"], ly.get("renewal", 1))},
+        {"metric": "인입 DB", "today": t.get("inbound", 0), "month": m.get("inbound", 0), "prev_month": p.get("inbound", 0), "mom_pct": pct(m.get("inbound", 0), p.get("inbound", 1)), "last_year": ly.get("inbound", 0), "yoy_pct": pct(m.get("inbound", 0), ly.get("inbound", 1))},
+        {"metric": "유효 DB", "today": t.get("valid", 0), "month": m.get("valid", 0), "prev_month": p.get("valid", 0), "mom_pct": pct(m.get("valid", 0), p.get("valid", 1)), "last_year": ly.get("valid", 0), "yoy_pct": pct(m.get("valid", 0), ly.get("valid", 1))},
+        {"metric": "미팅", "today": t.get("meeting", 0), "month": m.get("meeting", 0), "prev_month": p.get("meeting", 0), "mom_pct": pct(m.get("meeting", 0), p.get("meeting", 1)), "last_year": ly.get("meeting", 0), "yoy_pct": pct(m.get("meeting", 0), ly.get("meeting", 1))},
+        {"metric": "계약서", "today": t.get("contract", 0), "month": m.get("contract", 0), "prev_month": p.get("contract", 0), "mom_pct": pct(m.get("contract", 0), p.get("contract", 1)), "last_year": ly.get("contract", 0), "yoy_pct": pct(m.get("contract", 0), ly.get("contract", 1))},
+        {"metric": "재계약", "today": t.get("renewal", 0), "month": m.get("renewal", 0), "prev_month": p.get("renewal", 0), "mom_pct": pct(m.get("renewal", 0), p.get("renewal", 1)), "last_year": ly.get("renewal", 0), "yoy_pct": pct(m.get("renewal", 0), ly.get("renewal", 1))},
     ]}
 
 
@@ -668,6 +731,150 @@ async def api_sheets_status():
             "ads": SHEET_ADS,
         },
         "guide": "" if api_key else "console.cloud.google.com에서 Sheets API 활성화 후 API 키 발급 -> .env에 GOOGLE_SHEETS_API_KEY=키값 입력",
+    }
+
+
+# ===== AI Agent (OpenAI GPT-4o-mini) =====
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+
+@app.post("/api/chat")
+async def api_chat(request: Request):
+    """AI 에이전트 채팅 — OpenAI GPT-4o-mini. API키 없으면 룰베이스 폴백."""
+    body = await request.json()
+    user_msg = body.get("message", "").strip()
+    if not user_msg:
+        return {"reply": "질문을 입력해 주세요.", "source": "system"}
+
+    # Gather real data context
+    context_parts = []
+    try:
+        brand = await api_brand_pipeline()
+        if brand.get("source") == "live":
+            t = brand.get("today", {})
+            m = brand.get("month", {})
+            context_parts.append(f"[실시간 데이터] 오늘: 인입DB {t.get('inbound',0)}건, 유효DB {t.get('valid',0)}건, 계약 {t.get('contract',0)}건, 매출 {t.get('revenue',0):,}원")
+            context_parts.append(f"이번달: 인입DB {m.get('inbound',0)}건, 유효DB {m.get('valid',0)}건, 계약 {m.get('contract',0)}건, 매출 {m.get('revenue',0):,}원")
+            if t.get('unhandled', 0) > 0:
+                context_parts.append(f"⚠️ 미처리 {t.get('unhandled',0)}건 즉시 대응 필요")
+    except:
+        pass
+
+    data_context = "\n".join(context_parts) if context_parts else "실시간 데이터 로딩 실패"
+
+    if not OPENAI_API_KEY:
+        # Rule-based fallback
+        reply = _rule_based_reply(user_msg, data_context)
+        return {"reply": reply, "source": "rule-based"}
+
+    # OpenAI call
+    try:
+        system_prompt = f"""너는 공팔리터글로벌(08Liter Global) AI 수석 보좌관이다.
+인플루언서 마케팅 회사의 대시보드 AI로서 정확한 데이터 기반으로 답변한다.
+현재 실시간 데이터:
+{data_context}
+
+규칙:
+- 한국어로 답변
+- 수치는 정확히, 모르면 "확인 필요"
+- 실행 가능한 액션 제안 우선
+- 간결하게 핵심만"""
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_msg}
+                    ],
+                    "max_tokens": 500,
+                    "temperature": 0.7,
+                }
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                reply = data["choices"][0]["message"]["content"]
+                return {"reply": reply, "source": "gpt-4o-mini"}
+            else:
+                return {"reply": f"OpenAI 오류 ({resp.status_code}). 룰베이스로 전환합니다.\n\n" + _rule_based_reply(user_msg, data_context), "source": "fallback"}
+    except Exception as e:
+        return {"reply": f"AI 연결 실패. 룰베이스로 답변합니다.\n\n" + _rule_based_reply(user_msg, data_context), "source": "fallback"}
+
+
+def _rule_based_reply(msg: str, context: str) -> str:
+    """OpenAI API 키 없을 때 룰베이스 폴백"""
+    msg_lower = msg.lower()
+    if any(k in msg_lower for k in ["현황", "요약", "상태", "보고"]):
+        return f"현재 시스템 현황입니다.\n\n{context}\n\n상세 내용은 각 페이지에서 확인하세요."
+    if any(k in msg_lower for k in ["미처리", "대응", "긴급"]):
+        return f"미처리 현황 확인 중입니다.\n\n{context}\n\n미처리 건은 브랜드 페이지에서 상세 확인 가능합니다."
+    if any(k in msg_lower for k in ["매출", "계약", "실적"]):
+        return f"매출/계약 현황입니다.\n\n{context}\n\n상세 분석은 총괄 KPI에서 확인하세요."
+    if any(k in msg_lower for k in ["인플루언서", "풀", "발굴"]):
+        return "인플루언서 현황은 '맞춤 인플루언서' 페이지에서 실시간 확인 가능합니다."
+    if any(k in msg_lower for k in ["광고", "cpa", "roas"]):
+        return "광고 성과는 '광고센터 운영' 페이지에서 채널별 상세 데이터를 확인하세요."
+    return f"질문을 분석 중입니다.\n\n{context}\n\nOpenAI API Key를 설정하면 더 정확한 AI 답변을 받을 수 있습니다."
+
+
+# ===== Slack Webhook =====
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
+
+@app.post("/api/slack/test")
+async def slack_test():
+    """Slack 웹훅 테스트 발송"""
+    if not SLACK_WEBHOOK_URL:
+        return {"status": "error", "message": "SLACK_WEBHOOK_URL 미설정"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(SLACK_WEBHOOK_URL, json={
+                "text": f"[Jacob AI] 테스트 메시지 — {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            })
+            return {"status": "ok" if resp.status_code == 200 else "error", "code": resp.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/slack/kpi-report")
+async def slack_kpi_report():
+    """KPI 리포트 Slack 발송 (09:00 스케줄 또는 수동 트리거)"""
+    if not SLACK_WEBHOOK_URL:
+        return {"status": "error", "message": "SLACK_WEBHOOK_URL 미설정. .env에 추가 필요."}
+    try:
+        brand = await api_brand_pipeline()
+        t = brand.get("today", {})
+        m = brand.get("month", {})
+        text = f"""📊 *[Jacob AI] 오전 KPI 리포트* — {datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+*오늘*: 인입DB {t.get('inbound',0)}건 | 유효DB {t.get('valid',0)}건 | 계약 {t.get('contract',0)}건 | 매출 {t.get('revenue',0):,}원
+*이번달*: 인입DB {m.get('inbound',0)}건 | 유효DB {m.get('valid',0)}건 | 계약 {m.get('contract',0)}건 | 매출 {m.get('revenue',0):,}원
+*미처리*: {t.get('unhandled',0)}건 {'⚠️ 즉시 대응 필요' if t.get('unhandled',0) > 0 else '✅ 양호'}"""
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(SLACK_WEBHOOK_URL, json={"text": text})
+            return {"status": "ok" if resp.status_code == 200 else "error", "code": resp.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ===== SNS Performance =====
+@app.get("/api/sns-performance")
+async def api_sns_performance():
+    """SNS 운영 현황 (향후 실데이터 연동 예정, 현재 더미)"""
+    return {
+        "source": "dummy",
+        "note": "SNS API 연동 준비중 — Instagram/TikTok Business API 연동 예정",
+        "channels": {
+            "instagram": {"followers": 8420, "growth": 320, "posts": 28, "engagement": 3.8, "reach": 45000},
+            "tiktok": {"followers": 12800, "growth": 680, "videos": 15, "engagement": 5.2, "avg_views": 12400},
+            "youtube": {"subscribers": 2150, "growth": 185, "videos": 4, "avg_views": 3200, "watch_time": "4:30"},
+            "newsletter": {"subscribers": 20000, "growth": 120, "sent": 4, "open_rate": 21, "click_rate": 3.2},
+        },
+        "total_followers": 43370,
+        "monthly_growth": 1305,
+        "today_new": 60,
+        "organic_leads": {"today": 6, "month": 125, "target": 330},
     }
 
 
