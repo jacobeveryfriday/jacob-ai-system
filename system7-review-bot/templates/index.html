@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>R&amp;D - Jacob AI</title>
+<link rel="stylesheet" href="http://localhost:8000/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-layout no-chat">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="http://localhost:8000" class="sidebar-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Jacob AI
+      </a>
+      <div class="sidebar-sub">08Liter &times; Mili Mili</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">Command</div>
+        <a href="http://localhost:8000" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+        <span class="nav-item disabled"><i data-lucide="target"></i> Strategy</span>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">08Liter Global</div>
+        <a href="http://localhost:8004" class="nav-item"><i data-lucide="building-2"></i> Brand</a>
+        <span class="nav-item disabled"><i data-lucide="users"></i> Influencer</span>
+        <span class="nav-item disabled"><i data-lucide="globe"></i> Platform</span>
+        <a href="http://localhost:8002" class="nav-item"><i data-lucide="share-2"></i> SNS Marketing</a>
+        <a href="http://localhost:8005" class="nav-item"><i data-lucide="settings"></i> Ops Efficiency</a>
+        <a href="http://localhost:8001" class="nav-item"><i data-lucide="bar-chart-2"></i> Total KPI</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Mili Mili</div>
+        <span class="nav-item disabled"><i data-lucide="package"></i> Beauty Export</span>
+        <span class="nav-item disabled"><i data-lucide="shopping-cart"></i> Ecommerce MD</span>
+        <a href="http://localhost:8006" class="nav-item"><i data-lucide="megaphone"></i> Content &amp; Ad</a>
+        <a href="http://localhost:8007" class="nav-item active"><i data-lucide="flask-conical"></i> R&amp;D</a>
+        <a href="http://localhost:8003" class="nav-item"><i data-lucide="message-circle"></i> Community</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="nav-item"><i data-lucide="settings-2"></i> Settings</a>
+      <div class="nav-item"><i data-lucide="activity"></i> API Status <span class="api-status-dot"></span></div>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <div class="mobile-header">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <i data-lucide="menu"></i>
+      </button>
+      <span>R&amp;D</span>
+    </div>
+
+    <div class="main-header">
+      <div>
+        <h1 class="main-title">R&amp;D</h1>
+        <p class="main-subtitle">Mili Mili -- Platform Review Tracking &amp; Response Management</p>
+      </div>
+      <div class="header-actions">
+        <span class="date-display"><i data-lucide="calendar" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i> 2026-04-05</span>
+        <button class="btn btn-secondary btn-sm" onclick="loadData()"><i data-lucide="refresh-cw" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i> Refresh</button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="alert-banner" id="alertBanner"></div>
+
+      <div class="tab-group" id="platformTabs"></div>
+
+      <div class="kpi-grid" id="statCards"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="list" style="width:18px;height:18px;vertical-align:middle;margin-right:6px"></i> Review List</h2>
+        </div>
+        <div class="card-body">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+            <select id="filterRating" class="form-select" style="width:auto;min-width:140px">
+              <option value="">All Ratings</option>
+              <option value="1">1 Star</option>
+              <option value="2">2 Stars</option>
+              <option value="3">3 Stars</option>
+              <option value="4">4 Stars</option>
+              <option value="5">5 Stars</option>
+            </select>
+            <div class="search-box" style="width:220px">
+              <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);opacity:.5"></i>
+              <input type="text" id="searchKw" placeholder="Search keywords..." style="padding-left:30px">
+            </div>
+          </div>
+          <div id="reviewList"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i data-lucide="plus-circle" style="width:18px;height:18px;vertical-align:middle;margin-right:6px"></i> Add Review</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Platform</label>
+              <select id="f_platform" class="form-select">
+                <option>쿠팡</option><option>올리브영</option><option>라자다</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Product</label>
+              <select id="f_product" class="form-select">
+                <option>500달톤 히알루론산 세럼</option>
+                <option>500달톤 콜라겐 크림</option>
+                <option>500달톤 비타민C 앰플</option>
+                <option>500달톤 레티놀 에센스</option>
+                <option>500달톤 나이아신아마이드 토너</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Reviewer</label>
+              <input type="text" id="f_reviewer">
+            </div>
+            <div class="form-group">
+              <label>Rating</label>
+              <select id="f_rating" class="form-select">
+                <option>5</option><option>4</option><option>3</option><option>2</option><option>1</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label>Review Content</label>
+            <textarea id="f_content" rows="3"></textarea>
+          </div>
+          <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+            <button class="btn btn-primary" id="btnAdd"><i data-lucide="plus" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i> Add</button>
+            <span class="status-msg" id="addMsg"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="chart-container">
+          <div class="card-header">
+            <h2 class="card-title"><i data-lucide="bar-chart-horizontal" style="width:18px;height:18px;vertical-align:middle;margin-right:6px"></i> Keyword TOP 10</h2>
+          </div>
+          <div class="card-body">
+            <canvas id="keywordChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><i data-lucide="lightbulb" style="width:18px;height:18px;vertical-align:middle;margin-right:6px"></i> R&amp;D Insights</h2>
+          </div>
+          <div class="card-body">
+            <div id="insightBox"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Floating Chat -->
+<button class="floating-chat-btn" id="floatingChatBtn" onclick="document.getElementById('chatPanel').classList.add('open');document.getElementById('chatBackdrop').classList.add('visible')">
+  <i data-lucide="message-circle"></i>
+</button>
+<div class="chat-backdrop" id="chatBackdrop" onclick="document.getElementById('chatPanel').classList.remove('open');this.classList.remove('visible')"></div>
+<div class="floating-chat-panel" id="chatPanel">
+  <div class="chat-panel-header">
+    <span>[Review Bot]</span>
+    <button class="chat-panel-close" onclick="document.getElementById('chatPanel').classList.remove('open');document.getElementById('chatBackdrop').classList.remove('visible')">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+  <div class="chat-panel-messages" id="chatMessages">
+    <div class="chat-message bot">How can I help you with review monitoring today?</div>
+  </div>
+  <div class="chat-panel-input">
+    <input type="text" id="chatInput" placeholder="Ask about reviews..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()"><i data-lucide="send" style="width:16px;height:16px"></i></button>
+  </div>
+</div>
+
+<script>
+function sendChat() {
+  var input = document.getElementById('chatInput');
+  var msg = input.value.trim();
+  if (!msg) return;
+  var messages = document.getElementById('chatMessages');
+  var userDiv = document.createElement('div');
+  userDiv.className = 'chat-message user';
+  userDiv.textContent = msg;
+  messages.appendChild(userDiv);
+  input.value = '';
+  messages.scrollTop = messages.scrollHeight;
+  var botDiv = document.createElement('div');
+  botDiv.className = 'chat-message bot';
+  botDiv.textContent = '[Review Bot] Processing your request...';
+  messages.appendChild(botDiv);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+var allReviews = [];
+var currentPlatform = '';
+
+document.getElementById('filterRating').addEventListener('change', renderReviews);
+document.getElementById('searchKw').addEventListener('input', renderReviews);
+document.getElementById('btnAdd').addEventListener('click', addReview);
+
+async function loadData() {
+  allReviews = await (await fetch('/api/reviews')).json();
+  // Generate response drafts for those missing
+  allReviews.forEach(function(r){
+    if (!r.response_draft) {
+      fetch('/api/reviews/'+r.id+'/response', {method:'POST'});
+    }
+  });
+  renderTabs();
+  renderStats();
+  renderReviews();
+  renderKeywords();
+  renderInsights();
+  checkAlerts();
+}
+
+function renderTabs() {
+  var c = document.getElementById('platformTabs');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  [
+    {val:'', label:'All'},
+    {val:'쿠팡', label:'Coupang'},
+    {val:'올리브영', label:'Olive Young'},
+    {val:'라자다', label:'Lazada'}
+  ].forEach(function(p){
+    var tab = document.createElement('button');
+    tab.className = 'tab-btn'+(currentPlatform===p.val?' active':'');
+    tab.textContent = p.label;
+    tab.addEventListener('click', function(){ currentPlatform=p.val; renderTabs(); renderReviews(); renderStats(); });
+    c.appendChild(tab);
+  });
+}
+
+function getFiltered() {
+  var rating = document.getElementById('filterRating').value;
+  var kw = document.getElementById('searchKw').value.toLowerCase();
+  return allReviews.filter(function(r){
+    if (currentPlatform && r.platform !== currentPlatform) return false;
+    if (rating && r.rating !== Number(rating)) return false;
+    if (kw && r.content.toLowerCase().indexOf(kw)===-1) return false;
+    return true;
+  });
+}
+
+async function renderStats() {
+  var stats = await (await fetch('/api/stats')).json();
+  var c = document.getElementById('statCards');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  var items = [{n:stats.total,l:'Total Reviews'},{n:stats.urgent,l:'Urgent Response Needed'}];
+  var bp = stats.by_platform||{};
+  Object.keys(bp).forEach(function(p){ items.push({n:bp[p].avg_rating,l:p+' Avg'}); });
+  items.forEach(function(item){
+    var card = document.createElement('div'); card.className='kpi-card blue';
+    var num = document.createElement('div'); num.className='kpi-value'; num.textContent=item.n;
+    var lbl = document.createElement('div'); lbl.className='kpi-label'; lbl.textContent=item.l;
+    card.appendChild(num); card.appendChild(lbl); c.appendChild(card);
+  });
+}
+
+function renderReviews() {
+  var list = document.getElementById('reviewList');
+  while(list.firstChild) list.removeChild(list.firstChild);
+  var filtered = getFiltered();
+  filtered.sort(function(a,b){ return a.rating - b.rating; }); // Urgent first
+
+  filtered.forEach(function(r){
+    var card = document.createElement('div');
+    card.className = 'review-card' + (r.rating <= 3 ? ' urgent' : '');
+
+    var header = document.createElement('div'); header.className='review-header';
+    var left = document.createElement('div');
+    var stars = document.createElement('span'); stars.className='stars'; stars.textContent='\u2605'.repeat(r.rating)+'\u2606'.repeat(5-r.rating);
+    var reviewer = document.createElement('span'); reviewer.textContent = ' '+r.reviewer; reviewer.style.cssText='color:#888;font-size:13px';
+    left.appendChild(stars); left.appendChild(reviewer);
+    var badge = document.createElement('span'); badge.className='badge badge-info'; badge.textContent=r.platform;
+    header.appendChild(left); header.appendChild(badge);
+    card.appendChild(header);
+
+    var product = document.createElement('div'); product.textContent=r.product_name; product.style.cssText='font-size:12px;color:#666;margin-bottom:6px';
+    card.appendChild(product);
+
+    var content = document.createElement('div'); content.textContent=r.content; content.style.fontSize='14px';
+    card.appendChild(content);
+
+    if ((r.keywords_detected||[]).length) {
+      var kwDiv = document.createElement('div'); kwDiv.style.marginTop='8px';
+      r.keywords_detected.forEach(function(k){
+        var tag = document.createElement('span'); tag.className='keyword-tag'; tag.textContent=k;
+        kwDiv.appendChild(tag);
+      });
+      card.appendChild(kwDiv);
+    }
+
+    var responseBox = document.createElement('div');
+    responseBox.className = 'response-box';
+    responseBox.id = 'resp-'+r.id;
+    card.appendChild(responseBox);
+
+    var actions = document.createElement('div'); actions.style.cssText='margin-top:8px;display:flex;gap:8px';
+    var btnShow = document.createElement('button'); btnShow.className='btn btn-sm btn-secondary'; btnShow.textContent='Draft';
+    btnShow.addEventListener('click', function(){ toggleResponse(r); });
+    var btnCopy = document.createElement('button'); btnCopy.className='btn btn-sm btn-secondary'; btnCopy.textContent='Copy';
+    btnCopy.addEventListener('click', function(){ copyResponse(r); });
+    actions.appendChild(btnShow); actions.appendChild(btnCopy);
+    card.appendChild(actions);
+
+    list.appendChild(card);
+  });
+}
+
+function toggleResponse(r) {
+  var box = document.getElementById('resp-'+r.id);
+  if (box.style.display === 'block') { box.style.display='none'; return; }
+  box.textContent = r.response_draft || 'Generating draft response...';
+  box.style.display = 'block';
+  if (!r.response_draft) {
+    fetch('/api/reviews/'+r.id+'/response', {method:'POST'}).then(function(res){return res.json();}).then(function(data){
+      box.textContent = data.response || 'Generation failed';
+      r.response_draft = data.response;
+    });
+  }
+}
+
+function copyResponse(r) {
+  if (r.response_draft && navigator.clipboard) {
+    navigator.clipboard.writeText(r.response_draft);
+    alert('Response draft copied to clipboard.');
+  }
+}
+
+async function renderKeywords() {
+  var stats = await (await fetch('/api/stats')).json();
+  var freq = stats.keyword_freq||{};
+  var labels = Object.keys(freq);
+  var values = Object.values(freq);
+  if (labels.length) {
+    new Chart(document.getElementById('keywordChart'), {
+      type:'bar',
+      data:{labels:labels, datasets:[{data:values, backgroundColor:'#3b82f6'}]},
+      options:{indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{x:{ticks:{color:'#888'},grid:{color:'#222'}},y:{ticks:{color:'#ccc'}}}}
+    });
+  }
+}
+
+async function renderInsights() {
+  var data = await (await fetch('/api/insights')).json();
+  var box = document.getElementById('insightBox');
+  while(box.firstChild) box.removeChild(box.firstChild);
+  var insights = data.insights||[];
+  if (!insights.length) {
+    var p = document.createElement('p'); p.textContent='No notable insights at this time'; p.style.color='#666';
+    box.appendChild(p); return;
+  }
+  var summary = document.createElement('div'); summary.className='insight-box';
+  insights.forEach(function(insight){
+    var item = document.createElement('div'); item.className='insight-item';
+    item.textContent = insight;
+    summary.appendChild(item);
+  });
+  var negCount = document.createElement('div');
+  negCount.style.cssText='margin-top:12px;font-size:12px;color:#888';
+  negCount.textContent='Based on analysis of '+data.negative_count+' negative reviews';
+  summary.appendChild(negCount);
+  box.appendChild(summary);
+}
+
+function checkAlerts() {
+  var urgent = allReviews.filter(function(r){return r.rating<=3;});
+  var banner = document.getElementById('alertBanner');
+  if (urgent.length) {
+    banner.classList.add('visible');
+    banner.textContent=urgent.length+' urgent reviews require attention';
+  }
+}
+
+async function addReview() {
+  var body = {
+    platform: document.getElementById('f_platform').value,
+    product_name: document.getElementById('f_product').value,
+    reviewer: document.getElementById('f_reviewer').value,
+    rating: Number(document.getElementById('f_rating').value),
+    content: document.getElementById('f_content').value
+  };
+  await fetch('/api/reviews', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  document.getElementById('addMsg').textContent='Added successfully';
+  document.getElementById('f_reviewer').value='';
+  document.getElementById('f_content').value='';
+  loadData();
+}
+
+loadData();
+lucide.createIcons();
+</script>
+</body>
+</html>

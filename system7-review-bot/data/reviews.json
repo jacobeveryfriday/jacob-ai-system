@@ -1,0 +1,259 @@
+[
+  {
+    "id": "rv001",
+    "platform": "쿠팡",
+    "product_name": "500달톤 히알루론산 세럼",
+    "reviewer": "뷰티러버",
+    "rating": 5,
+    "content": "세럼 발림이 정말 좋아요! 흡수가 빠르고 다음 날 피부가 촉촉합니다. 저분자라 그런지 확실히 느낌이 달라요.",
+    "keywords_detected": [],
+    "response_draft": "뷰티러버님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 히알루론산 세럼의 500달톤 저분자 성분이 뷰티러버님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-01T10:00:00"
+  },
+  {
+    "id": "rv002",
+    "platform": "올리브영",
+    "product_name": "500달톤 콜라겐 크림",
+    "reviewer": "피부관리왕",
+    "rating": 4,
+    "content": "크림 질감이 가볍고 좋은데, 살짝 자극이 있는 것 같아요. 그래도 전체적으로 만족합니다.",
+    "keywords_detected": [
+      "자극"
+    ],
+    "response_draft": "피부관리왕님, 좋은 평가 감사합니다!\n\n말씀하신 자극 관련 부분은 확인 후 개선하겠습니다. 밀리밀리의 500달톤 저분자 기술이 더 좋은 결과를 드릴 수 있도록 노력하겠습니다.",
+    "response_status": "pending",
+    "created_at": "2026-04-01T14:00:00"
+  },
+  {
+    "id": "rv003",
+    "platform": "쿠팡",
+    "product_name": "500달톤 비타민C 앰플",
+    "reviewer": "다크서클고민",
+    "rating": 5,
+    "content": "비타민C 앰플 쓴 지 2주인데 톤이 확실히 밝아졌어요! 가격 대비 최고입니다.",
+    "keywords_detected": [],
+    "response_draft": "다크서클고민님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 비타민C 앰플의 500달톤 저분자 성분이 다크서클고민님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "responded",
+    "created_at": "2026-04-02T09:00:00"
+  },
+  {
+    "id": "rv004",
+    "platform": "라자다",
+    "product_name": "500달톤 히알루론산 세럼",
+    "reviewer": "SkincareFan",
+    "rating": 5,
+    "content": "Amazing serum! My skin feels so hydrated after using this. The 500 dalton technology really makes a difference.",
+    "keywords_detected": [],
+    "response_draft": "SkincareFan님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 히알루론산 세럼의 500달톤 저분자 성분이 SkincareFan님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-02T11:00:00"
+  },
+  {
+    "id": "rv005",
+    "platform": "쿠팡",
+    "product_name": "500달톤 레티놀 에센스",
+    "reviewer": "민감피부",
+    "rating": 2,
+    "content": "사용 후 트러블이 생겼어요. 얼굴에 발진이 올라왔습니다. 환불 요청합니다.",
+    "keywords_detected": [
+      "트러블",
+      "발진",
+      "환불"
+    ],
+    "response_draft": "민감피부님, 불편을 드려 진심으로 죄송합니다.\n\n피부 민감 반응에 대해 매우 걱정됩니다. 개인 피부 타입에 따라 반응이 다를 수 있으며, 즉시 사용을 중단하시고 피부과 상담을 권장드립니다.\n\n밀리밀리 고객센터(1544-XXXX)로 연락 주시면 교환/환불 및 피부 상담을 도와드리겠습니다.",
+    "response_status": "pending",
+    "created_at": "2026-04-02T16:00:00"
+  },
+  {
+    "id": "rv006",
+    "platform": "올리브영",
+    "product_name": "500달톤 히알루론산 세럼",
+    "reviewer": "건성피부",
+    "rating": 4,
+    "content": "보습력 좋아요! 근데 용량이 좀 적은 것 같아요. 가격 대비 양이 아쉽습니다.",
+    "keywords_detected": [],
+    "response_draft": "건성피부님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 히알루론산 세럼의 500달톤 저분자 성분이 건성피부님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-03T10:00:00"
+  },
+  {
+    "id": "rv007",
+    "platform": "쿠팡",
+    "product_name": "500달톤 콜라겐 크림",
+    "reviewer": "30대직장인",
+    "rating": 1,
+    "content": "효과없음. 2주 넘게 썼는데 변화가 없어요. 가려움도 생기고 환불하고 싶습니다.",
+    "keywords_detected": [
+      "효과없음",
+      "가려움",
+      "환불"
+    ],
+    "response_draft": "30대직장인님, 불편을 드려 진심으로 죄송합니다.\n\n피부 민감 반응에 대해 매우 걱정됩니다. 개인 피부 타입에 따라 반응이 다를 수 있으며, 즉시 사용을 중단하시고 피부과 상담을 권장드립니다.\n\n밀리밀리 고객센터(1544-XXXX)로 연락 주시면 교환/환불 및 피부 상담을 도와드리겠습니다.",
+    "response_status": "pending",
+    "created_at": "2026-04-03T15:00:00"
+  },
+  {
+    "id": "rv008",
+    "platform": "라자다",
+    "product_name": "500달톤 비타민C 앰플",
+    "reviewer": "BeautyBlogger",
+    "rating": 4,
+    "content": "Good product overall. Slight tingling sensation but results are visible after 1 week.",
+    "keywords_detected": [],
+    "response_draft": "BeautyBlogger님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 비타민C 앰플의 500달톤 저분자 성분이 BeautyBlogger님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-03T18:00:00"
+  },
+  {
+    "id": "rv009",
+    "platform": "올리브영",
+    "product_name": "500달톤 나이아신아마이드 토너",
+    "reviewer": "토너러버",
+    "rating": 5,
+    "content": "토너 정말 순해요! 나이아신아마이드 들어있는데 전혀 자극 없고 피부결 좋아졌어요.",
+    "keywords_detected": [],
+    "response_draft": "토너러버님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 나이아신아마이드 토너의 500달톤 저분자 성분이 토너러버님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "responded",
+    "created_at": "2026-04-04T09:00:00"
+  },
+  {
+    "id": "rv010",
+    "platform": "쿠팡",
+    "product_name": "500달톤 히알루론산 세럼",
+    "reviewer": "배송불만",
+    "rating": 2,
+    "content": "제품은 괜찮은데 배송 중 파손되어 왔어요. 박스가 찌그러지고 캡이 깨져있었습니다.",
+    "keywords_detected": [
+      "배송",
+      "파손"
+    ],
+    "response_draft": "배송불만님, 불편을 드려 진심으로 죄송합니다.\n\n배송/포장 관련 불편을 드려 죄송합니다. 고객센터(1544-XXXX)로 사진과 함께 접수해주시면 즉시 재발송 처리해드리겠습니다.",
+    "response_status": "pending",
+    "created_at": "2026-04-04T12:00:00"
+  },
+  {
+    "id": "rv011",
+    "platform": "올리브영",
+    "product_name": "500달톤 콜라겐 크림",
+    "reviewer": "피부과의사",
+    "rating": 5,
+    "content": "성분이 우수합니다. 500달톤 저분자 콜라겐이라 실제 피부 흡수율이 높을 것으로 보입니다. 환자분들께도 추천합니다.",
+    "keywords_detected": [],
+    "response_draft": "피부과의사님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 콜라겐 크림의 500달톤 저분자 성분이 피부과의사님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-04T14:00:00"
+  },
+  {
+    "id": "rv012",
+    "platform": "라자다",
+    "product_name": "500달톤 레티놀 에센스",
+    "reviewer": "RetinolUser",
+    "rating": 3,
+    "content": "Expected more results. The texture is nice but I didn't see significant changes after 3 weeks.",
+    "keywords_detected": [],
+    "response_draft": "RetinolUser님, 솔직한 리뷰 감사합니다.\n\n말씀해주신 부분은 R&D팀에 전달하여 제품 개선에 적극 반영하겠습니다. 500달톤 기술의 효과를 최대화하는 사용법(세안 후 토너 → 소량 도포 → 가볍게 두드리기)도 참고해주세요.\n\n더 나은 제품으로 보답하겠습니다. 감사합니다.",
+    "response_status": "pending",
+    "created_at": "2026-04-04T17:00:00"
+  },
+  {
+    "id": "rv013",
+    "platform": "쿠팡",
+    "product_name": "500달톤 비타민C 앰플",
+    "reviewer": "여름준비",
+    "rating": 5,
+    "content": "여름 전에 톤업하려고 구매했는데 대만족입니다! 끈적임 없고 흡수 빠르고 좋아요.",
+    "keywords_detected": [],
+    "response_draft": "여름준비님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 비타민C 앰플의 500달톤 저분자 성분이 여름준비님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-05T09:00:00"
+  },
+  {
+    "id": "rv014",
+    "platform": "올리브영",
+    "product_name": "500달톤 히알루론산 세럼",
+    "reviewer": "재구매고객",
+    "rating": 5,
+    "content": "3번째 재구매합니다. 이것 쓰고 나서 다른 세럼 못 써요. 500달톤 기술이 진짜인 것 같아요!",
+    "keywords_detected": [],
+    "response_draft": "재구매고객님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 히알루론산 세럼의 500달톤 저분자 성분이 재구매고객님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-05T10:00:00"
+  },
+  {
+    "id": "rv015",
+    "platform": "쿠팡",
+    "product_name": "500달톤 나이아신아마이드 토너",
+    "reviewer": "알레르기주의",
+    "rating": 1,
+    "content": "사용 직후 알레르기 반응이 왔어요. 얼굴이 빨갛게 되고 가려움이 심합니다. 즉시 환불 부탁드립니다.",
+    "keywords_detected": [
+      "알레르기",
+      "가려움",
+      "환불"
+    ],
+    "response_draft": "알레르기주의님, 불편을 드려 진심으로 죄송합니다.\n\n피부 민감 반응에 대해 매우 걱정됩니다. 개인 피부 타입에 따라 반응이 다를 수 있으며, 즉시 사용을 중단하시고 피부과 상담을 권장드립니다.\n\n밀리밀리 고객센터(1544-XXXX)로 연락 주시면 교환/환불 및 피부 상담을 도와드리겠습니다.",
+    "response_status": "pending",
+    "created_at": "2026-04-05T11:00:00"
+  },
+  {
+    "id": "rv016",
+    "platform": "라자다",
+    "product_name": "500달톤 콜라겐 크림",
+    "reviewer": "ThaiSkincare",
+    "rating": 4,
+    "content": "Really moisturizing cream. Works well in humid climate. Will buy again!",
+    "keywords_detected": [],
+    "response_draft": "ThaiSkincare님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 콜라겐 크림의 500달톤 저분자 성분이 ThaiSkincare님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-05T13:00:00"
+  },
+  {
+    "id": "rv017",
+    "platform": "쿠팡",
+    "product_name": "500달톤 히알루론산 세럼",
+    "reviewer": "민지맘",
+    "rating": 4,
+    "content": "딸이랑 같이 쓰는데 둘 다 좋아해요. 가격이 조금 내려가면 더 좋겠어요.",
+    "keywords_detected": [],
+    "response_draft": "민지맘님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 히알루론산 세럼의 500달톤 저분자 성분이 민지맘님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-05T14:00:00"
+  },
+  {
+    "id": "rv018",
+    "platform": "올리브영",
+    "product_name": "500달톤 비타민C 앰플",
+    "reviewer": "색소침착고민",
+    "rating": 3,
+    "content": "효과는 느린 편이에요. 한 달은 써봐야 알 것 같습니다. 자극은 없어서 그건 좋아요.",
+    "keywords_detected": [],
+    "response_draft": "색소침착고민님, 솔직한 리뷰 감사합니다.\n\n말씀해주신 부분은 R&D팀에 전달하여 제품 개선에 적극 반영하겠습니다. 500달톤 기술의 효과를 최대화하는 사용법(세안 후 토너 → 소량 도포 → 가볍게 두드리기)도 참고해주세요.\n\n더 나은 제품으로 보답하겠습니다. 감사합니다.",
+    "response_status": "pending",
+    "created_at": "2026-04-05T15:00:00"
+  },
+  {
+    "id": "rv019",
+    "platform": "쿠팡",
+    "product_name": "500달톤 레티놀 에센스",
+    "reviewer": "레티놀초보",
+    "rating": 4,
+    "content": "레티놀인데 순해요! 입문용으로 좋은 것 같습니다. 저분자라 그런지 흡수도 잘 되구요.",
+    "keywords_detected": [],
+    "response_draft": "레티놀초보님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 레티놀 에센스의 500달톤 저분자 성분이 레티놀초보님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "pending",
+    "created_at": "2026-04-05T16:00:00"
+  },
+  {
+    "id": "rv020",
+    "platform": "라자다",
+    "product_name": "500달톤 나이아신아마이드 토너",
+    "reviewer": "GlowGetter",
+    "rating": 5,
+    "content": "Best toner I've ever used! Pores look smaller and skin is glowing. Highly recommend!",
+    "keywords_detected": [],
+    "response_draft": "GlowGetter님, 밀리밀리를 사랑해주셔서 감사합니다! 💕\n\n500달톤 나이아신아마이드 토너의 500달톤 저분자 성분이 GlowGetter님 피부에 좋은 변화를 드리고 있다니 기쁩니다. 꾸준한 사용으로 더 큰 효과를 경험하실 수 있어요!\n\n다음 구매 시 사용 가능한 10% 할인 쿠폰을 드립니다: THANKYOU10",
+    "response_status": "responded",
+    "created_at": "2026-04-05T17:00:00"
+  }
+]

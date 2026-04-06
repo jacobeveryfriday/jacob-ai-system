@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SNS Marketing - Jacob AI</title>
+<link rel="stylesheet" href="http://localhost:8000/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+
+<div class="mobile-header">
+  <button class="header-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button>
+  <span style="font-weight:700;font-size:14px">SNS Marketing</span>
+  <div style="width:32px"></div>
+</div>
+
+<div class="app-layout no-chat">
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="http://localhost:8000" class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Jacob AI
+    </a>
+    <div class="sidebar-sub">08Liter &times; Mili Mili</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Command</div>
+      <a href="http://localhost:8000" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+      <span class="nav-item disabled"><i data-lucide="target"></i> Strategy</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">08Liter Global</div>
+      <a href="http://localhost:8004" class="nav-item"><i data-lucide="building-2"></i> Brand</a>
+      <span class="nav-item disabled"><i data-lucide="users"></i> Influencer</span>
+      <span class="nav-item disabled"><i data-lucide="globe"></i> Platform</span>
+      <a href="http://localhost:8002" class="nav-item active"><i data-lucide="share-2"></i> SNS Marketing</a>
+      <a href="http://localhost:8005" class="nav-item"><i data-lucide="settings"></i> Ops Efficiency</a>
+      <a href="http://localhost:8001" class="nav-item"><i data-lucide="bar-chart-2"></i> Total KPI</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Mili Mili</div>
+      <span class="nav-item disabled"><i data-lucide="package"></i> Beauty Export</span>
+      <span class="nav-item disabled"><i data-lucide="shopping-cart"></i> Ecommerce MD</span>
+      <a href="http://localhost:8006" class="nav-item"><i data-lucide="megaphone"></i> Content &amp; Ad</a>
+      <a href="http://localhost:8007" class="nav-item"><i data-lucide="flask-conical"></i> R&amp;D</a>
+      <a href="http://localhost:8003" class="nav-item"><i data-lucide="message-circle"></i> Community</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="#" class="nav-item"><i data-lucide="settings-2"></i> Settings</a>
+    <div class="nav-item"><i data-lucide="activity"></i> API Status <span class="api-status-dot"></span></div>
+  </div>
+</aside>
+
+<main class="main-content">
+  <div class="main-header">
+    <div>
+      <h1>SNS Marketing</h1>
+      <p class="main-sub">08Liter Global &amp; Mili Mili -- Content publishing management</p>
+    </div>
+    <div class="header-actions">
+      <span class="date-display"><i data-lucide="calendar"></i> <span id="headerDate"></span></span>
+      <button class="header-btn" onclick="loadData()"><i data-lucide="refresh-cw"></i></button>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="statCards"></div>
+
+  <div class="tab-group" id="platformTabs"></div>
+
+  <div class="card">
+    <h2 class="card-title"><i data-lucide="file-plus"></i> New Content</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>Title</label><input type="text" id="f_title" placeholder="Content title"></div>
+      <div class="form-group"><label>Platform</label><select id="f_platform"><option>Instagram</option><option>LinkedIn</option><option>TikTok</option><option>Facebook</option></select></div>
+      <div class="form-group"><label>Publish Date</label><input type="date" id="f_date"></div>
+      <div class="form-group"><label>Publish Time</label><input type="time" id="f_time" value="12:00"></div>
+    </div>
+    <div class="form-group" style="margin-top:12px"><label>Caption</label><textarea id="f_caption" placeholder="Enter caption..."></textarea></div>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-primary" id="btnAdd"><i data-lucide="plus"></i> Add Content</button>
+      <span class="status-msg" id="addMsg" style="font-size:13px;color:var(--accent)"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title"><i data-lucide="list"></i> Content Schedule</h2>
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Title</th><th>Platform</th><th>Date/Time</th><th>Status</th><th>Reach</th><th>Engagement</th><th>Action</th></tr></thead>
+        <tbody id="contentTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title"><i data-lucide="pie-chart"></i> Platform Distribution</h2>
+    <div class="chart-container">
+      <canvas id="platformChart" height="80"></canvas>
+    </div>
+  </div>
+</main>
+
+</div>
+
+<button class="chat-fab" id="chatFab"><i data-lucide="message-circle"></i></button>
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-header"><div class="flex items-center justify-between"><span style="font-weight:700;font-size:13px">Jacob AI</span><button class="header-btn" id="chatCloseBtn"><i data-lucide="x"></i></button></div></div>
+  <div class="chat-messages" id="chatMessages"><div class="chat-msg agent">SNS Scheduler ready.<div class="chat-msg-time">System</div></div></div>
+  <div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask Jacob AI..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></div></div>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<script>
+var allData = [];
+var currentPlatform = 'all';
+document.getElementById('f_date').value = new Date().toISOString().split('T')[0];
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'});
+
+document.getElementById('btnAdd').addEventListener('click', addContent);
+
+async function loadData() {
+  var res = await fetch('/api/contents');
+  allData = await res.json();
+  renderStats();
+  renderTabs();
+  renderTable();
+  renderChart();
+}
+
+function renderStats() {
+  var c = document.getElementById('statCards');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  var total = allData.length;
+  var pub = allData.filter(function(d){return d.status==='published';}).length;
+  var pend = allData.filter(function(d){return d.status==='pending';}).length;
+  var reach = allData.reduce(function(s,d){return s+((d.performance||{}).reach||0);},0);
+
+  var items = [
+    {n:total, l:'Total Content', icon:'file-text'},
+    {n:pub, l:'Published', icon:'check-circle'},
+    {n:pend, l:'Pending', icon:'clock'},
+    {n:reach.toLocaleString(), l:'Total Reach', icon:'eye'}
+  ];
+  items.forEach(function(item){
+    var card = document.createElement('div');
+    card.className = 'kpi-card';
+    var label = document.createElement('div');
+    label.className = 'kpi-label';
+    var icon = document.createElement('i');
+    icon.setAttribute('data-lucide', item.icon);
+    label.appendChild(icon);
+    label.appendChild(document.createTextNode(' ' + item.l));
+    var value = document.createElement('div');
+    value.className = 'kpi-value';
+    value.textContent = item.n;
+    card.appendChild(label);
+    card.appendChild(value);
+    c.appendChild(card);
+  });
+  lucide.createIcons();
+}
+
+function renderTabs() {
+  var c = document.getElementById('platformTabs');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  var platforms = ['all','Instagram','LinkedIn','TikTok','Facebook'];
+  var labels = ['All','Instagram','LinkedIn','TikTok','Facebook'];
+  platforms.forEach(function(p,i){
+    var tab = document.createElement('button');
+    tab.className = 'tab-btn' + (currentPlatform === p ? ' active' : '');
+    tab.textContent = labels[i];
+    tab.addEventListener('click', function(){ currentPlatform=p; renderTabs(); renderTable(); });
+    c.appendChild(tab);
+  });
+}
+
+function renderTable() {
+  var tbody = document.getElementById('contentTable');
+  while(tbody.firstChild) tbody.removeChild(tbody.firstChild);
+  var filtered = currentPlatform === 'all' ? allData : allData.filter(function(d){return d.platform===currentPlatform;});
+  filtered.sort(function(a,b){return (a.scheduled_date+a.scheduled_time).localeCompare(b.scheduled_date+b.scheduled_time);});
+
+  filtered.forEach(function(item){
+    var tr = document.createElement('tr');
+    var tdTitle = document.createElement('td'); tdTitle.textContent = item.title;
+    var tdPlat = document.createElement('td'); tdPlat.textContent = item.platform;
+    var tdDate = document.createElement('td'); tdDate.textContent = item.scheduled_date + ' ' + (item.scheduled_time||'');
+    var tdStatus = document.createElement('td');
+    var badge = document.createElement('span');
+    var badgeMap = {published:'badge-on',pending:'badge-watch',failed:'badge-risk'};
+    badge.className = 'badge ' + (badgeMap[item.status]||'badge-watch');
+    badge.textContent = item.status === 'published' ? 'Published' : item.status === 'pending' ? 'Pending' : 'Failed';
+    tdStatus.appendChild(badge);
+    var perf = item.performance || {};
+    var tdReach = document.createElement('td'); tdReach.textContent = (perf.reach||0).toLocaleString ? (perf.reach||0).toLocaleString() : '-';
+    var tdEng = document.createElement('td'); tdEng.textContent = (perf.engagement||0).toLocaleString ? (perf.engagement||0).toLocaleString() : '-';
+    var tdAction = document.createElement('td');
+    if (item.status === 'pending') {
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-primary';
+      btn.style.fontSize = '11px';
+      btn.style.padding = '6px 12px';
+      btn.textContent = 'Publish';
+      btn.addEventListener('click', function(){ publishItem(item.id); });
+      tdAction.appendChild(btn);
+    }
+    tr.appendChild(tdTitle);tr.appendChild(tdPlat);tr.appendChild(tdDate);tr.appendChild(tdStatus);tr.appendChild(tdReach);tr.appendChild(tdEng);tr.appendChild(tdAction);
+    tbody.appendChild(tr);
+  });
+}
+
+function renderChart() {
+  var platforms = {};
+  allData.forEach(function(d){ platforms[d.platform] = (platforms[d.platform]||0)+1; });
+  var labels = Object.keys(platforms);
+  var values = Object.values(platforms);
+  var colors = ['#e11d48','#2563eb','#000000','#1877f2','#22c55e'];
+  new Chart(document.getElementById('platformChart'), {
+    type:'doughnut',
+    data:{labels:labels, datasets:[{data:values, backgroundColor:colors.slice(0,labels.length)}]},
+    options:{responsive:true, plugins:{legend:{labels:{color:'#ccc'}}}}
+  });
+}
+
+async function addContent() {
+  var body = {
+    title: document.getElementById('f_title').value,
+    caption: document.getElementById('f_caption').value,
+    platform: document.getElementById('f_platform').value,
+    scheduled_date: document.getElementById('f_date').value,
+    scheduled_time: document.getElementById('f_time').value
+  };
+  await fetch('/api/contents', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  document.getElementById('addMsg').textContent = 'Added successfully';
+  document.getElementById('f_title').value='';
+  document.getElementById('f_caption').value='';
+  loadData();
+}
+
+async function publishItem(id) {
+  await fetch('/api/contents/'+id+'/publish', {method:'POST'});
+  loadData();
+}
+
+loadData();
+
+// Chat
+document.getElementById('chatFab').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.toggle('open'); });
+document.getElementById('chatCloseBtn').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.remove('open'); });
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} });
+function sendChat(){var input=document.getElementById('chatInput');var t=input.value.trim();if(!t)return;var m=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=t;m.appendChild(u);input.value='';setTimeout(function(){var a=document.createElement('div');a.className='chat-msg agent';a.textContent='[SNS Bot] Processing... Connect an LLM backend for real responses.';m.appendChild(a);m.scrollTop=m.scrollHeight;},500);m.scrollTop=m.scrollHeight;}
+
+// Mobile sidebar
+document.getElementById('hamburgerBtn').addEventListener('click', function(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('open');});
+document.getElementById('sidebarBackdrop').addEventListener('click', function(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('open');});
+
+lucide.createIcons();
+</script>
+</body>
+</html>

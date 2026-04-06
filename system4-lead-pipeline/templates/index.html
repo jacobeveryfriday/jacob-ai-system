@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Brand - Lead Pipeline</title>
+<link rel="stylesheet" href="http://localhost:8000/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-layout no-chat">
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="http://localhost:8000" class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Jacob AI
+    </a>
+    <div class="sidebar-sub">08Liter &times; Mili Mili</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Command</div>
+      <a href="http://localhost:8000" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+      <span class="nav-item disabled"><i data-lucide="target"></i> Strategy</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">08Liter Global</div>
+      <a href="http://localhost:8004" class="nav-item active"><i data-lucide="building-2"></i> Brand</a>
+      <span class="nav-item disabled"><i data-lucide="users"></i> Influencer</span>
+      <span class="nav-item disabled"><i data-lucide="globe"></i> Platform</span>
+      <a href="http://localhost:8002" class="nav-item"><i data-lucide="share-2"></i> SNS Marketing</a>
+      <a href="http://localhost:8005" class="nav-item"><i data-lucide="settings"></i> Ops Efficiency</a>
+      <a href="http://localhost:8001" class="nav-item"><i data-lucide="bar-chart-2"></i> Total KPI</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Mili Mili</div>
+      <span class="nav-item disabled"><i data-lucide="package"></i> Beauty Export</span>
+      <span class="nav-item disabled"><i data-lucide="shopping-cart"></i> Ecommerce MD</span>
+      <a href="http://localhost:8006" class="nav-item"><i data-lucide="megaphone"></i> Content &amp; Ad</a>
+      <a href="http://localhost:8007" class="nav-item"><i data-lucide="flask-conical"></i> R&amp;D</a>
+      <a href="http://localhost:8003" class="nav-item"><i data-lucide="message-circle"></i> Community</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="#" class="nav-item"><i data-lucide="settings-2"></i> Settings</a>
+    <div class="nav-item"><i data-lucide="activity"></i> API Status <span class="api-status-dot"></span></div>
+  </div>
+</aside>
+
+<div class="main-content">
+  <div class="mobile-header">
+    <button class="hamburger-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button>
+    <span class="mobile-title">Brand</span>
+  </div>
+
+  <div class="main-header">
+    <div>
+      <h1>Brand</h1>
+      <p class="main-subtitle">08Liter Global -- Lead Pipeline</p>
+    </div>
+    <div class="header-actions">
+      <span class="header-date">2026-04-05</span>
+      <button class="header-btn" onclick="loadData()"><i data-lucide="refresh-cw"></i></button>
+    </div>
+  </div>
+
+  <div class="content-body">
+    <div class="grade-cards" id="gradeCards"></div>
+
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Lead Registration</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Company</label><input type="text" id="f_company" placeholder="Company name"></div>
+          <div class="form-group"><label>Contact</label><input type="text" id="f_contact" placeholder="Contact name"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="f_email" placeholder="email@company.com"></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="f_phone" placeholder="010-0000-0000"></div>
+          <div class="form-group"><label>Channel</label><select id="f_channel"><option>Kakao</option><option>Instagram</option><option>Website</option><option>Referral</option><option>Ad</option></select></div>
+          <div class="form-group"><label>Package</label><select id="f_package"><option>Starter</option><option>Growth</option><option>Enterprise</option></select></div>
+          <div class="form-group"><label>Budget (KRW 10k)</label><input type="number" id="f_budget" placeholder="500"></div>
+          <div class="form-group"><label>Urgency</label><select id="f_urgency"><option value="immediate">Immediate</option><option value="this_month">This Month</option><option value="next_month">Next Month</option><option value="next_quarter">Next Quarter</option><option value="exploring">Exploring</option></select></div>
+        </div>
+        <div class="form-group" style="margin-top:12px"><label>Notes</label><input type="text" id="f_notes" placeholder="Additional notes"></div>
+        <button class="btn btn-primary" style="margin-top:12px" id="btnAdd"><i data-lucide="plus" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i> Register</button>
+        <span class="status-msg" id="addMsg"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2 class="card-title">Lead List</h2></div>
+      <div class="card-body">
+        <input type="text" class="search-box" id="searchBox" placeholder="Search company or contact...">
+        <div class="filters" id="gradeFilters"></div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr><th>Company</th><th>Contact</th><th>Grade</th><th>Package</th><th>Budget</th><th>Channel</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="leadTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="chart-container">
+        <h3 style="margin-bottom:12px">Channel Distribution</h3>
+        <canvas id="channelChart" height="200"></canvas>
+      </div>
+      <div class="chart-container">
+        <h3 style="margin-bottom:12px">Grade Distribution</h3>
+        <canvas id="gradeChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<button class="chat-fab" id="chatFab"><i data-lucide="message-circle"></i></button>
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-header"><div class="flex items-center justify-between"><span style="font-weight:700;font-size:13px">Jacob AI</span><button class="header-btn" id="chatCloseBtn"><i data-lucide="x"></i></button></div></div>
+  <div class="chat-messages" id="chatMessages"><div class="chat-msg agent">Lead Pipeline ready.<div class="chat-msg-time">System</div></div></div>
+  <div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask Jacob AI..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></div></div>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<script>
+var allLeads = [];
+var filterGrade = '';
+var searchQuery = '';
+
+document.getElementById('btnAdd').addEventListener('click', addLead);
+document.getElementById('searchBox').addEventListener('input', function(e){ searchQuery=e.target.value.toLowerCase(); renderTable(); });
+
+async function loadData() {
+  allLeads = await (await fetch('/api/leads')).json();
+  renderGradeCards();
+  renderFilters();
+  renderTable();
+  renderCharts();
+}
+
+function renderGradeCards() {
+  var stats = {HOT:0, WARM:0, COLD:0};
+  allLeads.forEach(function(l){ stats[l.grade] = (stats[l.grade]||0)+1; });
+  var c = document.getElementById('gradeCards');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  [['HOT','hot','HOT'],['WARM','warm','WARM'],['COLD','cold','COLD']].forEach(function(g){
+    var card = document.createElement('div');
+    card.className = 'grade-card ' + g[1];
+    card.addEventListener('click', function(){ filterGrade = filterGrade===g[0]?'':g[0]; renderFilters(); renderTable(); });
+    var num = document.createElement('div'); num.className='num'; num.textContent=stats[g[0]]||0;
+    var lbl = document.createElement('div'); lbl.className='lbl'; lbl.textContent=g[2];
+    card.appendChild(num); card.appendChild(lbl); c.appendChild(card);
+  });
+}
+
+function renderFilters() {
+  var c = document.getElementById('gradeFilters');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  ['','HOT','WARM','COLD'].forEach(function(g){
+    var btn = document.createElement('div');
+    btn.className = 'filter-btn' + (filterGrade===g?' active':'');
+    btn.textContent = g || 'All';
+    btn.addEventListener('click', function(){ filterGrade=g; renderFilters(); renderTable(); });
+    c.appendChild(btn);
+  });
+}
+
+function renderTable() {
+  var tbody = document.getElementById('leadTable');
+  while(tbody.firstChild) tbody.removeChild(tbody.firstChild);
+  var filtered = allLeads.filter(function(l){
+    if (filterGrade && l.grade !== filterGrade) return false;
+    if (searchQuery && l.company.toLowerCase().indexOf(searchQuery)===-1 && l.contact_name.toLowerCase().indexOf(searchQuery)===-1) return false;
+    return true;
+  });
+  filtered.forEach(function(lead){
+    var tr = document.createElement('tr');
+    var cells = [
+      lead.company, lead.contact_name, null, lead.package_interest,
+      lead.budget+'万', lead.channel, null, null
+    ];
+    cells.forEach(function(val, i){
+      var td = document.createElement('td');
+      if (i === 2) {
+        var badge = document.createElement('span');
+        var gradeClass = lead.grade==='HOT'?'badge-risk':lead.grade==='WARM'?'badge-watch':'badge-info';
+        badge.className = 'badge ' + gradeClass;
+        badge.textContent = lead.grade;
+        td.appendChild(badge);
+      } else if (i === 6) {
+        var badge2 = document.createElement('span');
+        var statusMap = {new:'badge-purple',contacted:'badge-purple',meeting:'badge-info',proposal:'badge-watch',won:'badge-on',lost:'badge-risk'};
+        badge2.className = 'badge ' + (statusMap[lead.status]||'badge-info');
+        badge2.textContent = lead.status;
+        td.appendChild(badge2);
+      } else if (i === 7) {
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-sm';
+        btn.textContent = 'Notify';
+        btn.addEventListener('click', function(){ notifySlack(lead.id); });
+        td.appendChild(btn);
+      } else {
+        td.textContent = val;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderCharts() {
+  var channels = {};
+  var grades = {HOT:0,WARM:0,COLD:0};
+  allLeads.forEach(function(l){
+    channels[l.channel] = (channels[l.channel]||0)+1;
+    grades[l.grade] = (grades[l.grade]||0)+1;
+  });
+  new Chart(document.getElementById('channelChart'), {
+    type:'doughnut',
+    data:{labels:Object.keys(channels), datasets:[{data:Object.values(channels), backgroundColor:['#fbbf24','#e11d48','#3b82f6','#22c55e','#8b5cf6']}]},
+    options:{responsive:true, plugins:{legend:{labels:{color:'#ccc'}}}}
+  });
+  new Chart(document.getElementById('gradeChart'), {
+    type:'bar',
+    data:{labels:['HOT','WARM','COLD'], datasets:[{data:[grades.HOT,grades.WARM,grades.COLD], backgroundColor:['#dc2626','#f97316','#3b82f6']}]},
+    options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{ticks:{color:'#888'},grid:{color:'#222'}},x:{ticks:{color:'#888'}}}}
+  });
+}
+
+async function addLead() {
+  var body = {
+    company: document.getElementById('f_company').value,
+    contact_name: document.getElementById('f_contact').value,
+    email: document.getElementById('f_email').value,
+    phone: document.getElementById('f_phone').value,
+    channel: document.getElementById('f_channel').value,
+    package_interest: document.getElementById('f_package').value,
+    budget: Number(document.getElementById('f_budget').value)||0,
+    urgency: document.getElementById('f_urgency').value,
+    notes: document.getElementById('f_notes').value
+  };
+  var res = await fetch('/api/leads', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  var result = await res.json();
+  document.getElementById('addMsg').textContent = 'Registered (Grade: '+result.grade+')';
+  loadData();
+}
+
+async function notifySlack(id) {
+  var res = await fetch('/api/slack/notify/'+id, {method:'POST'});
+  var result = await res.json();
+  alert(result.status === 'sent' ? 'Slack notification sent!' : 'Simulation mode: ' + (result.message||'').substring(0,100));
+}
+
+// Chat
+document.getElementById('chatFab').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.toggle('open'); });
+document.getElementById('chatCloseBtn').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.remove('open'); });
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} });
+function sendChat(){var input=document.getElementById('chatInput');var t=input.value.trim();if(!t)return;var m=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=t;m.appendChild(u);input.value='';setTimeout(function(){var a=document.createElement('div');a.className='chat-msg agent';a.textContent='[Lead Bot] Processing... Connect an LLM backend for real responses.';m.appendChild(a);m.scrollTop=m.scrollHeight;},500);m.scrollTop=m.scrollHeight;}
+
+// Mobile sidebar
+document.getElementById('hamburgerBtn').addEventListener('click', function(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('open');});
+document.getElementById('sidebarBackdrop').addEventListener('click', function(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('open');});
+
+loadData();
+lucide.createIcons();
+</script>
+</body>
+</html>

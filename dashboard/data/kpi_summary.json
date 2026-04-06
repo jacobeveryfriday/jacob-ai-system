@@ -1,0 +1,14 @@
+{
+  "liter": {
+    "contracts": {"value": 35, "target": 38, "unit": "건"},
+    "contract_value": {"value": 375, "target": 420, "unit": "만원"},
+    "organic_ratio": {"value": 12, "target": 30, "unit": "%"},
+    "conversion": {"value": 32, "target": 38, "unit": "%"}
+  },
+  "mili": {
+    "repurchase": {"value": 22, "target": 35, "unit": "%"},
+    "roas": {"value": 3.5, "target": 4.0, "unit": "x"},
+    "cpa": {"value": 19000, "target": 15000, "unit": "원"},
+    "rating": {"value": 4.5, "target": 4.7, "unit": ""}
+  }
+}

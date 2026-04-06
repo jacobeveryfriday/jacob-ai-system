@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Community - Jacob AI</title>
+<link rel="stylesheet" href="http://localhost:8000/static/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-layout no-chat">
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="http://localhost:8000" class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Jacob AI
+    </a>
+    <div class="sidebar-sub">08Liter &times; Mili Mili</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Command</div>
+      <a href="http://localhost:8000" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+      <span class="nav-item disabled"><i data-lucide="target"></i> Strategy</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">08Liter Global</div>
+      <a href="http://localhost:8004" class="nav-item"><i data-lucide="building-2"></i> Brand</a>
+      <span class="nav-item disabled"><i data-lucide="users"></i> Influencer</span>
+      <span class="nav-item disabled"><i data-lucide="globe"></i> Platform</span>
+      <a href="http://localhost:8002" class="nav-item"><i data-lucide="share-2"></i> SNS Marketing</a>
+      <a href="http://localhost:8005" class="nav-item"><i data-lucide="settings"></i> Ops Efficiency</a>
+      <a href="http://localhost:8001" class="nav-item"><i data-lucide="bar-chart-2"></i> Total KPI</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Mili Mili</div>
+      <span class="nav-item disabled"><i data-lucide="package"></i> Beauty Export</span>
+      <span class="nav-item disabled"><i data-lucide="shopping-cart"></i> Ecommerce MD</span>
+      <a href="http://localhost:8006" class="nav-item"><i data-lucide="megaphone"></i> Content &amp; Ad</a>
+      <a href="http://localhost:8007" class="nav-item"><i data-lucide="flask-conical"></i> R&amp;D</a>
+      <a href="http://localhost:8003" class="nav-item active"><i data-lucide="message-circle"></i> Community</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="#" class="nav-item"><i data-lucide="settings-2"></i> Settings</a>
+    <div class="nav-item"><i data-lucide="activity"></i> API Status <span class="api-status-dot"></span></div>
+  </div>
+</aside>
+
+<div class="main-content">
+  <div class="mobile-header">
+    <button class="hamburger-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button>
+    <span class="mobile-title">Community</span>
+  </div>
+
+  <div class="main-header">
+    <div>
+      <h1>Community</h1>
+      <p class="subtitle">Mili Mili -- Post-purchase message sequence management</p>
+    </div>
+    <div class="header-actions">
+      <span class="date-display" id="dateDisplay"></span>
+      <button class="header-btn" onclick="loadData()"><i data-lucide="refresh-cw"></i></button>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="statCards"></div>
+
+  <div class="card">
+    <h2 class="card-title">Customer Registration</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>Name</label><input type="text" id="f_name" placeholder="Hong Gildong"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="f_phone" placeholder="010-0000-0000"></div>
+      <div class="form-group"><label>Product</label><select id="f_product"></select></div>
+      <div class="form-group"><label>Purchase Date</label><input type="date" id="f_date"></div>
+    </div>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+      <button class="btn btn-primary" id="btnRegister">Register</button>
+      <span class="status-msg" id="regMsg"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Customer List &amp; Sequence Status</h2>
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Product</th><th>Purchase Date</th><th>Sequence Progress</th><th>Action</th></tr></thead>
+        <tbody id="customerTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent">
+    <h3 id="modalTitle"></h3>
+    <div class="msg-preview" id="modalMsg"></div>
+    <div class="flex-gap-8 mt-12">
+      <button class="btn btn-primary btn-sm" id="modalSendBtn">Send</button>
+      <button class="btn btn-secondary btn-sm" id="modalCloseBtn">Close</button>
+    </div>
+    <span class="status-msg" id="modalStatus"></span>
+  </div>
+</div>
+
+<button class="chat-fab" id="chatFab"><i data-lucide="message-circle"></i></button>
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-header"><div class="flex items-center justify-between"><span style="font-weight:700;font-size:13px">Jacob AI</span><button class="header-btn" id="chatCloseBtn"><i data-lucide="x"></i></button></div></div>
+  <div class="chat-messages" id="chatMessages"><div class="chat-msg agent">CRM Bot ready.<div class="chat-msg-time">System</div></div></div>
+  <div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask Jacob AI..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></div></div>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<script>
+var customers = [];
+var currentModal = {};
+
+// Date display
+(function(){
+  var now = new Date();
+  var opts = {year:'numeric',month:'long',day:'numeric',weekday:'long'};
+  var el = document.getElementById('dateDisplay');
+  if(el) el.textContent = now.toLocaleDateString('en-US', opts);
+})();
+
+document.getElementById('f_date').value = new Date().toISOString().split('T')[0];
+document.getElementById('btnRegister').addEventListener('click', registerCustomer);
+document.getElementById('modalCloseBtn').addEventListener('click', function(){ document.getElementById('modalOverlay').style.display='none'; });
+document.getElementById('modalSendBtn').addEventListener('click', sendModalMessage);
+
+async function init() {
+  var prods = await (await fetch('/api/products')).json();
+  var sel = document.getElementById('f_product');
+  prods.forEach(function(p){
+    var opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    sel.appendChild(opt);
+  });
+  loadData();
+}
+
+async function loadData() {
+  customers = await (await fetch('/api/customers')).json();
+  renderStats();
+  renderTable();
+}
+
+async function renderStats() {
+  var stats = await (await fetch('/api/stats')).json();
+  var c = document.getElementById('statCards');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  [{n:stats.total_customers,l:'Total Customers'},{n:stats.total_messages_sent,l:'Messages Sent'},{n:stats.completed_sequences,l:'Sequences Completed'},{n:stats.pending,l:'In Progress'}].forEach(function(item){
+    var card = document.createElement('div'); card.className='kpi-card blue';
+    var lbl = document.createElement('div'); lbl.className='kpi-label'; lbl.textContent=item.l;
+    var num = document.createElement('div'); num.className='kpi-value'; num.textContent=item.n;
+    card.appendChild(lbl); card.appendChild(num); c.appendChild(card);
+  });
+}
+
+function renderTable() {
+  var tbody = document.getElementById('customerTable');
+  while(tbody.firstChild) tbody.removeChild(tbody.firstChild);
+  customers.forEach(function(cust){
+    var tr = document.createElement('tr');
+    var td1 = document.createElement('td'); td1.textContent = cust.name;
+    var td2 = document.createElement('td'); td2.textContent = cust.product;
+    var td3 = document.createElement('td'); td3.textContent = cust.purchase_date;
+    var td4 = document.createElement('td');
+    var timeline = document.createElement('div'); timeline.className='timeline';
+    var seq = cust.sequence || [];
+    seq.forEach(function(s, i){
+      var step = document.createElement('div'); step.className='step';
+      var dot = document.createElement('div');
+      dot.className = 'step-dot step-' + s.status;
+      dot.textContent = s.status === 'completed' ? '\u2713' : s.status === 'ready' ? '!' : '\u00B7';
+      var lbl = document.createElement('div'); lbl.textContent = s.label.split(' ')[0];
+      step.appendChild(dot); step.appendChild(lbl);
+      timeline.appendChild(step);
+      if (i < seq.length - 1) {
+        var line = document.createElement('div'); line.className='step-line';
+        timeline.appendChild(line);
+      }
+    });
+    td4.appendChild(timeline);
+    var td5 = document.createElement('td');
+    seq.forEach(function(s){
+      if (s.status === 'ready') {
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-primary btn-sm';
+        btn.textContent = s.label.split(' ')[0] + ' Send';
+        btn.addEventListener('click', function(){ openModal(cust, s); });
+        td5.appendChild(btn);
+      }
+    });
+    tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);tr.appendChild(td4);tr.appendChild(td5);
+    tbody.appendChild(tr);
+  });
+}
+
+function openModal(cust, step) {
+  currentModal = {customerId: cust.id, step: step.day};
+  document.getElementById('modalTitle').textContent = cust.name + ' -- ' + step.label;
+  document.getElementById('modalMsg').textContent = step.message;
+  document.getElementById('modalStatus').textContent = '';
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+
+async function sendModalMessage() {
+  var res = await fetch('/api/messages/' + currentModal.customerId + '/send', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({step: currentModal.step})
+  });
+  var result = await res.json();
+  document.getElementById('modalStatus').textContent = (result.note || 'Sent successfully');
+  setTimeout(function(){ document.getElementById('modalOverlay').style.display='none'; loadData(); }, 1500);
+}
+
+async function registerCustomer() {
+  var body = {
+    name: document.getElementById('f_name').value,
+    phone: document.getElementById('f_phone').value,
+    product: document.getElementById('f_product').value,
+    purchase_date: document.getElementById('f_date').value
+  };
+  await fetch('/api/customers', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  document.getElementById('regMsg').textContent = 'Registration complete';
+  document.getElementById('f_name').value = '';
+  document.getElementById('f_phone').value = '';
+  loadData();
+}
+
+// Chat functionality
+document.getElementById('chatFab').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.toggle('open'); });
+document.getElementById('chatCloseBtn').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.remove('open'); });
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} });
+function sendChat(){var input=document.getElementById('chatInput');var t=input.value.trim();if(!t)return;var m=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=t;m.appendChild(u);input.value='';setTimeout(function(){var a=document.createElement('div');a.className='chat-msg agent';a.textContent='[CRM Bot] Processing... Connect an LLM backend for real responses.';m.appendChild(a);m.scrollTop=m.scrollHeight;},500);m.scrollTop=m.scrollHeight;}
+
+// Mobile sidebar
+document.getElementById('hamburgerBtn').addEventListener('click', function(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('open');});
+document.getElementById('sidebarBackdrop').addEventListener('click', function(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('open');});
+
+init();
+lucide.createIcons();
+</script>
+</body>
+</html>

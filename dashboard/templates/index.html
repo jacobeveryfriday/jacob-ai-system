@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Jacob AI Command Center</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+@media(max-width:1199px){.app-layout{grid-template-columns:var(--sidebar-width) 1fr var(--chat-width)!important}.chat-panel{display:flex!important}}
+@media(max-width:767px){.app-layout{grid-template-columns:1fr!important}.chat-panel{display:none!important}}
+[id^="page-"]{display:none}[id^="page-"].active{display:block}
+.kpi-detail{font-size:11px;color:var(--text-secondary);margin-top:2px}.kpi-detail .v{color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-weight:600}.kpi-detail .up{color:var(--status-on);font-family:'JetBrains Mono',monospace;font-weight:600}
+.kpi-progress{margin-top:8px}.kpi-progress-bar{height:3px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden}.kpi-progress-fill{height:100%;border-radius:2px}.kpi-progress-fill.on{background:var(--status-on)}.kpi-progress-fill.watch{background:var(--status-watch)}.kpi-progress-fill.risk{background:var(--status-risk)}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;margin-bottom:20px;border-radius:0 8px 8px 0;background:rgba(249,115,22,0.12);border-left:4px solid #F97316}
+.section-hdr-title{font-size:16px;font-weight:700;color:#F97316;display:flex;align-items:center;gap:8px}.section-hdr-dot{width:8px;height:8px;border-radius:50%;background:#F97316}.section-hdr-sub{font-size:12px;color:#8B95A6}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.chart-box{background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:16px}.chart-box h4{font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:12px}
+.sb-section{margin:20px 0 4px 0;padding:8px 16px;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:space-between;background:rgba(249,115,22,0.15);border-left:3px solid #F97316}
+.sb-section-left{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#F97316}.sb-dot{width:8px;height:8px;border-radius:50%;background:#F97316;flex-shrink:0}.sb-section-right{font-size:10px;color:rgba(249,115,22,0.6)}
+.sb-items{border-left:1px solid rgba(249,115,22,0.3);margin-left:16px}.sb-items .nav-item{padding-left:24px}.sb-items .nav-item:hover{background:rgba(249,115,22,0.08)}.sb-items .nav-item.active{background:rgba(249,115,22,0.15);color:#F97316;border-left-color:#F97316}
+.panels-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.status-panel{background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px}
+.panel-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.panel-title{font-size:13px;font-weight:600;color:#E8EBF2}
+.status-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}.status-row-label{font-size:12px;color:#8B95A6}.status-badge{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(249,115,22,0.15);color:#F97316}
+.task-item{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px}.task-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--status-on);cursor:pointer}.task-item.done label{color:#4A5568;text-decoration:line-through}.task-item label{cursor:pointer;color:#8B95A6}
+.chat-ex-btn{background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);font-size:11px;color:#F97316;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}.chat-ex-btn:hover{background:rgba(249,115,22,0.15)}.chat-examples{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0}
+.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;min-height:200px}.pipeline-col{min-width:0}
+.pipeline-hdr{background:rgba(249,115,22,0.08);padding:10px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text-primary)}.pipeline-hdr .cnt{background:rgba(249,115,22,0.2);color:#F97316;padding:1px 8px;border-radius:10px;font-size:10px;font-family:'JetBrains Mono',monospace}
+.pipeline-body{display:flex;flex-direction:column;gap:8px;padding:8px 0}
+.pipe-card{background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:14px;transition:border-color .15s;border-top:2px solid #2D3748}.pipe-card:hover{border-color:rgba(249,115,22,0.4)}
+.pipe-card.stage-0{border-top-color:#4A5568}.pipe-card.stage-1{border-top-color:rgba(249,115,22,0.4)}.pipe-card.stage-2{border-top-color:rgba(249,115,22,0.8)}.pipe-card.stage-3{border-top-color:#22C55E}
+.pipe-card-name{font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:6px}.pipe-card-info{font-size:11px;color:#8B95A6;line-height:1.6}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.filter-bar select,.filter-bar input{background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text-primary);font-size:12px;font-family:inherit}
+.inf-table{width:100%;border-collapse:collapse}.inf-table thead th{font-size:10px;font-weight:600;color:#4A5568;text-transform:uppercase;letter-spacing:.08em;padding:10px 8px;text-align:left;background:#161B27;border-bottom:1px solid var(--border)}
+.inf-table tbody tr{height:44px}.inf-table tbody tr:nth-child(odd){background:#0F1520}.inf-table tbody tr:nth-child(even){background:#161B27}.inf-table tbody tr:hover{background:rgba(249,115,22,0.04)}.inf-table tbody td{padding:8px;font-size:12px;border-bottom:1px solid var(--border)}
+.inf-table .mono{font-family:'JetBrains Mono',monospace;font-weight:500}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px}.tab-btn{padding:8px 20px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text-secondary);border:1px solid transparent;transition:all .15s}.tab-btn:hover{background:var(--bg-tertiary)}.tab-btn.active{background:var(--bg-tertiary);color:var(--text-primary);border-color:var(--border)}
+.tab-content{display:none}.tab-content.active{display:block}
+.ch-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.ch-card{background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:16px;border-top:2px solid #2D3748}
+.ch-card h4{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text-primary)}.ch-row{display:flex;justify-content:space-between;font-size:11px;color:#8B95A6;padding:3px 0}.ch-row .v{color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-weight:600}
+.country-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.country-card{background:#161B27;border:1px solid #1E2433;border-radius:6px;padding:10px;text-align:center}.country-card .flag{font-size:18px}.country-card .cnt{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text-primary)}.country-card .pct{font-size:10px;color:#8B95A6}
+</style>
+</head>
+<body>
+<div class="app-layout">
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-header"><a href="http://localhost:8000" class="sidebar-logo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Jacob AI</a><div class="sidebar-sub">08Liter Global</div></div>
+<nav class="sidebar-nav">
+<div class="nav-group"><div class="nav-group-label" style="margin-top:8px">커맨드</div>
+<a href="#" class="nav-item active" data-page="overview"><i data-lucide="layout-dashboard"></i> 전체 현황</a>
+<a href="#" class="nav-item" data-page="alerts"><i data-lucide="bell"></i> 알림 센터</a></div>
+<div class="nav-group"><div class="sb-section"><div class="sb-section-left"><span class="sb-dot"></span> 공팔리터 글로벌</div><div class="sb-section-right">08Liter</div></div>
+<div class="sb-items">
+<a href="#" class="nav-item" style="font-weight:600;color:#F97316" data-page="kpi"><i data-lucide="bar-chart-2"></i> 총괄 KPI</a>
+<a href="#" class="nav-item" data-page="brand"><i data-lucide="building-2"></i> 브랜드</a>
+<a href="#" class="nav-item" data-page="influencer"><i data-lucide="users"></i> 맞춤 인플루언서</a>
+<a href="#" class="nav-item" data-page="ads"><i data-lucide="megaphone"></i> 광고센터 운영</a>
+<a href="#" class="nav-item" data-page="sns"><i data-lucide="share-2"></i> 공식 SNS 운영</a>
+<a href="#" class="nav-item" data-page="management"><i data-lucide="briefcase"></i> 경영지원</a>
+<a href="#" class="nav-item" data-page="cs"><i data-lucide="headphones"></i> CS</a>
+</div></div>
+</nav>
+<div class="sidebar-footer"><a href="#" class="nav-item"><i data-lucide="settings-2"></i> 설정</a><div class="nav-item"><i data-lucide="activity"></i> API 상태 <span class="api-status-dot" id="apiDot"></span></div></div>
+</aside>
+
+<main class="main-content">
+<div class="mobile-header"><button class="hamburger-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button><span style="font-weight:700;font-size:15px">Jacob AI</span></div>
+<div class="main-header"><h1 id="pageTitle">전체 현황</h1><div class="header-actions"><span class="header-date" id="headerDate"></span><button class="header-btn" onclick="location.reload()"><i data-lucide="refresh-cw"></i></button></div></div>
+<div class="main-body">
+<div class="alert-banner" id="alertBanner"><i data-lucide="alert-triangle"></i><span id="alertText"></span></div>
+
+<!-- OVERVIEW -->
+<div id="page-overview" class="active">
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 공팔리터 글로벌</div><div class="section-hdr-sub">이번 달 핵심 지표</div></div>
+<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번 달 매출</div><div class="kpi-status watch"></div></div><div class="kpi-value">1.22<span class="kpi-unit">억원</span></div><div class="kpi-detail">목표: <span class="v">1.6억원</span> / 달성률: <span class="v">76%</span></div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" style="width:76%"></div></div></div><div class="mt-4"><span class="badge badge-watch">WATCH</span></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번 달 계약</div><div class="kpi-status risk"></div></div><div class="kpi-value">6<span class="kpi-unit">건</span></div><div class="kpi-detail">목표: <span class="v">38건</span> / 달성률: <span class="v">16%</span></div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill risk" style="width:16%"></div></div></div><div class="mt-4"><span class="badge badge-risk">AT RISK</span></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">평균 계약단가</div><div class="kpi-status watch"></div></div><div class="kpi-value">370<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">420만원</span></div><div class="mt-4"><span class="badge badge-watch">WATCH</span></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">오가닉 리드</div><div class="kpi-status risk"></div></div><div class="kpi-value">6<span class="kpi-unit">건/일</span></div><div class="kpi-detail">목표: <span class="v">15건</span></div><div class="mt-4"><span class="badge badge-risk">AT RISK</span></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">광고 리드 CPA</div><div class="kpi-status on"></div></div><div class="kpi-value">3.2<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">5만원 이하</span></div><div class="mt-4"><span class="badge badge-on">ON TRACK</span></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">인플루언서 풀</div><div class="kpi-status watch"></div></div><div class="kpi-value">140<span class="kpi-unit">만명</span></div><div class="kpi-detail">목표: <span class="v">155만명</span></div><div class="mt-4"><span class="badge badge-watch">WATCH</span></div></div>
+</div></div>
+
+<div id="page-alerts"><div class="card"><div class="card-title">알림 센터</div><div id="alertList"></div></div></div>
+<div id="page-kpi"></div>
+
+<div id="page-brand">
+  <div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
+    <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">일간</button>
+    <button id="brand-tab-monthly" onclick="setBrandTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">누적</button>
+  </div>
+  <div id="brand-kpi-cards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">인입 DB</p><p id="kpi-inbound" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-inbound-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">유효 DB</p><p id="kpi-valid" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-valid-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">미팅</p><p id="kpi-meeting" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-meeting-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">계약서</p><p id="kpi-contract" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-contract-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #7C3AED;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">재계약</p><p id="kpi-renewal" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-renewal-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
+  </div>
+  <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden;margin-bottom:20px">
+    <div style="padding:14px 20px;border-bottom:1px solid #1E2433;display:flex;justify-content:space-between"><p style="font-size:13px;font-weight:700;color:#E8EBF2">기간별 비교</p><span id="brand-data-source" style="font-size:10px;color:#4A5568">샘플 데이터</span></div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:700px"><thead><tr style="background:#161B27"><th style="padding:10px 16px;text-align:left;font-size:9px;color:#4A5568;text-transform:uppercase">지표</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">오늘</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">이번 달</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">전월</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">전월比</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">작년동월</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">YoY</th></tr></thead><tbody id="brand-compare-table"><tr><td colspan="7" style="text-align:center;padding:16px;color:#4A5568;font-size:12px">로딩중...</td></tr></tbody></table></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">유입채널별 DB 수</p><div style="position:relative;height:180px"><canvas id="chart-channel-db"></canvas></div></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">담당자별 성과</p><table style="width:100%;border-collapse:collapse"><thead><tr><th style="font-size:9px;color:#4A5568;text-align:left;padding:6px 0">담당자</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">인입DB</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">유효DB</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">전환율</th></tr></thead><tbody id="staff-tbody"><tr><td colspan="4" style="text-align:center;padding:12px;color:#4A5568;font-size:11px">로딩중...</td></tr></tbody></table></div>
+  </div>
+  <div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:14px;font-weight:700;color:#E8EBF2">브랜드 영업 파이프라인</p><div style="display:flex;gap:8px;align-items:center"><span id="pipeline-source" style="font-size:10px;color:#4A5568">로딩중...</span><button onclick="loadBrandPipeline()" style="padding:4px 12px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#8B95A6;font-size:10px;cursor:pointer">새로고침</button></div></div><div id="pipeline-board" style="overflow-x:auto;padding-bottom:8px"><div style="text-align:center;padding:40px;color:#4A5568;font-size:12px">파이프라인 로딩중...</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px"><div style="display:flex;justify-content:space-between;margin-bottom:14px"><p style="font-size:12px;font-weight:700;color:#E8EBF2">실시간 현황</p><span style="font-size:10px;color:#4A5568">방금 전</span></div><div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">오늘 신규 인바운드</span><span style="background:rgba(249,115,22,0.15);color:#F97316;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">3건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">오늘 미팅 예정</span><span style="background:rgba(14,165,233,0.15);color:#0EA5E9;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">2건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">응답 대기 견적</span><span style="background:rgba(245,158,11,0.15);color:#F59E0B;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">4건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#8B95A6">계약 진행중</span><span style="background:rgba(34,197,94,0.15);color:#22C55E;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">1건</span></div></div></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">오늘 업무 현황</p><div style="display:flex;flex-direction:column;gap:8px" id="brand-tasks"><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#94A3B8">Growth 패키지 견적 발송 (8건)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#94A3B8">인바운드 리드 1차 응답 (3건)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#94A3B8">비대면 미팅 준비 (오후 2시, 3시)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" checked onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#4A5568;text-decoration:line-through">오전 KPI 확인 완료</span></label></div></div>
+  </div>
+</div>
+
+<div id="page-influencer">
+  <div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
+    <button id="inf-tab-daily" onclick="setInfTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">당일</button>
+    <button id="inf-tab-monthly" onclick="setInfTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">누적</button>
+  </div>
+  <div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><p style="font-size:13px;font-weight:700;color:#E8EBF2">국가별 인플루언서 현황</p><span id="inf-data-source" style="font-size:10px;color:#4A5568">샘플 데이터</span></div><div id="country-cards" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px"><div style="text-align:center;padding:20px;color:#4A5568;font-size:12px">로딩중...</div></div></div>
+  <button onclick="toggleInfDetail()" style="width:100%;padding:8px;background:#161B27;border:1px solid #1E2433;border-radius:8px;color:#8B95A6;font-size:11px;cursor:pointer;margin-bottom:16px"><span id="inf-detail-btn-text">추이 그래프 자세히 보기</span></button>
+  <div id="inf-detail-panel" style="display:none;margin-bottom:20px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:12px">최근 1개월 확보 추이 (주별)</p><div style="position:relative;height:200px"><canvas id="chart-inf-1m"></canvas></div></div><div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:12px">최근 3개월 확보 추이 (월별)</p><div style="position:relative;height:200px"><canvas id="chart-inf-3m"></canvas></div></div></div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <select id="filter-country" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">국가 전체</option><option value="KR">KR</option><option value="US">US</option><option value="JP">JP</option><option value="CN">CN</option><option value="MY">MY</option><option value="SG">SG</option><option value="TH">TH</option><option value="ID">ID</option><option value="VT">VN</option></select>
+    <select id="filter-platform" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">플랫폼 전체</option><option value="Instagram">Instagram</option><option value="TikTok">TikTok</option><option value="YouTube">YouTube</option></select>
+    <select id="filter-category" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">카테고리 전체</option><option value="뷰티">뷰티</option><option value="패션">패션</option><option value="라이프">라이프</option><option value="푸드">푸드</option><option value="여행">여행</option><option value="피트니스">피트니스</option></select>
+    <select id="filter-status" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">상태 전체</option><option value="단순리스트업">단순리스트업</option><option value="사례활용가능">사례활용가능</option><option value="제안발송">제안발송</option><option value="거절">거절</option></select>
+    <input id="filter-search" oninput="applyInfluencerFilter()" placeholder="계정명 검색..." style="padding:6px 12px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px;flex:1;min-width:140px">
+  </div>
+  <div style="background:rgba(249,115,22,0.06);border:1px dashed rgba(249,115,22,0.3);border-radius:8px;padding:12px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center"><div><p style="font-size:11px;color:#8B95A6;margin-bottom:2px">현재 필터 조건 매칭</p><p id="target-count" style="font-family:monospace;font-size:22px;font-weight:700;color:#F97316">-</p></div><button onclick="showTargetList()" style="padding:10px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer">연락처 포함 리스트 보기</button></div>
+  <div id="target-result-panel" style="display:none;margin-bottom:16px"></div>
+  <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="background:#161B27"><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568;text-transform:uppercase">컨택날짜</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">국가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">플랫폼</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">계정명</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">팔로워</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">카테고리</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">진행상태</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">협업단가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">이메일</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">연락처</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">담당자</th></tr></thead><tbody id="inf-table-body"><tr><td colspan="11" style="text-align:center;padding:20px;color:#4A5568;font-size:12px">로딩중...</td></tr></tbody></table></div><div style="padding:8px 16px;border-top:1px solid #1E2433;display:flex;justify-content:space-between"><p id="inf-filter-count" style="font-size:10px;color:#4A5568">-</p><button onclick="exportTargetCSV()" style="padding:4px 14px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer">CSV 내보내기</button></div></div>
+</div>
+
+<div id="page-ads"></div><div id="page-sns"></div><div id="page-management"></div><div id="page-cs"></div>
+</div></main>
+
+<aside class="chat-panel">
+<div id="chatHdr" style="padding:12px 16px;border-bottom:1px solid var(--border);border-left:3px solid #7C3AED;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+<div id="chatAgentName" style="font-size:13px;font-weight:700;color:var(--text-primary)">전체 총괄 에이전트</div>
+<div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:var(--status-on)"></span><span style="font-size:10px;color:var(--text-muted)">온라인</span></div></div>
+<div class="chat-messages" id="chatMessages"><div class="chat-msg agent">Jacob AI 수석 보좌입니다.<div class="chat-msg-time">System</div></div></div>
+<div class="chat-examples" id="chatExamples"></div>
+<div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="Jacob AI에게 질문하세요..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>
+</aside>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<script>
+var TITLES={overview:'전체 현황',alerts:'알림 센터',kpi:'총괄 KPI',brand:'브랜드',influencer:'맞춤 인플루언서',ads:'광고센터 운영',sns:'공식 SNS 운영',management:'경영지원',cs:'CS'};
+var SL={on:'ON TRACK',watch:'WATCH',risk:'AT RISK'};
+var m8=['9월','10월','11월','12월','1월','2월','3월','4월'];
+var m6=['11월','12월','1월','2월','3월','4월'];
+var renderedPages={};var currentAgentId='overview';
+var CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:11}}}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}};
+
+// ===== AGENTS =====
+var AGENTS={
+overview:{name:'전체 총괄 에이전트',color:'#7C3AED',greeting:'Jacob AI 수석 보좌입니다. 공팔리터 글로벌 전체 현황을 보고합니다.',ex:['오늘 이상 감지 항목 요약해줘','이번 달 목표 달성률 알려줘','가장 급한 처리 항목이 뭐야'],reply:function(t){if(/이상|알림/.test(t))return'이상 감지 항목\n\n- 계약: 6/38건 (16%) AT RISK\n- 오가닉 리드: 6/15건 AT RISK\n\n즉시 확인 필요합니다.';if(/달성률|목표/.test(t))return'이번 달 달성률\n\n- 매출: 1.22억/1.6억 (76%)\n- 계약: 6/38건 (16%)\n- 단가: 370만/420만 (88%)\n- 인플루언서: 140만/155만 (90%)';return'시스템 분석 중입니다.'}},
+kpi:{name:'총괄 KPI 에이전트',color:'#F97316',greeting:'공팔리터 총괄 KPI AI입니다.',ex:['계약 목표 달성률은?','단가 하락 원인 분석해줘','P1 목표 달성 가능?'],reply:function(t){if(/계약|달성/.test(t))return'계약 현황\n\n- 이번 달: 6건/목표 38건 (16%)\n- 평균단가: 370만 (목표 420만)\n- Growth 제안율: 35% (목표 70%)';if(/단가/.test(t))return'단가 하락 분석\n\n- 현재: 370만 (목표 420만, -12%)\n- 원인: Starter 비중 60%+\n\nGrowth 기본 제안 전환 필요';return'KPI 분석 중입니다.'}},
+brand:{name:'브랜드 AI 에이전트',color:'#F97316',greeting:'브랜드 AI 에이전트입니다. 파이프라인 현황을 보고합니다.',ex:['오늘 파이프라인 현황은?','계약 가능성 높은 브랜드는?','이번 달 매출 달성 가능해?'],reply:function(t){if(/파이프라인|현황/.test(t))return'파이프라인 현황\n\n- DB 인입: 3건\n- 1차 상담: 7건\n- 2차상담/미팅: 5건\n- 계약완료: 6건\n\n2차상담 5건 중 3건 계약 유력합니다.';if(/계약.*가능|유력/.test(t))return'계약 유력 브랜드\n\n- 뷰티M: 600만 (계약서 검토중)\n- 스킨N: 800만 (내부 결재중)\n- 브랜드K: 520만 (견적 검토중)\n\n합산 1,920만원 예상';return'브랜드 데이터 확인 중입니다.'}},
+influencer:{name:'인플루언서 AI 에이전트',color:'#F97316',greeting:'인플루언서 AI 에이전트입니다.',ex:['뷰티 카테고리 동남아 인플루언서 현황은?','팔로워 10만 이상 KR 인플루언서 몇 명?','오늘 신규 발굴 현황 알려줘'],reply:function(t){if(/발굴|스크리닝/.test(t))return'오늘 발굴 현황\n\n- 스크리닝: 28명 (목표 40명)\n- KR: 11명 / SEA: 9명\n- US: 6명 / JP: 2명';if(/동남아|SEA/.test(t))return'동남아 인플루언서 현황\n\n- 총 풀: 42만명 (30%)\n- 뷰티 카테고리: 12.6만명\n- 평균 참여율: 6.2%\n- 평균 단가: 95만원';return'인플루언서 데이터 확인 중입니다.'}},
+ads:{name:'광고센터 AI 에이전트',color:'#F97316',greeting:'광고센터 AI 에이전트입니다.',ex:['오늘 채널별 광고 성과는?','CPA가 가장 높은 채널은?','리드 획득 효율 개선 방법은?'],reply:function(t){if(/CPA|효율/.test(t))return'채널별 CPA\n\n- Meta: 50,000원 (목표 달성)\n- 네이버: 66,700원 (목표 초과)\n- 구글: 55,600원\n- 카카오: 50,000원 (목표 달성)\n\n네이버 소재 교체가 시급합니다.';if(/리드|성과/.test(t))return'이번 달 리드\n\n- 총: 43건\n- Meta: 18 / 네이버: 12\n- 구글: 9 / 카카오: 4\n- 평균 CPA: 55,800원';return'광고센터 데이터 확인 중입니다.'}},
+sns:{name:'SNS 운영 AI 에이전트',color:'#F97316',greeting:'SNS 운영 AI 에이전트입니다.',ex:['오늘 채널별 성과는?','팔로워 증가율 가장 높은 채널은?','오가닉 리드 전환 현황은?'],reply:function(t){if(/팔로워|성과/.test(t))return'오늘 SNS 현황\n\n- IG: +12명 (8,420명)\n- TikTok: +25명 (12,800명)\n- YouTube: +8명 (2,150명)\n- 뉴스레터: +15명 (20,000명)\n\nTikTok 성장세가 가장 좋습니다.';if(/리드/.test(t))return'오가닉 리드 현황\n\n- 오늘: 6건\n- 이번 달: 125건 (목표 330건)\n- 주요 유입: TikTok > IG > 뉴스레터';return'SNS 데이터 확인 중입니다.'}},
+management:{name:'경영지원 AI 에이전트',color:'#F97316',greeting:'경영지원 AI 에이전트입니다.',ex:['이번 달 자금 현황 요약해줘','진행중인 정부지원사업 알려줘','미수금 현황 확인해줘'],reply:function(t){if(/자금|현금/.test(t))return'자금 현황\n\n- 보유 현금: 3.2억원\n- 수금 예정: 4,800만원\n- 미수금: 1,200만원\n- 영업이익률: 30.3%';if(/지원|정부/.test(t))return'정부지원사업\n\n- 진행중: 2건\n- 선정완료: K-뷰티 수출 바우처\n- 신청예정: 마감 5/15\n\nAI 마케팅 지원 신청 시급';if(/미수금/.test(t))return'미수금 현황\n\n- 총: 1,200만원\n- 브랜드A: 250만 (입금 요청중)\n- 브랜드B: 420만 (30일 초과)\n- 브랜드C: 130만 (잔금 대기)\n\n브랜드B 즉시 연락 필요';return'경영지원 데이터 확인 중입니다.'}},
+cs:{name:'CS AI 에이전트',color:'#F97316',greeting:'CS AI 에이전트입니다.',ex:['오늘 미처리 문의 있어?','인플루언서 카카오톡 대기 건은?','브랜드 환불 문의 처리 방법은?'],reply:function(t){if(/대기|문의/.test(t))return'CS 현황\n\n[브랜드] 대기: 3건 / 처리중: 3건\n[인플루언서] 대기: 1건 / 처리중: 2건\n\n총 4건 즉시 배정 필요';if(/환불/.test(t))return'환불 처리 절차\n\n1. 계약서 환불 조항 확인\n2. 캠페인 진행율 확인\n3. 팀장 승인 후 처리\n4. 사유 기록 필수';return'CS 데이터 확인 중입니다.'}}
+};
+
+// ===== HELPERS =====
+function mkKpi(el,kpis,cols){
+var g=document.createElement('div');g.className='kpi-grid';if(cols)g.style.gridTemplateColumns='repeat('+cols+',1fr)';
+kpis.forEach(function(k){var c=document.createElement('div');c.className='kpi-card orange';
+var h=document.createElement('div');h.className='kpi-card-header';var l=document.createElement('div');l.className='kpi-label';l.textContent=k[0];var d=document.createElement('div');d.className='kpi-status '+k[3];h.appendChild(l);h.appendChild(d);c.appendChild(h);
+var v=document.createElement('div');v.className='kpi-value';v.textContent=k[1];var u=document.createElement('span');u.className='kpi-unit';u.textContent=k[2];v.appendChild(u);c.appendChild(v);
+if(k[4]){var s=document.createElement('div');s.className='kpi-detail';s.textContent=k[4];c.appendChild(s)}
+var b=document.createElement('div');b.className='mt-4';var bg=document.createElement('span');bg.className='badge badge-'+k[3];bg.textContent=SL[k[3]];b.appendChild(bg);c.appendChild(b);g.appendChild(c)});el.appendChild(g)}
+
+function mkPanels(el,status,tasks){
+var pr=document.createElement('div');pr.className='panels-row';
+var sp=document.createElement('div');sp.className='status-panel';var ph=document.createElement('div');ph.className='panel-hdr';var pt=document.createElement('div');pt.className='panel-title';pt.textContent='실시간 현황';ph.appendChild(pt);sp.appendChild(ph);
+status.forEach(function(s){var r=document.createElement('div');r.className='status-row';var l=document.createElement('span');l.className='status-row-label';l.textContent=s[0];var b=document.createElement('span');b.className='status-badge';b.textContent=s[1];r.appendChild(l);r.appendChild(b);sp.appendChild(r)});pr.appendChild(sp);
+var tp=document.createElement('div');tp.className='status-panel';var th=document.createElement('div');th.className='panel-hdr';var tt=document.createElement('div');tt.className='panel-title';tt.textContent='오늘 업무 현황';th.appendChild(tt);tp.appendChild(th);
+tasks.forEach(function(tk){var it=document.createElement('div');it.className='task-item'+(tk[1]?' done':'');var cb=document.createElement('input');cb.type='checkbox';cb.checked=tk[1];cb.addEventListener('change',function(){it.className='task-item'+(cb.checked?' done':'')});var lb=document.createElement('label');lb.textContent=tk[0];lb.addEventListener('click',function(){cb.checked=!cb.checked;it.className='task-item'+(cb.checked?' done':'')});it.appendChild(cb);it.appendChild(lb);tp.appendChild(it)});pr.appendChild(tp);el.appendChild(pr)}
+
+function mkChart(el,cfgs){var row=document.createElement('div');row.className='chart-row';cfgs.forEach(function(cfg){var box=document.createElement('div');box.className='chart-box';var h4=document.createElement('h4');h4.textContent=cfg.title;box.appendChild(h4);var w=document.createElement('div');w.style.cssText='position:relative;height:200px;width:100%';var cv=document.createElement('canvas');w.appendChild(cv);box.appendChild(w);row.appendChild(box);setTimeout(function(){cfg.fn(cv)},50)});el.appendChild(row)}
+
+function mkTable(el,headers,rows,statusCol){
+var wrap=document.createElement('div');wrap.style.cssText='overflow-x:auto;border:1px solid #1E2433;border-radius:8px;margin-top:16px';
+var tbl=document.createElement('table');tbl.className='data-table';var thead=document.createElement('thead');var tr=document.createElement('tr');headers.forEach(function(h){var th=document.createElement('th');th.textContent=h;tr.appendChild(th)});thead.appendChild(tr);tbl.appendChild(thead);
+var tbody=document.createElement('tbody');rows.forEach(function(r){var row=document.createElement('tr');r.forEach(function(v,i){var td=document.createElement('td');if(i===statusCol){var b=document.createElement('span');b.className='badge '+({'처리완료':'badge-on','활성':'badge-on','캠페인중':'badge-watch','처리중':'badge-watch','선정완료':'badge-on','진행중':'badge-watch','대기중':'badge-risk','대기':'badge-watch','신청예정':'badge-info','검토중':'badge-watch'}[v]||'');b.textContent=v;td.appendChild(b)}else{td.textContent=v}row.appendChild(td)});tbody.appendChild(row)});
+tbl.appendChild(tbody);wrap.appendChild(tbl);el.appendChild(wrap)}
+
+// ===== PAGES =====
+var PAGES={
+kpi:function(el){
+fetch('/api/kpi-summary').then(function(r){return r.json()}).then(function(data){
+var m=data.month||{},t=data.today||{},pm=data.prev_month||{},trend=data.monthly_trend||[];
+// Toggle tabs
+var toggle=document.createElement('div');toggle.className='tab-bar';
+var tDay=document.createElement('div');tDay.className='tab-btn active';tDay.textContent='일간';
+var tMon=document.createElement('div');tMon.className='tab-btn';tMon.textContent='월 누적';
+toggle.appendChild(tDay);toggle.appendChild(tMon);el.appendChild(toggle);
+var dayDiv=document.createElement('div');var monDiv=document.createElement('div');monDiv.style.display='none';
+tDay.addEventListener('click',function(){tDay.classList.add('active');tMon.classList.remove('active');dayDiv.style.display='';monDiv.style.display='none'});
+tMon.addEventListener('click',function(){tMon.classList.add('active');tDay.classList.remove('active');monDiv.style.display='';dayDiv.style.display='none'});
+// Day KPIs
+mkKpi(dayDiv,[
+['오늘 매출','480','만원','watch','누적 '+(m.revenue?(m.revenue/100000000).toFixed(2):1.22)+'억'],
+['오늘 인입 DB',String(t.inbound||3),'건','watch','누적 '+(m.total_db||43)+'건'],
+['오늘 유효 DB',String(t.valid||12),'건','watch','전환율 29.5%'],
+['광고 리드 CPA','55,800','원','watch','목표 50,000원'],
+['인플루언서 발굴','28','명','watch','이번 달 확정 N명'],
+['오늘 CS 접수','8','건','on','브랜드 5건 / 인플루언서 3건']
+],3);
+el.appendChild(dayDiv);
+// Month KPIs
+mkKpi(monDiv,[
+['매출',(m.revenue?(m.revenue/100000000).toFixed(2):1.22),'억원','watch','목표 1.6억'],
+['계약건수',String(m.contract||6),'건','risk','목표 38건'],
+['평균계약단가',((m.avg_price||3700000)/10000).toFixed(0),'만원','watch','목표 420만'],
+['총 광고비',((m.total_spend||24000000)/10000).toFixed(0),'만원','watch',''],
+['총 리드 DB',String(m.total_db||43),'건','on',''],
+['광고 ROAS',String(m.roas||9.41),'x','on',''],
+['인플루언서 풀','140','만명','watch','목표 155만'],
+['SNS 팔로워','24,430','명','watch',''],
+['정부지원 수혜','2','건','on','']
+],3);
+el.appendChild(monDiv);
+// 섹션별 요약 6박스
+var boxes=document.createElement('div');boxes.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px';
+var boxData=[
+{title:'브랜드 파이프라인',id:'pipeline-summary',page:'brand',content:'인입DB '+(m.total_db||43)+'건 -> 유효DB '+(m.valid||127)+'건 -> 미팅 '+(pm.meeting||28)+'건 -> 계약 '+(m.contract||6)+'건\n오늘 신규 인입: '+(t.inbound||3)+'건'},
+{title:'맞춤 인플루언서',id:'influencer-summary',page:'influencer',content:'총 풀: 140만명\n오늘 신규 확보: 28명\n이번 달 캠페인: 6건'},
+{title:'광고센터 현황',id:'ads-summary',page:'ads',content:'이번 달 ROAS: '+(m.roas||9.41)+'x\n총 DB: '+(m.total_db||43)+'건 / 광고비: '+((m.total_spend||24000000)/10000).toFixed(0)+'만원'},
+{title:'공식 SNS 현황',id:'sns-summary',page:'sns',content:'B2B 합산: 24,430명 (+680명/월)\nIG 8,420 / TT 12,800 / LI 3,210\n오늘 신규: 60명'},
+{title:'현금흐름 (이번 달)',id:'cashflow-summary',page:'management',content:'매출: 1.22억원\n지출: 8,500만원\n영업이익: 3,700만원 (30.3%)\n미수금: 1,200만원'},
+{title:'CS & 경영지원',id:'cs-summary',page:'cs',content:'브랜드 CS: 오늘 5건 / 대기 2건\n인플루언서 CS: 오늘 3건 / 대기 1건\n정부지원: 진행 2건 / 신청예정 1건'}
+];
+boxData.forEach(function(bd){
+var box=document.createElement('div');box.style.cssText='background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:16px';
+var ht=document.createElement('div');ht.style.cssText='font-size:13px;font-weight:600;color:#E8EBF2;margin-bottom:10px';ht.textContent=bd.title;box.appendChild(ht);
+var ct=document.createElement('div');ct.id=bd.id;ct.style.cssText='font-size:11px;color:#8B95A6;white-space:pre-line;line-height:1.7;min-height:60px';ct.textContent=bd.content;box.appendChild(ct);
+var srcTag=document.createElement('div');srcTag.style.cssText='font-size:9px;color:#4A5568;margin-top:6px';srcTag.textContent='데이터: '+(data.source==='live'?'실시간':'샘플');box.appendChild(srcTag);
+var btn=document.createElement('button');btn.className='btn btn-secondary btn-sm';btn.style.marginTop='8px';btn.textContent='상세 보기';btn.addEventListener('click',function(){showPage(bd.page)});box.appendChild(btn);
+boxes.appendChild(box);
+});
+el.appendChild(boxes);
+// 월별 매출 추이 그래프
+if(trend.length){
+var chartWrap=document.createElement('div');chartWrap.style.marginTop='20px';
+mkChart(chartWrap,[{title:'월별 매출 & 광고비 추이',fn:function(c){
+new Chart(c,{type:'line',data:{labels:trend.map(function(t){return t.month}),datasets:[
+{label:'매출(신규)',data:trend.map(function(t){return Math.round((t.revenue||0)/10000)}),borderColor:'#F97316',tension:.3,pointRadius:3,borderWidth:2,fill:false},
+{label:'광고비',data:trend.map(function(t){return Math.round((t.spend||0)/10000)}),borderColor:'#EF4444',borderDash:[5,3],tension:.3,pointRadius:2,borderWidth:1,fill:false}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6'}}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toFixed(0)+'만'}},grid:{color:'rgba(255,255,255,0.05)'}}}}})
+}}]);
+el.appendChild(chartWrap);
+}
+// API 상태 표시
+var apiNote=document.createElement('div');apiNote.style.cssText='display:flex;align-items:center;gap:8px;margin-top:16px;font-size:10px;color:#4A5568';
+var dot=document.createElement('span');dot.style.cssText='width:6px;height:6px;border-radius:50%;display:inline-block;background:'+(data.source==='live'?'#22C55E':'#4A5568');apiNote.appendChild(dot);
+apiNote.appendChild(document.createTextNode('데이터 소스: '+(data.source==='live'?'LIVE (Google Sheets)':'DUMMY (샘플 데이터)')+' | 업데이트: '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})));
+el.appendChild(apiNote);
+}).catch(function(){mkKpi(el,[['데이터 로딩 실패','','','risk','API 확인 필요']])})},
+
+brand:function(el){/* static HTML - loaded via loadBrandPipeline() */},
+_brand_old:function(el){
+fetch('/api/brand-pipeline').then(function(r){return r.json()}).then(function(d){
+var m=d.month||{},t=d.today||{};
+// Toggle tabs
+var toggle=document.createElement('div');toggle.className='tab-bar';
+var tDay=document.createElement('div');tDay.className='tab-btn active';tDay.textContent='일간';
+var tMon=document.createElement('div');tDay.className='tab-btn active';tMon=document.createElement('div');tMon.className='tab-btn';tMon.textContent='누적';
+toggle.appendChild(tDay);toggle.appendChild(tMon);el.appendChild(toggle);
+var dayGrid=document.createElement('div');dayGrid.className='kpi-grid';dayGrid.style.gridTemplateColumns='repeat(5,1fr)';
+var monGrid=document.createElement('div');monGrid.className='kpi-grid';monGrid.style.gridTemplateColumns='repeat(5,1fr)';monGrid.style.display='none';
+tDay.addEventListener('click',function(){tDay.classList.add('active');tMon.classList.remove('active');dayGrid.style.display='';monGrid.style.display='none'});
+tMon.addEventListener('click',function(){tMon.classList.add('active');tDay.classList.remove('active');monGrid.style.display='';dayGrid.style.display='none'});
+// Day KPIs
+[['인입 DB',t.inbound,'건'],['유효 DB',t.valid,'건'],['미팅',t.meeting,'건'],['계약서',t.contract,'건'],['재계약',t.renewal,'건']].forEach(function(k){
+var c=document.createElement('div');c.className='kpi-card orange';var h=document.createElement('div');h.className='kpi-card-header';var l=document.createElement('div');l.className='kpi-label';l.textContent=k[0];h.appendChild(l);c.appendChild(h);
+var v=document.createElement('div');v.className='kpi-value';v.textContent=k[1];var u=document.createElement('span');u.className='kpi-unit';u.textContent=k[2];v.appendChild(u);c.appendChild(v);dayGrid.appendChild(c)});el.appendChild(dayGrid);
+// Month KPIs
+var pm=d.prev_month||{};
+[['인입 DB',m.inbound,pm.inbound],['유효 DB',m.valid,pm.valid],['미팅',m.meeting,pm.meeting],['계약서',m.contract,pm.contract],['재계약',m.renewal,pm.renewal]].forEach(function(k){
+var c=document.createElement('div');c.className='kpi-card orange';var h=document.createElement('div');h.className='kpi-card-header';var l=document.createElement('div');l.className='kpi-label';l.textContent=k[0];h.appendChild(l);c.appendChild(h);
+var v=document.createElement('div');v.className='kpi-value';v.textContent=k[1];var u=document.createElement('span');u.className='kpi-unit';u.textContent='건';v.appendChild(u);c.appendChild(v);
+if(k[2]){var diff=k[2]>0?Math.round((k[1]-k[2])/k[2]*100):0;var dt=document.createElement('div');dt.className='kpi-detail';dt.textContent='전월: '+k[2]+'건 ('+(diff>=0?'+':'')+diff+'%)';dt.style.color=diff>=0?'#22C55E':'#EF4444';c.appendChild(dt)}
+monGrid.appendChild(c)});el.appendChild(monGrid);
+// Comparison table
+fetch('/api/brand-comparison').then(function(r2){return r2.json()}).then(function(comp){
+var card=document.createElement('div');card.className='card';card.style.marginTop='16px';
+var ct=document.createElement('div');ct.className='card-title';ct.textContent='기간별 비교';card.appendChild(ct);
+var tbl=document.createElement('table');tbl.className='data-table';
+var thead=document.createElement('thead');var thr=document.createElement('tr');['','오늘','이번 달','전월','전월比','작년동월','YoY'].forEach(function(h){var th=document.createElement('th');th.textContent=h;thr.appendChild(th)});thead.appendChild(thr);tbl.appendChild(thead);
+var tbody=document.createElement('tbody');
+(comp.comparison||[]).forEach(function(row){var tr=document.createElement('tr');
+[row.metric,row.today,row.month,row.prev_month,'',row.last_year,''].forEach(function(v,i){
+var td=document.createElement('td');
+if(i===4){var pct=row.mom_pct;td.textContent=(pct>=0?'+':'')+pct.toFixed(1)+'%';td.style.color=pct>=0?'#22C55E':'#EF4444';td.style.fontFamily='JetBrains Mono,monospace';td.style.fontWeight='600'}
+else if(i===6){var yoy=row.yoy_pct;td.textContent=(yoy>=0?'+':'')+yoy.toFixed(1)+'%';td.style.color=yoy>=0?'#22C55E':'#EF4444';td.style.fontFamily='JetBrains Mono,monospace';td.style.fontWeight='600'}
+else{td.textContent=v;if(i>0){td.style.fontFamily='JetBrains Mono,monospace';td.style.textAlign='right'}}
+tr.appendChild(td)});tbody.appendChild(tr)});
+tbl.appendChild(tbody);card.appendChild(tbl);el.appendChild(card)});
+// Channel breakdown chart
+if(d.channel_breakdown){
+mkChart(el,[{title:'유입채널별 DB 수',fn:function(c){var labels=Object.keys(d.channel_breakdown);var data=Object.values(d.channel_breakdown);new Chart(c,{type:'bar',data:{labels:labels,datasets:[{data:data,backgroundColor:['#1877F2','#34D399','#03C75A','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}},{title:'담당자별 성과',fn:function(c){var mgrs=d.manager_stats||[];new Chart(c,{type:'bar',data:{labels:mgrs.map(function(m){return m.name}),datasets:[{label:'인입DB',data:mgrs.map(function(m){return m.inbound}),backgroundColor:'rgba(249,115,22,0.4)'},{label:'유효DB',data:mgrs.map(function(m){return m.valid}),backgroundColor:'rgba(34,197,94,0.6)'}]},options:CD})}}])}
+// Pipeline
+var title2=document.createElement('div');title2.className='card-title';title2.textContent='브랜드 영업 파이프라인';title2.style.marginTop='20px';el.appendChild(title2);
+var srcNote=document.createElement('div');srcNote.style.cssText='font-size:10px;color:#4A5568;margin-bottom:8px';srcNote.textContent='데이터 소스: '+(d.source==='live'?'Google Sheets (실시간)':'샘플 데이터')+' | '+d.updated_at;el.appendChild(srcNote);
+var pipe=document.createElement('div');pipe.className='pipeline';pipe.style.gridTemplateColumns='repeat(5,1fr)';
+var stages=['인입DB','유효DB','미팅','계약서','재계약'];
+(d.pipeline||[]).forEach(function(col,si){
+var c2=document.createElement('div');c2.className='pipeline-col';
+var hdr=document.createElement('div');hdr.className='pipeline-hdr';var hn=document.createElement('span');hn.textContent=col.stage;var cnt2=document.createElement('span');cnt2.className='cnt';cnt2.textContent=col.count||col.brands.length;hdr.appendChild(hn);hdr.appendChild(cnt2);c2.appendChild(hdr);
+var body=document.createElement('div');body.className='pipeline-body';
+(col.brands||[]).forEach(function(brand){var card=document.createElement('div');card.className='pipe-card stage-'+si;var nm=document.createElement('div');nm.className='pipe-card-name';nm.textContent=brand.name;card.appendChild(nm);
+var info=document.createElement('div');info.className='pipe-card-info';info.style.whiteSpace='pre-line';info.textContent=(brand.channel||'')+' | '+(brand.manager||'')+'\n'+(brand.date||'');card.appendChild(info);body.appendChild(card)});
+c2.appendChild(body);pipe.appendChild(c2)});el.appendChild(pipe);
+mkPanels(el,[['오늘 인바운드',t.inbound+'건'],['오늘 유효DB',t.valid+'건'],['오늘 미팅',t.meeting+'건'],['이번 달 계약',m.contract+'건']],[['오전 KPI 확인 완료',true],['Growth 견적 발송',false],['인바운드 리드 응답',false],['비대면 미팅 준비',false]]);
+}).catch(function(){mkKpi(el,[['데이터 로딩 실패','','','risk','API 연결을 확인하세요']])})},
+
+influencer:function(el){/* static HTML - loaded via loadInfluencerData() */},
+_influencer_old:function(el){
+fetch('/api/influencer-db').then(function(r){return r.json()}).then(function(d){
+var total=d.total||0;var rows=d.rows||[];var bc=d.by_country||{};var bp=d.by_platform||{};
+// Source note
+var srcNote=document.createElement('div');srcNote.style.cssText='font-size:10px;color:#4A5568;margin-bottom:12px';srcNote.textContent='데이터: '+(d.source==='live'?'Google Sheets (실시간)':'샘플 데이터')+' | '+d.updated_at;el.appendChild(srcNote);
+// Country cards
+var countryFlags={'KR':'KR','US':'US','JP':'JP','CN':'CN','MY':'MY','SG':'SG','TH':'TH','ID':'ID','VN':'VN'};
+var cb=document.createElement('div');cb.className='country-bar';cb.style.gridTemplateColumns='repeat(auto-fit,minmax(100px,1fr))';
+Object.keys(bc).forEach(function(k){var card=document.createElement('div');card.className='country-card';var cnt=document.createElement('div');cnt.className='cnt';cnt.textContent=bc[k];card.appendChild(cnt);var pct=document.createElement('div');pct.className='pct';pct.textContent=k;card.appendChild(pct);cb.appendChild(card)});el.appendChild(cb);
+// Platform summary
+var platDiv=document.createElement('div');platDiv.style.cssText='display:flex;gap:16px;margin-bottom:12px;font-size:11px;color:#8B95A6';
+Object.keys(bp).forEach(function(p){var s=document.createElement('span');s.textContent=p+': ';var v=document.createElement('span');v.style.cssText='color:#E8EBF2;font-family:JetBrains Mono,monospace;font-weight:600';v.textContent=bp[p]+'명';s.appendChild(v);platDiv.appendChild(s)});el.appendChild(platDiv);
+// Filter bar
+var fb=document.createElement('div');fb.className='filter-bar';
+[['국가','전체,'+Object.keys(bc).join(',')],['플랫폼','전체,'+Object.keys(bp).join(',')],['카테고리','전체,'+(Object.keys(d.by_category||{}).join(','))],['진행상태','전체,단순리스트업,사례활용가능,제안발송,거절']].forEach(function(f){var sel=document.createElement('select');f[1].split(',').forEach(function(o){var opt=document.createElement('option');opt.textContent=o;sel.appendChild(opt)});fb.appendChild(sel)});
+var si=document.createElement('input');si.placeholder='검색...';si.style.flex='1';fb.appendChild(si);el.appendChild(fb);
+// Table
+var wrap=document.createElement('div');wrap.style.cssText='overflow-x:auto;border:1px solid #1E2433;border-radius:8px';
+var tbl=document.createElement('table');tbl.className='inf-table';
+var thead=document.createElement('thead');var thr=document.createElement('tr');
+['컨택일','국가','플랫폼','계정명','팔로워(K)','카테고리','진행상태','협업단가','담당자','캠페인','비고'].forEach(function(h){var th=document.createElement('th');th.textContent=h;thr.appendChild(th)});thead.appendChild(thr);tbl.appendChild(thead);
+var tbody=document.createElement('tbody');
+var statusMap={'단순리스트업':'badge-watch','사례활용가능':'badge-on','제안발송':'badge-info','거절':'badge-risk'};
+rows.forEach(function(row){
+var tr=document.createElement('tr');
+[row.contact_date,row.country,row.platform,row.account,row.followers_k,row.category,row.status,row.collab_price||(row.krw_price?row.krw_price+'만':''),row.manager,row.campaign,row.note].forEach(function(v,i){
+var td=document.createElement('td');
+if(i===3&&row.link){var a=document.createElement('a');a.href=row.link;a.target='_blank';a.textContent=v;a.style.cssText='color:#F97316;text-decoration:none';td.appendChild(a)}
+else if(i===4){td.className='mono';td.textContent=v+'K'}
+else if(i===6){var b=document.createElement('span');b.className='badge '+(statusMap[v]||'');b.style.fontSize='9px';b.textContent=v;td.appendChild(b)}
+else if(i===7){td.className='mono';td.textContent=v?v+'만원':''}
+else{td.textContent=v||''}
+tr.appendChild(td)});tbody.appendChild(tr)});
+tbl.appendChild(tbody);wrap.appendChild(tbl);el.appendChild(wrap);
+var foot=document.createElement('div');foot.style.cssText='font-size:11px;color:#4A5568;margin-top:8px;text-align:right';foot.textContent='총 '+rows.length+'명 표시';el.appendChild(foot);
+mkPanels(el,[['총 인플루언서 풀',total>10000?(total/10000).toFixed(0)+'만명':total+'명'],['국가 수',Object.keys(bc).length+'개국'],['플랫폼',Object.keys(bp).length+'개'],['데이터 소스',d.source==='live'?'실시간':'샘플']],[['일일 발굴 리포트 수신',true],['동남아 스크리닝 진행',false],['캠페인 성과 확인',false],['리뷰 미제출 리마인더',false]]);
+}).catch(function(){mkKpi(el,[['데이터 로딩 실패','','','risk','API 연결을 확인하세요']])})},
+
+ads:function(el){
+fetch('/api/ads-performance').then(function(r){return r.json()}).then(function(d){
+var mt=d.month||{},td2=d.today||{},pm=d.prev_month||{},ly=d.last_year_same||{};
+var srcNote=document.createElement('div');srcNote.style.cssText='font-size:10px;color:#4A5568;margin-bottom:12px';srcNote.textContent='데이터: '+(d.source==='live'?'Google Sheets':'샘플')+' | '+d.updated_at;el.appendChild(srcNote);
+// Toggle
+var toggle=document.createElement('div');toggle.className='tab-bar';
+var tDay=document.createElement('div');tDay.className='tab-btn active';tDay.textContent='일간';
+var tMon=document.createElement('div');tMon.className='tab-btn';tMon.textContent='누적';
+toggle.appendChild(tDay);toggle.appendChild(tMon);el.appendChild(toggle);
+var dayG=document.createElement('div');dayG.className='kpi-grid';
+var todaySpend=(td2.meta||{}).spend+(td2.google||{}).spend+(td2.naver||{}).spend+(td2.kakao||{}).spend;
+var todayDb=(td2.meta||{}).db+(td2.google||{}).db+(td2.naver||{}).db+(td2.kakao||{}).db;
+mkKpi(dayG,[['오늘 광고비',todaySpend,'만원','on',''],['오늘 DB',todayDb,'건','on',''],['오늘 CPA',todayDb>0?Math.round(todaySpend*10000/todayDb).toLocaleString():'0','원','watch',''],['이상 채널','0','개','on','']]);
+el.appendChild(dayG);
+var monG=document.createElement('div');monG.style.display='none';
+var totalSpend=(mt.meta||{}).spend+(mt.google||{}).spend+(mt.naver||{}).spend+(mt.kakao||{}).spend;
+var totalDb=(mt.meta||{}).db+(mt.google||{}).db+(mt.naver||{}).db+(mt.kakao||{}).db;
+var avgCpa=totalDb>0?Math.round(totalSpend*10000/totalDb):0;
+mkKpi(monG,[['이번 달 광고비',totalSpend,'만원','watch',''],['총 DB',totalDb,'건','on',''],['평균 CPA',avgCpa.toLocaleString(),'원','watch','목표 50,000원'],['목표 달성률',d.target_cpa?Math.round(d.target_cpa/avgCpa*100):'0','%','watch','']]);
+el.appendChild(monG);
+tDay.addEventListener('click',function(){tDay.classList.add('active');tMon.classList.remove('active');dayG.style.display='';monG.style.display='none'});
+tMon.addEventListener('click',function(){tMon.classList.add('active');tDay.classList.remove('active');monG.style.display='';dayG.style.display='none'});
+// Channel cards
+var channels=[{key:'meta',name:'Meta (FB/IG)',line:'#1877F2'},{key:'naver',name:'네이버',line:'#03C75A'},{key:'google',name:'구글',line:'#EA4335'},{key:'kakao',name:'카카오톡',line:'#FEE500'}];
+var cc=document.createElement('div');cc.className='ch-cards';
+channels.forEach(function(ch){
+var mdata=mt[ch.key]||{};var tdata=td2[ch.key]||{};
+var card=document.createElement('div');card.className='ch-card';card.style.borderTopColor=ch.line;
+var h4=document.createElement('h4');h4.textContent=ch.name;card.appendChild(h4);
+[['이번 달 지출',(mdata.spend||0)+'만원'],['DB / CPA',(mdata.db||0)+'건 / '+(mdata.cpa||0).toLocaleString()+'원'],['CTR / 노출',(mdata.ctr||0)+'% / '+(mdata.impressions||0).toLocaleString()+'회'],['오늘',(tdata.spend||0)+'만원 / '+(tdata.db||0)+'건']].forEach(function(r){var row=document.createElement('div');row.className='ch-row';var l=document.createElement('span');l.textContent=r[0];var v=document.createElement('span');v.className='v';v.textContent=r[1];row.appendChild(l);row.appendChild(v);card.appendChild(row)});
+var s2=mdata.cpa<=50000?'on':'watch';var bdg=document.createElement('div');bdg.style.marginTop='8px';var b=document.createElement('span');b.className='badge badge-'+s2;b.textContent=SL[s2];bdg.appendChild(b);card.appendChild(bdg);cc.appendChild(card)});el.appendChild(cc);
+// Comparison table
+var compCard=document.createElement('div');compCard.className='card';compCard.style.marginTop='16px';
+var compTitle=document.createElement('div');compTitle.className='card-title';compTitle.textContent='기간별 DB 확보 및 광고비 비교';compCard.appendChild(compTitle);
+var compTbl=document.createElement('table');compTbl.className='data-table';
+var compTh=document.createElement('thead');var compTr=document.createElement('tr');['','오늘','이번달','전월','전월比','작년동월','YoY'].forEach(function(h){var th=document.createElement('th');th.textContent=h;compTr.appendChild(th)});compTh.appendChild(compTr);compTbl.appendChild(compTh);
+var compTb=document.createElement('tbody');
+channels.forEach(function(ch){
+var mdata=mt[ch.key]||{};var tdata=td2[ch.key]||{};var pmdata=pm[ch.key]||{};var lydata=ly[ch.key]||{};
+[{label:ch.name+' DB',t:tdata.db||0,m:mdata.db||0,p:pmdata.db||0,l:lydata.db||0},{label:ch.name+' CPA',t:tdata.cpa||0,m:mdata.cpa||0,p:pmdata.cpa||0,l:lydata.cpa||0}].forEach(function(row){
+var tr=document.createElement('tr');
+var cells=[row.label,row.t,row.m,row.p,'',row.l,''];
+cells.forEach(function(v,i){var td=document.createElement('td');
+if(i===4){var pct=row.p>0?Math.round((row.m-row.p)/row.p*100):0;td.textContent=(pct>=0?'+':'')+pct+'%';td.style.color=pct>=0?'#22C55E':'#EF4444';td.style.fontFamily='JetBrains Mono,monospace'}
+else if(i===6){var yoy=row.l>0?Math.round((row.m-row.l)/row.l*100):0;td.textContent=(yoy>=0?'+':'')+yoy+'%';td.style.color=yoy>=0?'#22C55E':'#EF4444';td.style.fontFamily='JetBrains Mono,monospace'}
+else{td.textContent=typeof v==='number'?v.toLocaleString():v;if(i>0)td.style.fontFamily='JetBrains Mono,monospace'}
+tr.appendChild(td)});compTb.appendChild(tr)})});
+compTbl.appendChild(compTb);compCard.appendChild(compTbl);el.appendChild(compCard);
+// Charts
+var trend=d.daily_trend||[];var trendPrev=d.daily_trend_prev||[];var cumCpa=d.cumulative_cpa||[];var cumCpaPrev=d.cumulative_cpa_prev||[];
+var days=trend.map(function(_,i){return(i+1)+'일'});
+mkChart(el,[
+{title:'일별 DB 획득 (이번달 vs 전월)',fn:function(c){new Chart(c,{type:'line',data:{labels:days,datasets:[{label:'이번달',data:trend,borderColor:'#F97316',tension:.3,pointRadius:2,borderWidth:2,fill:false},{label:'전월',data:trendPrev,borderColor:'#8B95A6',borderDash:[5,3],tension:.3,pointRadius:2,borderWidth:1,fill:false}]},options:CD})}},
+{title:'채널별 CPA (원)',fn:function(c){new Chart(c,{type:'bar',data:{labels:channels.map(function(ch){return ch.name}),datasets:[{data:channels.map(function(ch){return(mt[ch.key]||{}).cpa||0}),backgroundColor:channels.map(function(ch){return ch.line})}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}}
+]);
+mkChart(el,[{title:'누적 CPA 추이 (이번달 vs 전월)',fn:function(c){new Chart(c,{type:'line',data:{labels:days,datasets:[{label:'이번달 CPA',data:cumCpa,borderColor:'#F97316',tension:.3,pointRadius:2,borderWidth:2,fill:false},{label:'전월 CPA',data:cumCpaPrev,borderColor:'#8B95A6',borderDash:[5,3],tension:.3,pointRadius:2,borderWidth:1,fill:false}]},options:CD})}}]);
+mkPanels(el,[['오늘 총 지출',todaySpend+'만원'],['오늘 DB',todayDb+'건'],['이상 소재','0건'],['활성 캠페인','8건']],[['오늘 광고 예산 확인',true],['네이버 CPA 개선 소재 교체',false],['구글 키워드 입찰가 조정',false],['Meta A/B 테스트 설정',false]]);
+}).catch(function(){mkKpi(el,[['데이터 로딩 실패','','','risk','API 연결을 확인하세요']])})},
+
+sns:function(el){
+// B2B / B2C tabs
+var tb=document.createElement('div');tb.className='tab-bar';
+var t1=document.createElement('div');t1.className='tab-btn active';t1.style.cssText='background:#F97316;color:#fff';t1.textContent='B2B 채널';
+var t2=document.createElement('div');t2.className='tab-btn';t2.textContent='B2C 채널';
+tb.appendChild(t1);tb.appendChild(t2);el.appendChild(tb);
+var c1=document.createElement('div');c1.className='tab-content active';
+var c2=document.createElement('div');c2.className='tab-content';
+t1.addEventListener('click',function(){t1.classList.add('active');t1.style.background='#F97316';t1.style.color='#fff';t2.classList.remove('active');t2.style.background='';t2.style.color='';c1.classList.add('active');c2.classList.remove('active')});
+t2.addEventListener('click',function(){t2.classList.add('active');t2.style.background='#F97316';t2.style.color='#fff';t1.classList.remove('active');t1.style.background='';t1.style.color='';c2.classList.add('active');c1.classList.remove('active')});
+// B2B content
+mkKpi(c1,[['전체 팔로워','24,430','명','watch',''],['이번 달 순증','+1,245','명','watch',''],['이번 달 콘텐츠','67','건','on',''],['평균 참여율','4.1','%','on','']]);
+var cc=document.createElement('div');cc.className='ch-cards';
+[{name:'Instagram',line:'#E1306C',rows:[['팔로워','8,420명 (+320)'],['게시물','28건'],['참여율','3.8%'],['도달수','45,000회'],['릴스 평균 조회','8,200회'],['오늘 신규','12명']],s:'watch'},{name:'TikTok',line:'#E8EBF2',rows:[['팔로워','12,800명 (+680)'],['영상','15건'],['참여율','5.2%'],['평균 조회','12,400회'],['오늘 신규','25명']],s:'on'},{name:'YouTube',line:'#FF0000',rows:[['구독자','2,150명 (+185)'],['영상','4건'],['평균 조회','3,200회'],['평균 시청','4분 30초'],['오늘 신규','8명']],s:'watch'},{name:'블로그/뉴스레터',line:'#03C75A',rows:[['구독자','20,000명 (+120)'],['발행','4건'],['오픈율','21%'],['클릭율','3.2%'],['오늘 신규','15명']],s:'watch'}].forEach(function(ch){
+var card=document.createElement('div');card.className='ch-card';card.style.borderTopColor=ch.line;
+var h4=document.createElement('h4');h4.textContent=ch.name;card.appendChild(h4);
+ch.rows.forEach(function(r){var row=document.createElement('div');row.className='ch-row';var l=document.createElement('span');l.textContent=r[0];var v=document.createElement('span');v.className='v';v.textContent=r[1];row.appendChild(l);row.appendChild(v);card.appendChild(row)});
+var bdg=document.createElement('div');bdg.style.marginTop='8px';var b=document.createElement('span');b.className='badge badge-'+ch.s;b.textContent=SL[ch.s];bdg.appendChild(b);card.appendChild(bdg);cc.appendChild(card)});c1.appendChild(cc);
+mkChart(c1,[{title:'채널별 월별 팔로워 순증',fn:function(c){new Chart(c,{type:'bar',data:{labels:m6,datasets:[{label:'IG',data:[280,310,290,320,340,320],backgroundColor:'#E1306C'},{label:'TT',data:[520,580,610,650,680,680],backgroundColor:'#4A4A4A'},{label:'YT',data:[120,140,155,170,185,185],backgroundColor:'#FF0000'}]},options:CD})}},{title:'채널별 참여율 추이 (%)',fn:function(c){new Chart(c,{type:'line',data:{labels:m6,datasets:[{label:'IG',data:[3.2,3.5,3.6,3.7,3.8,3.8],borderColor:'#E1306C',tension:.3,pointRadius:3,borderWidth:2,fill:false},{label:'TT',data:[4.8,5.0,5.1,5.2,5.2,5.2],borderColor:'#8B95A6',tension:.3,pointRadius:3,borderWidth:2,fill:false}]},options:CD})}}]);
+mkPanels(c1,[['오늘 신규 팔로워','60명'],['발행 예정 콘텐츠','2건'],['오가닉 리드 전환','6건'],['발행 대기','8건']],[['오전 SNS 모니터링 완료',true],['IG 릴스 2건 발행',false],['TikTok 영상 편집 완료',false],['뉴스레터 초안 검토',false]]);
+el.appendChild(c1);
+// B2C content
+var b2cBox=document.createElement('div');b2cBox.style.cssText='background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.3);border-radius:8px;padding:32px;text-align:center;margin-bottom:16px';
+var b2cTitle=document.createElement('div');b2cTitle.style.cssText='font-size:15px;font-weight:700;color:#0EA5E9;margin-bottom:8px';b2cTitle.textContent='B2C 채널 운영 준비중';b2cBox.appendChild(b2cTitle);
+var b2cDesc=document.createElement('div');b2cDesc.style.cssText='font-size:12px;color:#8B95A6;line-height:1.6';b2cDesc.textContent='현재 공팔리터글로벌은 B2B 채널에 집중하고 있습니다.\n밀리밀리 브랜드 채널 연동 시 자동 활성화됩니다.';b2cDesc.style.whiteSpace='pre-line';b2cBox.appendChild(b2cDesc);
+c2.appendChild(b2cBox);
+var b2cCards=document.createElement('div');b2cCards.className='ch-cards';
+['Instagram B2C','TikTok B2C','YouTube'].forEach(function(name){
+var card=document.createElement('div');card.className='ch-card';card.style.opacity='0.4';
+var h4=document.createElement('h4');h4.textContent=name;card.appendChild(h4);
+var msg=document.createElement('div');msg.style.cssText='font-size:11px;color:#4A5568;padding:12px 0';msg.textContent='준비중';card.appendChild(msg);
+b2cCards.appendChild(card)});
+c2.appendChild(b2cCards);
+el.appendChild(c2)},
+
+management:function(el){
+mkKpi(el,[['보유 현금','3.2','억원','on',''],['수금 예정','4,800','만원','on',''],['미수금','1,200','만원','watch',''],['정부지원 진행','2','건','on','']]);
+mkTable(el,['사업명','지원기관','신청금액','상태','마감일','담당자'],[['스타트업 글로벌 진출','KOTRA','5,000만원','진행중','2026-06-30','김대표'],['K-뷰티 수출 바우처','중기부','3,000만원','선정완료','2026-12-31','이팀장'],['디지털 전환 지원사업','중기부','2,000만원','신청예정','2026-05-15','박팀장'],['AI 활용 마케팅 지원','창진원','1,500만원','검토중','2026-04-30','김대표']],3);
+mkChart(el,[{title:'월별 수입 vs 지출 (백만원)',fn:function(c){new Chart(c,{type:'line',data:{labels:m8,datasets:[{label:'수입',data:[240,238,262,158,122,99,155,122],borderColor:'#22C55E',tension:.3,pointRadius:3,borderWidth:2,fill:false},{label:'지출',data:[180,175,190,130,100,85,120,95],borderColor:'#EF4444',tension:.3,pointRadius:3,borderWidth:2,fill:false}]},options:CD})}},{title:'미수금 현황 (만원)',fn:function(c){new Chart(c,{type:'bar',data:{labels:['브랜드A','브랜드B','브랜드C'],datasets:[{data:[250,420,130],backgroundColor:['#F59E0B','#EF4444','#F97316']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}}]);
+mkPanels(el,[['오늘 입금 예정','2건 (870만)'],['미수금 30일 초과','1건'],['정부지원 마감','1건 (4/30)'],['진행중 사업','2건']],[['세금계산서 발행 완료',true],['브랜드B 미수금 독촉',false],['AI 마케팅 지원 신청서',false],['4월 비용 정산 확인',false]])},
+
+cs:function(el){
+// Tabs
+var tb=document.createElement('div');tb.className='tab-bar';
+var t1=document.createElement('div');t1.className='tab-btn active';t1.textContent='브랜드 카카오톡 대응';
+var t2=document.createElement('div');t2.className='tab-btn';t2.textContent='인플루언서 카카오톡 대응';
+tb.appendChild(t1);tb.appendChild(t2);el.appendChild(tb);
+var c1=document.createElement('div');c1.className='tab-content active';
+var c2=document.createElement('div');c2.className='tab-content';
+t1.addEventListener('click',function(){t1.classList.add('active');t2.classList.remove('active');c1.classList.add('active');c2.classList.remove('active')});
+t2.addEventListener('click',function(){t2.classList.add('active');t1.classList.remove('active');c2.classList.add('active');c1.classList.remove('active')});
+// Brand tab
+mkKpi(c1,[['오늘 신규 문의','8','건','on',''],['처리중','3','건','watch',''],['처리 완료','5','건','on',''],['평균 응답','12','분','watch','목표 10분']]);
+mkTable(c1,['#','브랜드명','문의 내용','접수','상태','담당자','처리시간'],[['1','뷰티브랜드L','캠페인 견적 문의','09:23','처리완료','김팀장','15분'],['2','코스메틱M','계약 조건 확인','10:05','처리완료','이팀장','8분'],['3','스킨케어N','인플루언서 풀 확인','10:42','처리중','박팀장','-'],['4','뷰티O','Growth 패키지 문의','11:18','처리중','김팀장','-'],['5','코스P','계약서 재발송','11:55','대기중','미배정','-'],['6','브랜드Q','캠페인 결과 보고','12:30','대기중','미배정','-'],['7','스킨R','추가 서비스 문의','13:15','처리중','이팀장','-'],['8','뷰티S','환불 문의','14:02','대기중','미배정','-']],4);
+el.appendChild(c1);
+// Influencer tab
+mkKpi(c2,[['오늘 신규 문의','5','건','on',''],['처리중','2','건','watch',''],['처리 완료','3','건','on',''],['평균 응답','8','분','on','']]);
+mkTable(c2,['#','계정명','문의 내용','접수','상태','담당자','처리시간'],[['1','@beauty_kr1','캠페인 참여 조건','09:45','처리완료','김팀장','10분'],['2','@style_th','정산 문의','10:20','처리완료','이팀장','6분'],['3','@skincare_us','콘텐츠 가이드 요청','11:00','처리완료','박팀장','12분'],['4','@food_jp','캠페인 일정 확인','11:30','처리중','김팀장','-'],['5','@fashion_sg','단가 협의','13:00','처리중','이팀장','-'],['6','@beauty_kr2','리뷰 제출 방법','14:30','대기중','미배정','-']],4);
+el.appendChild(c2);
+mkChart(el,[{title:'문의 유형별 비중',fn:function(c){new Chart(c,{type:'doughnut',data:{labels:['견적문의','계약관련','캠페인','환불/불만','기타'],datasets:[{data:[35,25,20,10,10],backgroundColor:['#F97316','#22C55E','#0EA5E9','#EF4444','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6'}}}}})}}]);
+mkPanels(el,[['브랜드 대기','3건'],['인플루언서 대기','1건'],['평균 응답','12분'],['미배정','4건']],[['오전 문의 처리 완료',true],['대기 4건 담당자 배정',false],['환불 문의 처리 방침',false],['응답 시간 10분 이내 달성',false]])}
+};
+
+// ===== NAVIGATION =====
+function showPage(pid){
+document.querySelectorAll('[id^="page-"]').forEach(function(p){p.classList.remove('active')});
+var t=document.getElementById('page-'+pid);if(!t)return;t.classList.add('active');
+document.querySelectorAll('.nav-item[data-page]').forEach(function(n){n.classList.remove('active')});
+var nav=document.querySelector('[data-page="'+pid+'"]');if(nav)nav.classList.add('active');
+document.getElementById('pageTitle').textContent=TITLES[pid]||pid;
+switchAgent(pid);
+if(pid==='alerts')renderAlertPage();
+if(!renderedPages[pid]&&PAGES[pid]){PAGES[pid](t);renderedPages[pid]=true}
+if(window.Chart)Object.values(Chart.instances||{}).forEach(function(c){try{c.resize()}catch(e){}});
+document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('open')}
+
+function switchAgent(pid){
+var a=AGENTS[pid]||AGENTS.overview;currentAgentId=pid;
+document.getElementById('chatAgentName').textContent=a.name;
+document.getElementById('chatHdr').style.borderLeftColor=a.color;
+var ex=document.getElementById('chatExamples');while(ex.firstChild)ex.removeChild(ex.firstChild);
+a.ex.forEach(function(q){var btn=document.createElement('button');btn.className='chat-ex-btn';btn.textContent=q;btn.addEventListener('click',function(){document.getElementById('chatInput').value=q;sendChat()});ex.appendChild(btn)});
+var msgs=document.getElementById('chatMessages');while(msgs.firstChild)msgs.removeChild(msgs.firstChild);
+var g=document.createElement('div');g.className='chat-msg agent';g.textContent=a.greeting;var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent='System';g.appendChild(ts);msgs.appendChild(g)}
+
+document.getElementById('chatSendBtn').addEventListener('click',sendChat);
+document.getElementById('chatInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}});
+function sendChat(){var input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;var msgs=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=text;var t=document.createElement('div');t.className='chat-msg-time';t.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});u.appendChild(t);msgs.appendChild(u);input.value='';var agent=AGENTS[currentAgentId]||AGENTS.overview;setTimeout(function(){var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=agent.reply(text);var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight},600);msgs.scrollTop=msgs.scrollHeight}
+
+document.querySelectorAll('[data-page]').forEach(function(el){el.addEventListener('click',function(e){e.preventDefault();showPage(this.getAttribute('data-page'))})});
+document.getElementById('headerDate').textContent=new Date().toISOString().split('T')[0];
+document.getElementById('hamburgerBtn').addEventListener('click',function(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('open')});
+document.getElementById('sidebarBackdrop').addEventListener('click',function(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('open')});
+async function renderAlertPage(){var list=document.getElementById('alertList');while(list.firstChild)list.removeChild(list.firstChild);try{var a=await(await fetch('/api/alerts')).json();if(!a.length){var p=document.createElement('p');p.className='text-secondary';p.textContent='현재 이상 감지 없음';list.appendChild(p);return}a.forEach(function(x){var d=document.createElement('div');d.className='checklist-item';var b=document.createElement('span');b.className='badge badge-risk';b.textContent='ALERT';b.style.marginRight='8px';var t=document.createElement('span');t.textContent=x.system+': '+x.detail;d.appendChild(b);d.appendChild(t);list.appendChild(d)})}catch(e){}}
+(async function(){try{var a=await(await fetch('/api/alerts')).json();if(a.length){document.getElementById('alertText').textContent=a.length+'건 이상 감지';document.getElementById('alertBanner').classList.add('visible')}}catch(e){}})();
+(async function(){try{var s=await(await fetch('/api/status')).json();var o=s.filter(function(x){return x.status==='online'}).length;document.getElementById('apiDot').className='api-status-dot'+(o<s.length?' offline':'')}catch(e){document.getElementById('apiDot').className='api-status-dot offline'}})();
+showPage('overview');lucide.createIcons();
+
+// ===== API Auto-Load (작업 5) =====
+async function loadKpiData(){
+try{
+var kpiResp=await fetch('/api/kpi-summary');var kpiData=await kpiResp.json();
+var brandResp=await fetch('/api/brand-pipeline');var brandData=await brandResp.json();
+var infResp=await fetch('/api/influencer-db');var infData=await infResp.json();
+var adsResp=await fetch('/api/ads-performance');var adsData=await adsResp.json();
+// Update pipeline summary box
+var pe=document.getElementById('pipeline-summary');
+if(pe){var m2=brandData.month||{},t2=brandData.today||{};
+while(pe.firstChild)pe.removeChild(pe.firstChild);
+var flow=document.createElement('div');flow.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;font-size:11px';
+[['인입DB',m2.inbound||43,'#8B95A6'],['->','','#4A5568'],['유효DB',m2.valid||127,'#8B95A6'],['->','','#4A5568'],['미팅',m2.meeting||28,'#8B95A6'],['->','','#4A5568'],['계약',m2.contract||6,'#F97316']].forEach(function(f){
+var s=document.createElement('span');if(f[1]!==''){s.style.cssText='font-size:14px;font-weight:700;color:'+f[2];s.textContent=f[1]+'건'}else if(f[0]==='->'){s.textContent=f[0];s.style.color='#4A5568'}else{s.textContent=f[0];s.style.color=f[2]}flow.appendChild(s)});pe.appendChild(flow);
+var tn=document.createElement('div');tn.style.cssText='font-size:11px;color:#8B95A6';tn.textContent='오늘 신규 인입: '+(t2.inbound||3)+'건';pe.appendChild(tn);
+var src=document.createElement('div');src.style.cssText='font-size:9px;color:#4A5568;margin-top:4px';src.textContent='데이터: '+(brandData.source==='live'?'실시간':'샘플');pe.appendChild(src)}
+// Update influencer summary box
+var ie=document.getElementById('influencer-summary');
+if(ie){var stats=infData.stats||{};var bc=stats.by_country||{};
+while(ie.firstChild)ie.removeChild(ie.firstChild);
+var top3=Object.entries(bc).sort(function(a,b){return b[1]-a[1]}).slice(0,3);
+var flags={'KR':'KR','US':'US','JP':'JP','VN':'VN','TH':'TH','ID':'ID'};
+top3.forEach(function(e){var r=document.createElement('div');r.style.cssText='display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px';
+var l=document.createElement('span');l.textContent=(flags[e[0]]||e[0]);var v=document.createElement('span');v.style.cssText='font-family:monospace;color:#F97316';v.textContent=e[1].toLocaleString()+'명';r.appendChild(l);r.appendChild(v);ie.appendChild(r)});
+var tt=document.createElement('div');tt.style.cssText='font-size:10px;color:#4A5568;margin-top:6px';tt.textContent='총 '+(infData.total||0).toLocaleString()+'명 | '+(infData.source==='live'?'실시간':'샘플');ie.appendChild(tt)}
+// Update ads summary box
+var ae=document.getElementById('ads-summary');
+if(ae){var mt=adsData.month||{};var total=mt.total||{};var last=adsData.monthly_trend;last=last&&last.length?last[last.length-1]:{};
+while(ae.firstChild)ae.removeChild(ae.firstChild);
+var g=document.createElement('div');g.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px';
+[['ROAS',(last.roas||9.41).toFixed(2)+'x','#22C55E'],['총 DB',(total.db||43)+'건','#F97316']].forEach(function(d2){
+var bx=document.createElement('div');var lb=document.createElement('div');lb.style.cssText='font-size:10px;color:#8B95A6';lb.textContent=d2[0];bx.appendChild(lb);
+var vl=document.createElement('div');vl.style.cssText='font-size:16px;font-weight:700;font-family:monospace;color:'+d2[2];vl.textContent=d2[1];bx.appendChild(vl);g.appendChild(bx)});ae.appendChild(g);
+var cp=document.createElement('div');cp.style.cssText='font-size:11px;color:#8B95A6';cp.textContent='평균 CPA: '+(total.cpa||558000).toLocaleString()+'원';ae.appendChild(cp);
+var as=document.createElement('div');as.style.cssText='font-size:9px;color:#4A5568;margin-top:4px';as.textContent='데이터: '+(adsData.source==='live'?'실시간':'샘플');ae.appendChild(as)}
+console.log('KPI data loaded:',kpiData.source);
+}catch(e){console.error('KPI load error:',e)}}
+loadKpiData();setInterval(loadKpiData,1800000);
+
+// ===== Brand Pipeline Functions =====
+var _brandData=null,_brandTab='daily';
+function setBrandTab(tab){_brandTab=tab;
+document.getElementById('brand-tab-daily').style.background=tab==='daily'?'#F97316':'transparent';
+document.getElementById('brand-tab-daily').style.color=tab==='daily'?'#fff':'#64748B';
+document.getElementById('brand-tab-monthly').style.background=tab==='monthly'?'#F97316':'transparent';
+document.getElementById('brand-tab-monthly').style.color=tab==='monthly'?'#fff':'#64748B';
+if(_brandData)updateBrandKpiCards(_brandData)}
+
+function loadBrandPipeline(){
+fetch('/api/brand-pipeline').then(function(r){return r.json()}).then(function(data){
+_brandData=data;updateBrandKpiCards(data);updateBrandCompareTable(data);renderPipelineBoard(data);renderChannelChart(data);renderStaffTable(data);
+var s=document.getElementById('brand-data-source');if(s)s.textContent=data.source==='live'?'실시간':'샘플';
+var ps=document.getElementById('pipeline-source');if(ps){ps.textContent=data.source==='live'?'실시간':'샘플';ps.style.color=data.source==='live'?'#22C55E':'#4A5568'}
+}).catch(function(e){var b=document.getElementById('pipeline-board');if(b){while(b.firstChild)b.removeChild(b.firstChild);var d=document.createElement('div');d.style.cssText='padding:20px;text-align:center;color:#EF4444;font-size:12px';d.textContent='로드 실패: '+e.message;b.appendChild(d)}})}
+
+function updateBrandKpiCards(data){
+var d=_brandTab==='daily'?data.today:data.month;var prev=data.prev_month||{};
+[['kpi-inbound',d.inbound,prev.inbound],['kpi-valid',d.valid,prev.valid],['kpi-meeting',d.meeting,prev.meeting],['kpi-contract',d.contract,prev.contract],['kpi-renewal',d.renewal,prev.renewal]].forEach(function(p){
+var el=document.getElementById(p[0]);var sub=document.getElementById(p[0]+'-sub');
+if(el)el.textContent=(p[1]!==undefined?p[1]:'-')+'건';
+if(sub&&p[2]!==undefined&&p[1]!==undefined){var diff=p[1]-p[2];var pct=p[2]>0?((diff/p[2])*100).toFixed(1):0;var c=diff>=0?'#22C55E':'#EF4444';var a=diff>=0?'+':'';sub.textContent=a+pct+'% vs 전월';sub.style.color=c}})}
+
+function updateBrandCompareTable(data){
+var tbody=document.getElementById('brand-compare-table');if(!tbody)return;
+var rows=[{l:'인입 DB',t:data.today.inbound,m:data.month.inbound,p:data.prev_month.inbound,y:data.last_year.inbound},
+{l:'유효 DB',t:data.today.valid,m:data.month.valid,p:data.prev_month.valid,y:data.last_year.valid},
+{l:'미팅',t:data.today.meeting,m:data.month.meeting,p:data.prev_month.meeting,y:data.last_year.meeting},
+{l:'계약서',t:data.today.contract,m:data.month.contract,p:data.prev_month.contract,y:data.last_year.contract},
+{l:'재계약',t:data.today.renewal,m:data.month.renewal,p:data.prev_month.renewal,y:data.last_year.renewal}];
+while(tbody.firstChild)tbody.removeChild(tbody.firstChild);
+rows.forEach(function(r){var tr=document.createElement('tr');tr.style.borderBottom='1px solid #1E2433';
+var momPct=r.p>0?((r.m-r.p)/r.p*100).toFixed(1):'-';var yoyPct=r.y>0?((r.m-r.y)/r.y*100).toFixed(1):'-';
+[{v:r.l,a:'left',c:'#E8EBF2',w:500},{v:r.t,a:'right',c:'#F97316',w:400},{v:r.m,a:'right',c:'#E8EBF2',w:400},{v:r.p,a:'right',c:'#8B95A6',w:400},{v:momPct,a:'right',c:parseFloat(momPct)>=0?'#22C55E':'#EF4444',w:600,pct:true},{v:r.y,a:'right',c:'#8B95A6',w:400},{v:yoyPct,a:'right',c:parseFloat(yoyPct)>=0?'#22C55E':'#EF4444',w:600,pct:true}].forEach(function(cell){
+var td=document.createElement('td');td.style.cssText='padding:10px 16px;font-size:12px;text-align:'+cell.a+';color:'+cell.c+';font-weight:'+cell.w;
+if(cell.pct&&!isNaN(parseFloat(cell.v)))td.textContent=(parseFloat(cell.v)>=0?'+':'')+cell.v+'%';else td.textContent=cell.v!==undefined?cell.v:'-';
+if(cell.a==='right')td.style.fontFamily='monospace';tr.appendChild(td)});tbody.appendChild(tr)})}
+
+function renderPipelineBoard(data){
+var board=document.getElementById('pipeline-board');if(!board)return;while(board.firstChild)board.removeChild(board.firstChild);
+var stages=['인입DB','유효DB','미팅','계약서','재계약'];var colors={'인입DB':'#4A5568','유효DB':'#F97316','미팅':'#0EA5E9','계약서':'#22C55E','재계약':'#7C3AED'};
+var pipeline=data.pipeline||{};
+var container=document.createElement('div');container.style.cssText='display:flex;gap:16px;min-width:900px';
+stages.forEach(function(stage,si){
+var cards=pipeline[stage]||[];var color=colors[stage];
+var col=document.createElement('div');col.style.cssText='flex:1;min-width:170px';
+var hdr=document.createElement('div');hdr.style.cssText='background:'+color+'18;border-top:3px solid '+color+';border-radius:8px 8px 0 0;padding:10px 14px;display:flex;justify-content:space-between;align-items:center';
+var hn=document.createElement('span');hn.style.cssText='font-size:12px;font-weight:700;color:'+color;hn.textContent=stage;hdr.appendChild(hn);
+var cnt=document.createElement('span');cnt.style.cssText='background:'+color+'30;color:'+color+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px';cnt.textContent=cards.length+'건';hdr.appendChild(cnt);col.appendChild(hdr);
+var body=document.createElement('div');body.style.cssText='background:#0F1520;border:1px solid #1E2433;border-top:none;border-radius:0 0 8px 8px;padding:8px;min-height:200px;display:flex;flex-direction:column;gap:8px';
+if(!cards.length){var empty=document.createElement('div');empty.style.cssText='text-align:center;color:#4A5568;font-size:11px;padding:20px 0';empty.textContent='데이터 없음';body.appendChild(empty)}
+else{cards.forEach(function(c){
+var card=document.createElement('div');card.style.cssText='background:#161B27;border:1px solid #1E2433;border-left:3px solid '+color+';border-radius:6px;padding:10px 12px';
+var nm=document.createElement('p');nm.style.cssText='font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:4px';nm.textContent=c.name||'브랜드';card.appendChild(nm);
+if(c.channel){var ch=document.createElement('p');ch.style.cssText='font-size:10px;color:#8B95A6';ch.textContent=c.channel;card.appendChild(ch)}
+if(c.staff){var st=document.createElement('p');st.style.cssText='font-size:10px;color:#8B95A6';st.textContent=c.staff;card.appendChild(st)}
+if(c.amount){var am=document.createElement('p');am.style.cssText='font-size:10px;color:#F97316;font-weight:600';am.textContent=c.amount;card.appendChild(am)}
+if(c.date){var dt=document.createElement('p');dt.style.cssText='font-size:10px;color:#4A5568';dt.textContent=c.date;card.appendChild(dt)}
+body.appendChild(card)})}
+col.appendChild(body);container.appendChild(col)});board.appendChild(container)}
+
+function renderChannelChart(data){var ctx=document.getElementById('chart-channel-db');if(!ctx)return;
+var channels=data.channel_breakdown||[];if(ctx._chart)ctx._chart.destroy();
+ctx._chart=new Chart(ctx,{type:'bar',data:{labels:channels.map(function(c){return c.channel}),datasets:[{label:'인입DB',data:channels.map(function(c){return c.inbound||0}),backgroundColor:'rgba(249,115,22,0.7)'},{label:'유효DB',data:channels.map(function(c){return c.valid||0}),backgroundColor:'rgba(34,197,94,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}
+
+function renderStaffTable(data){var tbody=document.getElementById('staff-tbody');if(!tbody)return;var staff=data.staff_breakdown||[];
+while(tbody.firstChild)tbody.removeChild(tbody.firstChild);
+if(!staff.length){var tr=document.createElement('tr');var td=document.createElement('td');td.colSpan=4;td.style.cssText='text-align:center;padding:12px;color:#4A5568;font-size:11px';td.textContent='데이터 없음';tr.appendChild(td);tbody.appendChild(tr);return}
+staff.forEach(function(s){var tr=document.createElement('tr');tr.style.borderBottom='1px solid #1E2433';
+[[s.name,'left','#E8EBF2'],[s.inbound,'right','#F97316'],[s.valid,'right','#22C55E'],[s.rate+'%','right','#0EA5E9']].forEach(function(c){
+var td=document.createElement('td');td.style.cssText='padding:8px 0;font-size:11px;color:'+c[2]+';text-align:'+c[1];if(c[1]==='right')td.style.fontFamily='monospace';td.textContent=c[0];tr.appendChild(td)});tbody.appendChild(tr)})}
+
+// ===== Influencer Functions =====
+var _infData=[],_infFiltered=[];
+function loadInfluencerData(){
+fetch('/api/influencer-db').then(function(r){return r.json()}).then(function(data){
+_infData=data.items||[];_infFiltered=[].concat(_infData);
+renderCountryCards(data.stats||{});renderInfluencerTable(_infData);
+var s=document.getElementById('inf-data-source');if(s)s.textContent=data.source==='live'?'실시간':'샘플';
+var tc=document.getElementById('target-count');if(tc)tc.textContent=_infData.length+'명';
+}).catch(function(e){console.error('Influencer load:',e)})}
+
+function renderCountryCards(stats){var el=document.getElementById('country-cards');if(!el)return;
+var bc=stats.by_country||{};var total=0;for(var k in bc)total+=bc[k];if(!total)total=1;
+while(el.firstChild)el.removeChild(el.firstChild);
+var flags={KR:'KR',US:'US',JP:'JP',CN:'CN',MY:'MY',SG:'SG',TH:'TH',ID:'ID',VT:'VN',VN:'VN'};
+var entries=[];for(var k2 in bc)entries.push([k2,bc[k2]]);entries.sort(function(a,b){return b[1]-a[1]});
+entries.forEach(function(e){var code=e[0],count=e[1];var pct=(count/total*100).toFixed(1);
+var card=document.createElement('div');card.style.cssText='background:#161B27;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:14px;min-width:110px;flex-shrink:0;cursor:pointer';
+card.addEventListener('click',function(){var sel=document.getElementById('filter-country');if(sel){sel.value=code;applyInfluencerFilter()}});
+var nm=document.createElement('p');nm.style.cssText='font-size:11px;color:#8B95A6;margin-bottom:4px';nm.textContent=flags[code]||code;card.appendChild(nm);
+var ct=document.createElement('p');ct.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:#E8EBF2';ct.textContent=count;card.appendChild(ct);
+var pc=document.createElement('p');pc.style.cssText='font-size:10px;color:#F97316';pc.textContent=pct+'%';card.appendChild(pc);
+el.appendChild(card)})}
+
+function renderInfluencerTable(data){var tbody=document.getElementById('inf-table-body');if(!tbody)return;
+while(tbody.firstChild)tbody.removeChild(tbody.firstChild);
+if(!data.length){var tr=document.createElement('tr');var td=document.createElement('td');td.colSpan=11;td.style.cssText='text-align:center;padding:20px;color:#4A5568;font-size:12px';td.textContent='데이터 없음';tr.appendChild(td);tbody.appendChild(tr);return}
+var statusColors={'단순리스트업':'#4A5568','사례활용가능':'#22C55E','제안발송':'#0EA5E9','거절':'#EF4444','워킹중':'#F97316'};
+data.slice(0,100).forEach(function(item,i){var tr=document.createElement('tr');tr.style.cssText='border-bottom:1px solid #1E2433;background:'+(i%2===0?'#0F1520':'#161B27');
+var vals=[item.date||'-',item.country||'-',item.platform||'-',null,item.followers||'-',item.category||'-',null,item.price_collab?item.price_collab+'만':'',item.email||'-',item.contact||'-',item.staff||'-'];
+vals.forEach(function(v,ci){var td=document.createElement('td');td.style.cssText='padding:9px 8px;font-size:11px';
+if(ci===3){if(item.url){var a=document.createElement('a');a.href=item.url;a.target='_blank';a.style.cssText='color:#0EA5E9;text-decoration:none';a.textContent=item.account||'-';td.appendChild(a)}else{td.textContent=item.account||'-'}}
+else if(ci===4){td.style.fontFamily='monospace';td.style.textAlign='right';td.style.color='#F97316';td.textContent=v}
+else if(ci===6){var sc=statusColors[item.status]||'#4A5568';var b=document.createElement('span');b.style.cssText='background:'+sc+'20;color:'+sc+';padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600';b.textContent=item.status||'-';td.appendChild(b)}
+else if(ci===7){td.style.fontFamily='monospace';td.style.textAlign='right';td.textContent=v}
+else{td.style.color='#8B95A6';td.textContent=v}
+tr.appendChild(td)});tbody.appendChild(tr)});
+var fc=document.getElementById('inf-filter-count');if(fc)fc.textContent='총 '+data.length+'명 표시 (전체 '+_infData.length+'명)'}
+
+function applyInfluencerFilter(){
+var country=document.getElementById('filter-country').value;
+var platform=document.getElementById('filter-platform').value;
+var category=document.getElementById('filter-category').value;
+var status=document.getElementById('filter-status').value;
+var search=(document.getElementById('filter-search').value||'').toLowerCase();
+_infFiltered=_infData.filter(function(item){
+if(country&&item.country!==country)return false;
+if(platform&&(!item.platform||item.platform.toLowerCase().indexOf(platform.toLowerCase())===-1))return false;
+if(category&&item.category!==category)return false;
+if(status&&(!item.status||item.status.indexOf(status)===-1))return false;
+if(search&&(!item.account||item.account.toLowerCase().indexOf(search)===-1))return false;
+return true});
+renderInfluencerTable(_infFiltered);
+var tc=document.getElementById('target-count');if(tc)tc.textContent=_infFiltered.length+'명'}
+
+function toggleInfDetail(){var p=document.getElementById('inf-detail-panel');var b=document.getElementById('inf-detail-btn-text');if(!p)return;
+var h=p.style.display==='none';p.style.display=h?'block':'none';if(b)b.textContent=h?'추이 그래프 닫기':'추이 그래프 자세히 보기';if(h)initInfCharts()}
+
+function initInfCharts(){
+var ctx1=document.getElementById('chart-inf-1m');
+if(ctx1&&!ctx1._chart){ctx1._chart=new Chart(ctx1,{type:'line',data:{labels:['3/10주','3/17주','3/24주','3/31주'],datasets:[{label:'KR',data:[12,15,18,20],borderColor:'#F97316',fill:false,tension:0.3},{label:'VN',data:[8,10,12,15],borderColor:'#0EA5E9',fill:false,tension:0.3},{label:'US',data:[5,7,9,11],borderColor:'#22C55E',fill:false,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}
+var ctx3=document.getElementById('chart-inf-3m');
+if(ctx3&&!ctx3._chart){ctx3._chart=new Chart(ctx3,{type:'bar',data:{labels:['2월','3월','4월'],datasets:[{label:'KR',data:[45,65,28],backgroundColor:'rgba(249,115,22,0.7)'},{label:'VN',data:[38,45,25],backgroundColor:'rgba(14,165,233,0.7)'},{label:'US',data:[22,32,14],backgroundColor:'rgba(34,197,94,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{stacked:true,ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{stacked:true,ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}
+}
+
+function showTargetList(){var data=_infFiltered.length?_infFiltered:_infData;var panel=document.getElementById('target-result-panel');if(!panel)return;
+if(panel.style.display!=='none'){panel.style.display='none';return}panel.style.display='block';
+while(panel.firstChild)panel.removeChild(panel.firstChild);
+var box=document.createElement('div');box.style.cssText='background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:20px';
+var hd=document.createElement('div');hd.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px';
+var ht=document.createElement('p');ht.style.cssText='font-size:13px;font-weight:700;color:#E8EBF2';ht.textContent='타겟 결과: '+data.length+'명';hd.appendChild(ht);
+var btnWrap=document.createElement('div');btnWrap.style.display='flex';btnWrap.style.gap='8px';
+var csvBtn=document.createElement('button');csvBtn.style.cssText='padding:6px 14px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer';csvBtn.textContent='CSV 다운로드';csvBtn.addEventListener('click',exportTargetCSV);btnWrap.appendChild(csvBtn);
+var closeBtn=document.createElement('button');closeBtn.style.cssText='padding:6px 14px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#8B95A6;font-size:11px;cursor:pointer';closeBtn.textContent='닫기';closeBtn.addEventListener('click',function(){panel.style.display='none'});btnWrap.appendChild(closeBtn);
+hd.appendChild(btnWrap);box.appendChild(hd);
+var info=document.createElement('p');info.style.cssText='font-size:10px;color:#4A5568;margin-bottom:8px';info.textContent=data.length>50?'50명 미리보기 (전체 '+data.length+'명은 CSV)':'';box.appendChild(info);
+var tbl=document.createElement('table');tbl.style.cssText='width:100%;border-collapse:collapse';
+var thead=document.createElement('thead');var thr=document.createElement('tr');thr.style.background='#0F1520';
+['계정명','국가','플랫폼','팔로워','이메일','연락처','상태'].forEach(function(h){var th=document.createElement('th');th.style.cssText='padding:8px;text-align:left;font-size:9px;color:#4A5568';th.textContent=h;thr.appendChild(th)});thead.appendChild(thr);tbl.appendChild(thead);
+var tbody=document.createElement('tbody');
+data.slice(0,50).forEach(function(item,i){var tr=document.createElement('tr');tr.style.cssText='border-bottom:1px solid #1E2433;background:'+(i%2===0?'#161B27':'#0F1520');
+[item.account||'-',item.country||'-',item.platform||'-',item.followers||'-',item.email||'-',item.contact||'-',item.status||'-'].forEach(function(v){var td=document.createElement('td');td.style.cssText='padding:8px;font-size:11px;color:#8B95A6';td.textContent=v;tr.appendChild(td)});tbody.appendChild(tr)});
+tbl.appendChild(tbody);box.appendChild(tbl);panel.appendChild(box)}
+
+function exportTargetCSV(){var data=_infFiltered.length?_infFiltered:_infData;
+var headers=['계정명','국가','플랫폼','팔로워','카테고리','이메일','연락처','진행상태','협업단가','담당자'];
+var rows=data.map(function(item){return[item.account,item.country,item.platform,item.followers,item.category,item.email,item.contact,item.status,item.price_collab,item.staff].map(function(v){return'"'+(v||'')+'"'}).join(',')});
+var csv=[headers.join(',')].concat(rows).join('\n');
+var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);
+var a=document.createElement('a');a.href=url;a.download='인플루언서_'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(url)}
+
+function setInfTab(tab){
+document.getElementById('inf-tab-daily').style.background=tab==='daily'?'#F97316':'transparent';
+document.getElementById('inf-tab-daily').style.color=tab==='daily'?'#fff':'#64748B';
+document.getElementById('inf-tab-monthly').style.background=tab==='monthly'?'#F97316':'transparent';
+document.getElementById('inf-tab-monthly').style.color=tab==='monthly'?'#fff':'#64748B'}
+
+function toggleTask(el){var span=el.parentElement.querySelector('span');
+if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A5568'}
+else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
+
+// ===== showPage hook =====
+var _origShowPage=showPage;
+showPage=function(pageId){_origShowPage(pageId);
+if(pageId==='brand')loadBrandPipeline();
+if(pageId==='influencer')loadInfluencerData()};
+</script>
+</body>
+</html>

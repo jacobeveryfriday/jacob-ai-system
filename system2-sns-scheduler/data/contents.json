@@ -1,0 +1,7 @@
+[
+  {"id":"sns001","title":"밀리밀리 500달톤 세럼 런칭 릴스","caption":"500달톤이 피부에 닿는 순간 ✨ 저분자 히알루론산의 차이를 느껴보세요 #밀리밀리 #500달톤","platform":"Instagram","scheduled_date":"2026-04-07","scheduled_time":"12:00","status":"pending","performance":{},"created_at":"2026-04-05T10:00:00"},
+  {"id":"sns002","title":"08Liter Growth 패키지 성공사례","caption":"월매출 4200만원에서 1억 돌파! KOL 캠페인의 힘 💪 자세한 내용은 프로필 링크에서","platform":"LinkedIn","scheduled_date":"2026-04-08","scheduled_time":"09:00","status":"pending","performance":{},"created_at":"2026-04-05T10:30:00"},
+  {"id":"sns003","title":"K-뷰티 트렌드 숏폼","caption":"2026 K-뷰티 트렌드 TOP 5 🔥 #KBeauty #skincare #밀리밀리","platform":"TikTok","scheduled_date":"2026-04-06","scheduled_time":"18:00","status":"published","published_at":"2026-04-06T18:00:00","performance":{"reach":45000,"engagement":2800,"clicks":340},"created_at":"2026-04-04T14:00:00"},
+  {"id":"sns004","title":"인플루언서 마케팅 팁 카드뉴스","caption":"인플루언서 마케팅 ROI 높이는 3가지 방법 📊","platform":"Instagram","scheduled_date":"2026-04-09","scheduled_time":"15:00","status":"pending","performance":{},"created_at":"2026-04-05T11:00:00"},
+  {"id":"sns005","title":"밀리밀리 사용 후기 모음","caption":"실제 고객님들의 생생한 후기 💬 #밀리밀리 #리얼후기","platform":"Facebook","scheduled_date":"2026-04-05","scheduled_time":"11:00","status":"published","published_at":"2026-04-05T11:00:00","performance":{"reach":12000,"engagement":890,"clicks":120},"created_at":"2026-04-03T09:00:00"}
+]

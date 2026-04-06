@@ -1,0 +1,201 @@
+[
+  {
+    "id": "ad001",
+    "campaign_name": "500달톤 세럼 런칭",
+    "creative_name": "세럼A-before_after",
+    "platform": "Meta",
+    "spend": 850000,
+    "impressions": 320000,
+    "clicks": 5120,
+    "conversions": 48,
+    "revenue": 3200000,
+    "ctr": 1.6,
+    "cpa": 17708,
+    "roas": 3.76,
+    "date": "2026-04-01",
+    "alerts": []
+  },
+  {
+    "id": "ad002",
+    "campaign_name": "500달톤 세럼 런칭",
+    "creative_name": "세럼B-testimonial",
+    "platform": "Meta",
+    "spend": 720000,
+    "impressions": 280000,
+    "clicks": 3920,
+    "conversions": 35,
+    "revenue": 2100000,
+    "ctr": 1.4,
+    "cpa": 20571,
+    "roas": 2.92,
+    "date": "2026-04-01",
+    "alerts": [
+      {
+        "level": "critical",
+        "metric": "ROAS",
+        "value": 2.92,
+        "threshold": 3.0
+      },
+      {
+        "level": "warning",
+        "metric": "CPA",
+        "value": 20571,
+        "threshold": 20000
+      }
+    ]
+  },
+  {
+    "id": "ad003",
+    "campaign_name": "콜라겐 크림 프로모션",
+    "creative_name": "크림A-moisturize",
+    "platform": "Meta",
+    "spend": 500000,
+    "impressions": 200000,
+    "clicks": 3400,
+    "conversions": 30,
+    "revenue": 2250000,
+    "ctr": 1.7,
+    "cpa": 16667,
+    "roas": 4.5,
+    "date": "2026-04-02",
+    "alerts": []
+  },
+  {
+    "id": "ad004",
+    "campaign_name": "500달톤 세럼 런칭",
+    "creative_name": "세럼C-science",
+    "platform": "TikTok",
+    "spend": 600000,
+    "impressions": 450000,
+    "clicks": 9000,
+    "conversions": 42,
+    "revenue": 2520000,
+    "ctr": 2.0,
+    "cpa": 14286,
+    "roas": 4.2,
+    "date": "2026-04-01",
+    "alerts": []
+  },
+  {
+    "id": "ad005",
+    "campaign_name": "500달톤 세럼 런칭",
+    "creative_name": "세럼D-unboxing",
+    "platform": "TikTok",
+    "spend": 550000,
+    "impressions": 380000,
+    "clicks": 6080,
+    "conversions": 28,
+    "revenue": 1540000,
+    "ctr": 1.6,
+    "cpa": 19643,
+    "roas": 2.8,
+    "date": "2026-04-02",
+    "alerts": [
+      {
+        "level": "critical",
+        "metric": "ROAS",
+        "value": 2.8,
+        "threshold": 3.0
+      }
+    ]
+  },
+  {
+    "id": "ad006",
+    "campaign_name": "비타민C 앰플",
+    "creative_name": "앰플A-glow",
+    "platform": "Meta",
+    "spend": 400000,
+    "impressions": 160000,
+    "clicks": 2240,
+    "conversions": 22,
+    "revenue": 1540000,
+    "ctr": 1.4,
+    "cpa": 18182,
+    "roas": 3.85,
+    "date": "2026-04-03",
+    "alerts": []
+  },
+  {
+    "id": "ad007",
+    "campaign_name": "비타민C 앰플",
+    "creative_name": "앰플B-routine",
+    "platform": "TikTok",
+    "spend": 350000,
+    "impressions": 260000,
+    "clicks": 4940,
+    "conversions": 25,
+    "revenue": 1375000,
+    "ctr": 1.9,
+    "cpa": 14000,
+    "roas": 3.93,
+    "date": "2026-04-03",
+    "alerts": []
+  },
+  {
+    "id": "ad008",
+    "campaign_name": "콜라겐 크림 프로모션",
+    "creative_name": "크림B-aging",
+    "platform": "Meta",
+    "spend": 480000,
+    "impressions": 190000,
+    "clicks": 1520,
+    "conversions": 18,
+    "revenue": 1260000,
+    "ctr": 0.8,
+    "cpa": 26667,
+    "roas": 2.63,
+    "date": "2026-04-04",
+    "alerts": [
+      {
+        "level": "critical",
+        "metric": "ROAS",
+        "value": 2.63,
+        "threshold": 3.0
+      },
+      {
+        "level": "critical",
+        "metric": "CPA",
+        "value": 26667,
+        "threshold": 25000
+      },
+      {
+        "level": "warning",
+        "metric": "CTR",
+        "value": 0.8,
+        "threshold": 1.0
+      }
+    ]
+  },
+  {
+    "id": "ad009",
+    "campaign_name": "500달톤 전체",
+    "creative_name": "브랜드-awareness",
+    "platform": "TikTok",
+    "spend": 300000,
+    "impressions": 520000,
+    "clicks": 7280,
+    "conversions": 20,
+    "revenue": 1100000,
+    "ctr": 1.4,
+    "cpa": 15000,
+    "roas": 3.67,
+    "date": "2026-04-04",
+    "alerts": []
+  },
+  {
+    "id": "ad010",
+    "campaign_name": "리타겟팅",
+    "creative_name": "retarget-cart",
+    "platform": "Meta",
+    "spend": 200000,
+    "impressions": 80000,
+    "clicks": 2400,
+    "conversions": 32,
+    "revenue": 1920000,
+    "ctr": 3.0,
+    "cpa": 6250,
+    "roas": 9.6,
+    "date": "2026-04-05",
+    "alerts": []
+  }
+]

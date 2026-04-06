@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Total KPI - Jacob AI</title>
+<link rel="stylesheet" href="http://localhost:8000/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-layout no-chat">
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="http://localhost:8000" class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Jacob AI
+    </a>
+    <div class="sidebar-sub">08Liter &times; Mili Mili</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Command</div>
+      <a href="http://localhost:8000" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+      <span class="nav-item disabled"><i data-lucide="target"></i> Strategy</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">08Liter Global</div>
+      <a href="http://localhost:8004" class="nav-item"><i data-lucide="building-2"></i> Brand</a>
+      <span class="nav-item disabled"><i data-lucide="users"></i> Influencer</span>
+      <span class="nav-item disabled"><i data-lucide="globe"></i> Platform</span>
+      <a href="http://localhost:8002" class="nav-item"><i data-lucide="share-2"></i> SNS Marketing</a>
+      <a href="http://localhost:8005" class="nav-item"><i data-lucide="settings"></i> Ops Efficiency</a>
+      <a href="http://localhost:8001" class="nav-item active"><i data-lucide="bar-chart-2"></i> Total KPI</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Mili Mili</div>
+      <span class="nav-item disabled"><i data-lucide="package"></i> Beauty Export</span>
+      <span class="nav-item disabled"><i data-lucide="shopping-cart"></i> Ecommerce MD</span>
+      <a href="http://localhost:8006" class="nav-item"><i data-lucide="megaphone"></i> Content &amp; Ad</a>
+      <a href="http://localhost:8007" class="nav-item"><i data-lucide="flask-conical"></i> R&amp;D</a>
+      <a href="http://localhost:8003" class="nav-item"><i data-lucide="message-circle"></i> Community</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="#" class="nav-item"><i data-lucide="settings-2"></i> Settings</a>
+    <div class="nav-item"><i data-lucide="activity"></i> API Status <span class="api-status-dot"></span></div>
+  </div>
+</aside>
+
+<div class="main-content">
+  <div class="mobile-header">
+    <button class="hamburger-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button>
+    <span style="font-weight:700;font-size:15px">Total KPI</span>
+  </div>
+
+  <div class="main-header">
+    <div>
+      <h1>Total KPI</h1>
+      <p style="color:var(--text-tertiary);font-size:13px;margin-top:2px">08Liter Global &amp; Mili Mili Daily KPI Dashboard</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="color:var(--text-secondary);font-size:13px" id="headerDate"></span>
+      <button class="btn btn-ghost" onclick="loadData()" title="Refresh"><i data-lucide="refresh-cw" style="width:15px;height:15px"></i></button>
+    </div>
+  </div>
+
+  <div style="padding:20px">
+    <div class="alert-banner" id="alertBanner" style="display:none">
+      <i data-lucide="alert-triangle" style="width:16px;height:16px;flex-shrink:0"></i>
+      <span id="alertText"></span>
+    </div>
+
+    <div class="tab-group" style="margin-bottom:20px">
+      <button class="tab active" id="tabLiter"><i data-lucide="circle" style="width:12px;height:12px;color:#f97316"></i> 08Liter</button>
+      <button class="tab" id="tabMili"><i data-lucide="circle" style="width:12px;height:12px;color:#3b82f6"></i> Mili Mili</button>
+    </div>
+
+    <div class="kpi-grid" id="kpiCards"></div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="card-title"><i data-lucide="edit-3" style="width:16px;height:16px"></i> KPI Data Input</div>
+      <div class="form-group" style="max-width:200px;margin-bottom:16px">
+        <label>Date</label>
+        <input type="date" id="inputDate">
+      </div>
+      <div class="section-label section-label-liter"><i data-lucide="circle" style="width:12px;height:12px;color:#f97316"></i> 08Liter</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Contracts</label><input type="number" id="l_contracts" placeholder="36"></div>
+        <div class="form-group"><label>Avg Contract Value (M KRW)</label><input type="number" id="l_contract_value" placeholder="357"></div>
+        <div class="form-group"><label>Organic Lead Ratio (%)</label><input type="number" id="l_organic_ratio" placeholder="12"></div>
+        <div class="form-group"><label>Meeting-to-Contract CVR (%)</label><input type="number" id="l_conversion" placeholder="32"></div>
+        <div class="form-group"><label>Lead CPA (M KRW)</label><input type="number" step="0.1" id="l_lead_cpa" placeholder="3.2"></div>
+        <div class="form-group"><label>Utilization (%)</label><input type="number" id="l_utilization" placeholder="92"></div>
+      </div>
+      <div class="section-label section-label-mili" style="margin-top:16px"><i data-lucide="circle" style="width:12px;height:12px;color:#3b82f6"></i> Mili Mili</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Repurchase Rate (%)</label><input type="number" id="m_repurchase" placeholder="22"></div>
+        <div class="form-group"><label>ROAS (x)</label><input type="number" step="0.1" id="m_roas" placeholder="3.5"></div>
+        <div class="form-group"><label>CPA (KRW)</label><input type="number" id="m_cpa" placeholder="19000"></div>
+        <div class="form-group"><label>Platform Rating</label><input type="number" step="0.1" id="m_rating" placeholder="4.5"></div>
+        <div class="form-group"><label>Kakao Net Growth</label><input type="number" id="m_kakao_growth" placeholder="230"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-primary" id="btnSave"><i data-lucide="save" style="width:14px;height:14px"></i> Save</button>
+        <button class="btn btn-ghost" id="btnPreview"><i data-lucide="eye" style="width:14px;height:14px"></i> Slack Preview</button>
+        <button class="btn btn-success" id="btnSend"><i data-lucide="send" style="width:14px;height:14px"></i> Send to Slack</button>
+      </div>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+
+    <div class="card" id="slackSection" style="display:none;margin-top:20px">
+      <div class="card-title"><i data-lucide="message-square" style="width:16px;height:16px"></i> Slack Message Preview</div>
+      <div class="slack-preview" id="slackPreview"></div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="card-title"><i data-lucide="trending-up" style="width:16px;height:16px"></i> 7-Day KPI Trend</div>
+      <div class="chart-container">
+        <canvas id="kpiChart" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<button class="chat-fab" id="chatFab"><i data-lucide="message-circle"></i></button>
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-header">
+    <div class="flex items-center justify-between">
+      <span style="font-weight:700;font-size:13px">Jacob AI</span>
+      <button class="header-btn" id="chatCloseBtn"><i data-lucide="x"></i></button>
+    </div>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg agent">KPI Bot ready. Ask about daily metrics, trends, or anomalies.<div class="chat-msg-time">System</div></div>
+  </div>
+  <div class="chat-input-area">
+    <div class="chat-input-wrapper">
+      <textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask Jacob AI..."></textarea>
+      <button class="chat-send-btn" id="chatSendBtn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentTab = 'liter';
+let historyData = [];
+let kpiChart = null;
+
+document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+document.getElementById('headerDate').textContent = new Date().toISOString().split('T')[0];
+
+document.getElementById('tabLiter').addEventListener('click', function() { switchTab('liter'); });
+document.getElementById('tabMili').addEventListener('click', function() { switchTab('mili'); });
+document.getElementById('btnSave').addEventListener('click', submitKPI);
+document.getElementById('btnPreview').addEventListener('click', previewSlack);
+document.getElementById('btnSend').addEventListener('click', sendSlack);
+
+async function loadData() {
+  const res = await fetch('/api/kpi/history');
+  historyData = await res.json();
+  renderCards();
+  renderChart();
+  checkAlerts();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  var tabLiter = document.getElementById('tabLiter');
+  var tabMili = document.getElementById('tabMili');
+  tabLiter.className = 'tab' + (tab === 'liter' ? ' active' : '');
+  tabMili.className = 'tab' + (tab === 'mili' ? ' active' : '');
+  renderCards();
+  renderChart();
+}
+
+function createCard(label, value, unit, trendDir, targetVal) {
+  var card = document.createElement('div');
+  card.className = 'kpi-card ' + (currentTab === 'liter' ? 'orange' : 'blue');
+  var h3 = document.createElement('div');
+  h3.style.cssText = 'font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px';
+  h3.textContent = label;
+  card.appendChild(h3);
+
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:baseline;gap:4px';
+  var valSpan = document.createElement('span');
+  valSpan.style.cssText = 'font-size:28px;font-weight:700;color:var(--text-primary)';
+  valSpan.textContent = value;
+  row.appendChild(valSpan);
+
+  var unitSpan = document.createElement('span');
+  unitSpan.style.cssText = 'font-size:13px;color:var(--text-tertiary)';
+  unitSpan.textContent = unit;
+  row.appendChild(unitSpan);
+
+  if (trendDir) {
+    var trendSpan = document.createElement('span');
+    trendSpan.className = 'trend ' + trendDir.cls;
+    trendSpan.style.cssText = 'font-size:16px;margin-left:6px';
+    trendSpan.textContent = trendDir.arrow;
+    row.appendChild(trendSpan);
+  }
+  card.appendChild(row);
+
+  if (targetVal !== null && targetVal !== undefined) {
+    var tgt = document.createElement('div');
+    tgt.style.cssText = 'font-size:11px;color:var(--text-tertiary);margin-top:6px';
+    tgt.textContent = 'Target: ' + targetVal + unit;
+    card.appendChild(tgt);
+  }
+  return card;
+}
+
+function renderCards() {
+  var container = document.getElementById('kpiCards');
+  while (container.firstChild) container.removeChild(container.firstChild);
+  if (!historyData.length) {
+    var p = document.createElement('p');
+    p.style.color = 'var(--text-tertiary)';
+    p.textContent = 'No data available';
+    container.appendChild(p);
+    return;
+  }
+  var latest = historyData[historyData.length - 1];
+  var prev = historyData.length >= 2 ? historyData[historyData.length - 2] : null;
+  var d = latest[currentTab] || {};
+  var p2 = prev ? (prev[currentTab] || {}) : {};
+
+  var metrics = currentTab === 'liter' ? [
+    {key:'contracts',label:'Contracts',unit:'',target:38},
+    {key:'contract_value',label:'Avg Contract Value',unit:'M',target:420},
+    {key:'organic_ratio',label:'Organic Lead',unit:'%',target:30},
+    {key:'conversion',label:'CVR',unit:'%',target:38},
+    {key:'lead_cpa',label:'Lead CPA',unit:'M',target:null,reverse:true},
+    {key:'utilization',label:'Utilization',unit:'%',target:95}
+  ] : [
+    {key:'repurchase',label:'Repurchase Rate',unit:'%',target:35},
+    {key:'roas',label:'ROAS',unit:'x',target:4.0},
+    {key:'cpa',label:'CPA',unit:'KRW',target:15000,reverse:true},
+    {key:'rating',label:'Platform Rating',unit:'',target:4.7},
+    {key:'kakao_growth',label:'Kakao Net Growth',unit:'',target:600}
+  ];
+
+  metrics.forEach(function(m) {
+    var val = d[m.key] !== undefined ? d[m.key] : '-';
+    var trendDir = null;
+    if (p2[m.key] !== undefined && d[m.key] !== undefined) {
+      var diff = d[m.key] - p2[m.key];
+      if (diff > 0) trendDir = {arrow:'↑', cls: m.reverse ? 'trend-down' : 'trend-up'};
+      else if (diff < 0) trendDir = {arrow:'↓', cls: m.reverse ? 'trend-up' : 'trend-down'};
+      else trendDir = {arrow:'→', cls:'trend-same'};
+    }
+    container.appendChild(createCard(m.label, val, m.unit, trendDir, m.target));
+  });
+}
+
+function renderChart() {
+  var last7 = historyData.slice(-7);
+  var labels = last7.map(function(d) { return d.date.slice(5); });
+  var datasets = currentTab === 'liter' ? [
+    {label:'Contracts', data:last7.map(function(d){return (d.liter||{}).contracts;}), borderColor:'#f97316', tension:.3},
+    {label:'Contract Value', data:last7.map(function(d){return (d.liter||{}).contract_value;}), borderColor:'#3b82f6', tension:.3},
+    {label:'CVR(%)', data:last7.map(function(d){return (d.liter||{}).conversion;}), borderColor:'#22c55e', tension:.3}
+  ] : [
+    {label:'ROAS(x)', data:last7.map(function(d){return (d.mili||{}).roas;}), borderColor:'#8b5cf6', tension:.3},
+    {label:'Repurchase(%)', data:last7.map(function(d){return (d.mili||{}).repurchase;}), borderColor:'#ec4899', tension:.3},
+    {label:'Kakao Growth', data:last7.map(function(d){return (d.mili||{}).kakao_growth;}), borderColor:'#fbbf24', tension:.3}
+  ];
+  if (kpiChart) kpiChart.destroy();
+  kpiChart = new Chart(document.getElementById('kpiChart'), {
+    type:'line',
+    data:{labels:labels, datasets:datasets.map(function(ds){return Object.assign({},ds,{fill:false,pointRadius:4,borderWidth:2});})},
+    options:{responsive:true, plugins:{legend:{labels:{color:'#ccc'}}}, scales:{x:{ticks:{color:'#888'}},y:{ticks:{color:'#888'},grid:{color:'#222'}}}}
+  });
+}
+
+function checkAlerts() {
+  if (!historyData.length) return;
+  var latest = historyData[historyData.length - 1];
+  var alerts = [];
+  var l = latest.liter || {};
+  var m = latest.mili || {};
+  if (l.contract_value < 400) alerts.push('08Liter Contract Value ' + l.contract_value + 'M (below 400M threshold)');
+  if (l.utilization < 90) alerts.push('08Liter Utilization ' + l.utilization + '% (below 90% threshold)');
+  if (m.roas < 3.5) alerts.push('Mili Mili ROAS ' + m.roas + 'x (below 3.5x threshold)');
+  if (m.cpa > 20000) alerts.push('Mili Mili CPA ' + m.cpa + ' KRW (above 20,000 KRW threshold)');
+  var banner = document.getElementById('alertBanner');
+  if (alerts.length) {
+    banner.style.display = 'flex';
+    document.getElementById('alertText').textContent = 'Anomaly detected: ' + alerts.join(' | ');
+  }
+}
+
+function getFormData() {
+  return {
+    date: document.getElementById('inputDate').value,
+    liter: {
+      contracts: Number(document.getElementById('l_contracts').value) || 0,
+      contract_value: Number(document.getElementById('l_contract_value').value) || 0,
+      organic_ratio: Number(document.getElementById('l_organic_ratio').value) || 0,
+      conversion: Number(document.getElementById('l_conversion').value) || 0,
+      lead_cpa: Number(document.getElementById('l_lead_cpa').value) || 0,
+      utilization: Number(document.getElementById('l_utilization').value) || 0
+    },
+    mili: {
+      repurchase: Number(document.getElementById('m_repurchase').value) || 0,
+      roas: Number(document.getElementById('m_roas').value) || 0,
+      cpa: Number(document.getElementById('m_cpa').value) || 0,
+      rating: Number(document.getElementById('m_rating').value) || 0,
+      kakao_growth: Number(document.getElementById('m_kakao_growth').value) || 0
+    }
+  };
+}
+
+async function submitKPI() {
+  var data = getFormData();
+  var res = await fetch('/api/kpi/submit', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  var result = await res.json();
+  document.getElementById('statusMsg').textContent = 'Saved successfully (' + result.count + ' records total)';
+  loadData();
+}
+
+async function previewSlack() {
+  var data = getFormData();
+  var res = await fetch('/api/slack/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  var result = await res.json();
+  document.getElementById('slackSection').style.display = 'block';
+  document.getElementById('slackPreview').textContent = result.message;
+}
+
+async function sendSlack() {
+  var preview = document.getElementById('slackPreview').textContent;
+  if (!preview) await previewSlack();
+  var msg = document.getElementById('slackPreview').textContent;
+  var res = await fetch('/api/slack/send', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:msg})});
+  var result = await res.json();
+  document.getElementById('statusMsg').textContent = result.status === 'sent' ? 'Slack message sent successfully!' : (result.note || result.detail || 'Simulation mode');
+}
+
+// Mobile sidebar
+document.getElementById('hamburgerBtn').addEventListener('click', function(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('open');});
+document.getElementById('sidebarBackdrop').addEventListener('click', function(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('open');});
+
+// Chat
+document.getElementById('chatFab').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.toggle('open'); });
+document.getElementById('chatCloseBtn').addEventListener('click', function(){ document.getElementById('chatOverlay').classList.remove('open'); });
+document.getElementById('chatSendBtn').addEventListener('click', sendChat);
+document.getElementById('chatInput').addEventListener('keydown', function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} });
+function sendChat(){var input=document.getElementById('chatInput');var t=input.value.trim();if(!t)return;var m=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=t;m.appendChild(u);input.value='';setTimeout(function(){var a=document.createElement('div');a.className='chat-msg agent';a.textContent='[KPI Bot] Processing... Connect an LLM backend for real responses.';m.appendChild(a);m.scrollTop=m.scrollHeight;},500);m.scrollTop=m.scrollHeight;}
+
+loadData();
+lucide.createIcons();
+</script>
+</body>
+</html>

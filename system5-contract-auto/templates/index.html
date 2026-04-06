@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ops Efficiency - Jacob AI</title>
+<link rel="stylesheet" href="http://localhost:8000/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-layout no-chat">
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="http://localhost:8000" class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Jacob AI
+    </a>
+    <div class="sidebar-sub">08Liter &times; Mili Mili</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Command</div>
+      <a href="http://localhost:8000" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+      <span class="nav-item disabled"><i data-lucide="target"></i> Strategy</span>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">08Liter Global</div>
+      <a href="http://localhost:8004" class="nav-item"><i data-lucide="building-2"></i> Brand</a>
+      <span class="nav-item disabled"><i data-lucide="users"></i> Influencer</span>
+      <span class="nav-item disabled"><i data-lucide="globe"></i> Platform</span>
+      <a href="http://localhost:8002" class="nav-item"><i data-lucide="share-2"></i> SNS Marketing</a>
+      <a href="http://localhost:8005" class="nav-item active"><i data-lucide="settings"></i> Ops Efficiency</a>
+      <a href="http://localhost:8001" class="nav-item"><i data-lucide="bar-chart-2"></i> Total KPI</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Mili Mili</div>
+      <span class="nav-item disabled"><i data-lucide="package"></i> Beauty Export</span>
+      <span class="nav-item disabled"><i data-lucide="shopping-cart"></i> Ecommerce MD</span>
+      <a href="http://localhost:8006" class="nav-item"><i data-lucide="megaphone"></i> Content &amp; Ad</a>
+      <a href="http://localhost:8007" class="nav-item"><i data-lucide="flask-conical"></i> R&amp;D</a>
+      <a href="http://localhost:8003" class="nav-item"><i data-lucide="message-circle"></i> Community</a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="#" class="nav-item"><i data-lucide="settings-2"></i> Settings</a>
+    <div class="nav-item"><i data-lucide="activity"></i> API Status <span class="api-status-dot"></span></div>
+  </div>
+</aside>
+
+<main class="main-content">
+  <div class="mobile-header">
+    <button class="header-btn" id="menuBtn"><i data-lucide="menu"></i></button>
+    <span class="mobile-title">Ops Efficiency</span>
+  </div>
+
+  <div class="main-header">
+    <div>
+      <h1 class="page-title">Ops Efficiency</h1>
+      <p class="page-sub">Contract &amp; payment automation pipeline</p>
+    </div>
+    <div class="header-actions">
+      <span class="header-date" id="headerDate"></span>
+      <button class="header-btn" id="refreshBtn"><i data-lucide="refresh-cw"></i></button>
+    </div>
+  </div>
+
+  <div class="content-body">
+    <div class="kpi-grid" id="statCards"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i data-lucide="file-plus" style="width:18px;height:18px"></i> New Contract</h2>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Company</label><input type="text" id="f_company"></div>
+          <div class="form-group"><label>Contact</label><input type="text" id="f_contact"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="f_email"></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="f_phone"></div>
+          <div class="form-group"><label>Package</label><select id="f_package"><option>Starter</option><option>Growth</option><option>Enterprise</option></select></div>
+          <div class="form-group"><label>Amount (KRW 10K)</label><input type="number" id="f_amount" value="520"></div>
+          <div class="form-group"><label>Start Date</label><input type="date" id="f_start"></div>
+          <div class="form-group"><label>End Date</label><input type="date" id="f_end"></div>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+          <button class="btn btn-primary" id="btnAdd"><i data-lucide="plus" style="width:14px;height:14px"></i> Create Contract</button>
+          <span class="status-msg" id="addMsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i data-lucide="list" style="width:18px;height:18px"></i> Contracts</h2>
+      </div>
+      <div class="card-body" style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Company</th><th>Package</th><th>Amount</th><th>Progress</th><th>Actions</th></tr></thead>
+          <tbody id="contractTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i data-lucide="bar-chart-2" style="width:18px;height:18px"></i> Package Distribution</h2>
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="packageChart" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<div class="modal-overlay" id="pdfModal">
+  <div class="modal" style="max-width:640px">
+    <h3>Contract Preview</h3>
+    <iframe id="pdfFrame" style="width:100%;height:400px;border:1px solid var(--border);border-radius:6px;margin:12px 0;background:#fff"></iframe>
+    <button class="btn btn-secondary btn-sm" id="closePdf">Close</button>
+  </div>
+</div>
+
+<button class="chat-fab" id="chatFab"><i data-lucide="message-circle"></i></button>
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-header"><div class="flex items-center justify-between"><span style="font-weight:700;font-size:13px">Jacob AI</span><button class="header-btn" id="chatCloseBtn"><i data-lucide="x"></i></button></div></div>
+  <div class="chat-messages" id="chatMessages"><div class="chat-msg agent">Contract Bot ready.<div class="chat-msg-time">System</div></div></div>
+  <div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask Jacob AI..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button></div></div>
+</div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<script>
+var STAGES = ['\uC785\uB825','\uC11C\uBA85','\uC785\uAE08','\uC138\uAE08\uACC4\uC0B0\uC11C','\uC644\uB8CC'];
+var contracts = [];
+
+/* --- Date header --- */
+(function(){
+  var d = new Date();
+  var opts = {year:'numeric',month:'long',day:'numeric',weekday:'long'};
+  var el = document.getElementById('headerDate');
+  if(el) el.textContent = d.toLocaleDateString('en-US', opts);
+})();
+
+document.getElementById('btnAdd').addEventListener('click', addContract);
+document.getElementById('closePdf').addEventListener('click', function(){ document.getElementById('pdfModal').style.display='none'; });
+document.getElementById('refreshBtn').addEventListener('click', function(){ loadData(); });
+
+async function loadData() {
+  contracts = await (await fetch('/api/contracts')).json();
+  renderStats();
+  renderTable();
+  renderChart();
+}
+
+async function renderStats() {
+  var stats = await (await fetch('/api/stats')).json();
+  var c = document.getElementById('statCards');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  var items = [
+    {n:stats.total, l:'Total Contracts', ic:'file-text'},
+    {n:stats.total_amount.toLocaleString()+'\uB9CC\uC6D0', l:'Total Amount', ic:'wallet'},
+    {n:stats.avg_amount+'\uB9CC\uC6D0', l:'Avg Price', ic:'trending-up'},
+    {n:(stats.by_stage||{})['\uC644\uB8CC']||0, l:'Completed', ic:'check-circle'}
+  ];
+  items.forEach(function(item){
+    var card = document.createElement('div'); card.className='kpi-card orange';
+    var iconDiv = document.createElement('div'); iconDiv.className='kpi-icon';
+    var iconEl = document.createElement('i'); iconEl.setAttribute('data-lucide', item.ic);
+    iconDiv.appendChild(iconEl);
+    var valDiv = document.createElement('div'); valDiv.className='kpi-value'; valDiv.textContent=item.n;
+    var lblDiv = document.createElement('div'); lblDiv.className='kpi-label'; lblDiv.textContent=item.l;
+    card.appendChild(iconDiv); card.appendChild(valDiv); card.appendChild(lblDiv);
+    c.appendChild(card);
+  });
+  lucide.createIcons();
+}
+
+function renderTable() {
+  var tbody = document.getElementById('contractTable');
+  while(tbody.firstChild) tbody.removeChild(tbody.firstChild);
+  contracts.forEach(function(ct){
+    var tr = document.createElement('tr');
+    var td1 = document.createElement('td'); td1.textContent = ct.id; td1.style.fontFamily='monospace';
+    var td2 = document.createElement('td'); td2.textContent = ct.company;
+    var td3 = document.createElement('td'); td3.textContent = ct.package;
+    var td4 = document.createElement('td'); td4.textContent = ct.amount + '\uB9CC\uC6D0';
+    var td5 = document.createElement('td');
+    var stagesDiv = document.createElement('div'); stagesDiv.className='stages';
+    var si = ct.stage_index || 0;
+    STAGES.forEach(function(s, i){
+      var dot = document.createElement('div');
+      dot.className = 'stage-dot ' + (i < si ? 'stage-done' : i === si ? 'stage-current' : 'stage-pending');
+      dot.textContent = i < si ? '\u2713' : (i+1);
+      dot.title = s;
+      stagesDiv.appendChild(dot);
+    });
+    td5.appendChild(stagesDiv);
+    var td6 = document.createElement('td');
+    var btnPdf = document.createElement('button');
+    btnPdf.className = 'btn btn-sm btn-secondary'; btnPdf.textContent = 'PDF';
+    btnPdf.addEventListener('click', function(){ showPdf(ct.id); });
+    td6.appendChild(btnPdf);
+
+    if (ct.stage !== '\uC644\uB8CC') {
+      var nextIdx = STAGES.indexOf(ct.stage) + 1;
+      if (nextIdx < STAGES.length) {
+        var btnNext = document.createElement('button');
+        btnNext.className = 'btn btn-sm btn-success'; btnNext.textContent = '\u2192 ' + STAGES[nextIdx];
+        btnNext.style.marginLeft = '4px';
+        btnNext.addEventListener('click', function(){ advanceStage(ct.id, STAGES[nextIdx]); });
+        td6.appendChild(btnNext);
+      }
+    }
+    tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);tr.appendChild(td4);tr.appendChild(td5);tr.appendChild(td6);
+    tbody.appendChild(tr);
+  });
+}
+
+var chartInstance = null;
+function renderChart() {
+  var pkgs = {};
+  contracts.forEach(function(c){ pkgs[c.package]=(pkgs[c.package]||0)+1; });
+  if(chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(document.getElementById('packageChart'), {
+    type:'bar',
+    data:{labels:Object.keys(pkgs), datasets:[{label:'Contracts',data:Object.values(pkgs), backgroundColor:['#f97316','#2563eb','#8b5cf6']}]},
+    options:{responsive:true, plugins:{legend:{display:false}}, scales:{y:{ticks:{color:'#888'},grid:{color:'#222'}},x:{ticks:{color:'#888'}}}}
+  });
+}
+
+function showPdf(id) {
+  document.getElementById('pdfFrame').src = '/api/contracts/'+id+'/pdf';
+  document.getElementById('pdfModal').style.display = 'flex';
+}
+
+async function advanceStage(id, stage) {
+  await fetch('/api/contracts/'+id+'/status', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stage:stage})});
+  loadData();
+}
+
+async function addContract() {
+  var body = {
+    company: document.getElementById('f_company').value,
+    contact_name: document.getElementById('f_contact').value,
+    email: document.getElementById('f_email').value,
+    phone: document.getElementById('f_phone').value,
+    package: document.getElementById('f_package').value,
+    amount: Number(document.getElementById('f_amount').value)||0,
+    start_date: document.getElementById('f_start').value,
+    end_date: document.getElementById('f_end').value
+  };
+  var res = await fetch('/api/contracts', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  var result = await res.json();
+  document.getElementById('addMsg').textContent = 'Contract created: ' + result.id;
+  loadData();
+}
+
+/* --- Chat --- */
+(function(){
+  var fab = document.getElementById('chatFab');
+  var overlay = document.getElementById('chatOverlay');
+  var closeBtn = document.getElementById('chatCloseBtn');
+  var input = document.getElementById('chatInput');
+  var sendBtn = document.getElementById('chatSendBtn');
+  var messages = document.getElementById('chatMessages');
+
+  fab.addEventListener('click', function(){ overlay.classList.toggle('open'); });
+  closeBtn.addEventListener('click', function(){ overlay.classList.remove('open'); });
+
+  function sendMessage(){
+    var text = input.value.trim();
+    if(!text) return;
+    appendMsg('user', text);
+    input.value = '';
+    setTimeout(function(){
+      appendMsg('agent', '[Contract Bot] I can help with contract automation. Try asking about contract status, creating contracts, or payment tracking.');
+    }, 600);
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+  });
+
+  function appendMsg(role, text){
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + role;
+    div.textContent = text;
+    var time = document.createElement('div');
+    time.className = 'chat-msg-time';
+    time.textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    div.appendChild(time);
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+})();
+
+/* --- Mobile sidebar --- */
+(function(){
+  var menuBtn = document.getElementById('menuBtn');
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('sidebarBackdrop');
+
+  menuBtn.addEventListener('click', function(){
+    sidebar.classList.toggle('open');
+    backdrop.classList.toggle('open');
+  });
+  backdrop.addEventListener('click', function(){
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+  });
+})();
+
+loadData();
+lucide.createIcons();
+</script>
+</body>
+</html>

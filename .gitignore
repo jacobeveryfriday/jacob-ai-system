@@ -1,0 +1,30 @@
+# 환경변수 & 시크릿
+.env
+service_account.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로그 & DB
+*.log
+*.db
+
+# IDE & 도구
+.claude/
+.playwright-mcp/
+.idea/
+.vscode/
+
+# 스크린샷 (배포 불필요)
+*.png
+
+# Railway 로컬 설정
+.railway/

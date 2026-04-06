@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content & Ad -- Jacob AI</title>
+<link rel="stylesheet" href="http://localhost:8000/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-layout no-chat">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <a href="http://localhost:8000" class="sidebar-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Jacob AI
+      </a>
+      <div class="sidebar-sub">08Liter &times; Mili Mili</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">Command</div>
+        <a href="http://localhost:8000" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+        <span class="nav-item disabled"><i data-lucide="target"></i> Strategy</span>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">08Liter Global</div>
+        <a href="http://localhost:8004" class="nav-item"><i data-lucide="building-2"></i> Brand</a>
+        <span class="nav-item disabled"><i data-lucide="users"></i> Influencer</span>
+        <span class="nav-item disabled"><i data-lucide="globe"></i> Platform</span>
+        <a href="http://localhost:8002" class="nav-item"><i data-lucide="share-2"></i> SNS Marketing</a>
+        <a href="http://localhost:8005" class="nav-item"><i data-lucide="settings"></i> Ops Efficiency</a>
+        <a href="http://localhost:8001" class="nav-item"><i data-lucide="bar-chart-2"></i> Total KPI</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Mili Mili</div>
+        <span class="nav-item disabled"><i data-lucide="package"></i> Beauty Export</span>
+        <span class="nav-item disabled"><i data-lucide="shopping-cart"></i> Ecommerce MD</span>
+        <a href="http://localhost:8006" class="nav-item active"><i data-lucide="megaphone"></i> Content &amp; Ad</a>
+        <a href="http://localhost:8007" class="nav-item"><i data-lucide="flask-conical"></i> R&amp;D</a>
+        <a href="http://localhost:8003" class="nav-item"><i data-lucide="message-circle"></i> Community</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="#" class="nav-item"><i data-lucide="settings-2"></i> Settings</a>
+      <div class="nav-item"><i data-lucide="activity"></i> API Status <span class="api-status-dot"></span></div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="mobile-header">
+      <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <i data-lucide="menu"></i>
+      </button>
+      <span>Content &amp; Ad</span>
+    </div>
+
+    <div class="main-header">
+      <div>
+        <h1>Content &amp; Ad</h1>
+        <p class="main-subtitle">Mili Mili -- ROAS / CPA / CTR Real-time Tracking</p>
+      </div>
+      <div class="header-actions">
+        <span class="header-date" id="headerDate"></span>
+        <button class="btn btn-secondary" onclick="loadData()"><i data-lucide="refresh-cw"></i> Refresh</button>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <div class="alert-banner" id="alertBanner">
+        <i data-lucide="alert-triangle"></i>
+        <span id="alertText"></span>
+      </div>
+
+      <div class="tab-group" id="platformTabs"></div>
+
+      <div class="kpi-grid" id="kpiCards"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Ad Performance by Creative</h2>
+        </div>
+        <div class="card-body">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Campaign</th>
+                <th>Creative</th>
+                <th>Platform</th>
+                <th>Spend</th>
+                <th>ROAS</th>
+                <th>CPA</th>
+                <th>CTR</th>
+                <th>Conversions</th>
+              </tr>
+            </thead>
+            <tbody id="adsTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Data Input</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group"><label>Campaign Name</label><input type="text" id="f_campaign"></div>
+            <div class="form-group"><label>Creative Name</label><input type="text" id="f_creative"></div>
+            <div class="form-group"><label>Platform</label><select id="f_platform"><option>Meta</option><option>TikTok</option></select></div>
+            <div class="form-group"><label>Spend (KRW)</label><input type="number" id="f_spend"></div>
+            <div class="form-group"><label>Impressions</label><input type="number" id="f_impressions"></div>
+            <div class="form-group"><label>Clicks</label><input type="number" id="f_clicks"></div>
+            <div class="form-group"><label>Conversions</label><input type="number" id="f_conversions"></div>
+            <div class="form-group"><label>Revenue (KRW)</label><input type="number" id="f_revenue"></div>
+            <div class="form-group"><label>Date</label><input type="date" id="f_date"></div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+            <button class="btn btn-primary" id="btnAdd"><i data-lucide="plus"></i> Add</button>
+            <button class="btn btn-secondary" id="btnSlack"><i data-lucide="send"></i> Slack Alert</button>
+            <span class="status-msg" id="addMsg"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>7-Day ROAS Trend</h2>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="trendChart" height="100"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Floating Chat -->
+<button class="floating-chat-btn" id="floatingChatBtn" onclick="document.getElementById('chatPanel').classList.add('open');document.getElementById('chatBackdrop').classList.add('visible');">
+  <i data-lucide="message-circle"></i>
+</button>
+<div class="chat-backdrop" id="chatBackdrop" onclick="document.getElementById('chatPanel').classList.remove('open');this.classList.remove('visible');"></div>
+<div class="floating-chat-panel" id="chatPanel">
+  <div class="chat-panel-header">
+    <span>[Ads Bot]</span>
+    <button class="chat-panel-close" onclick="document.getElementById('chatPanel').classList.remove('open');document.getElementById('chatBackdrop').classList.remove('visible');">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+  <div class="chat-panel-messages" id="chatMessages">
+    <div class="chat-message bot">[Ads Bot] How can I help you with ad performance today?</div>
+  </div>
+  <div class="chat-panel-input">
+    <input type="text" id="chatInput" placeholder="Ask about ad metrics..." onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()"><i data-lucide="send"></i></button>
+  </div>
+</div>
+
+<script>
+var allAds = [];
+var currentPlatform = '';
+
+// Set header date
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+document.getElementById('f_date').value = new Date().toISOString().split('T')[0];
+document.getElementById('btnAdd').addEventListener('click', addAd);
+document.getElementById('btnSlack').addEventListener('click', sendSlack);
+
+async function loadData() {
+  allAds = await (await fetch('/api/ads')).json();
+  renderTabs();
+  renderKPIs();
+  renderTable();
+  renderChart();
+  checkAlerts();
+  lucide.createIcons();
+}
+
+function renderTabs() {
+  var c = document.getElementById('platformTabs');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  ['','Meta','TikTok'].forEach(function(p){
+    var tab = document.createElement('button');
+    tab.className = 'tab' + (currentPlatform===p?' active':'');
+    tab.textContent = p || 'All';
+    tab.addEventListener('click', function(){ currentPlatform=p; renderTabs(); renderKPIs(); renderTable(); });
+    c.appendChild(tab);
+  });
+}
+
+function getFiltered() {
+  return currentPlatform ? allAds.filter(function(a){return a.platform===currentPlatform;}) : allAds;
+}
+
+function renderKPIs() {
+  var filtered = getFiltered();
+  var totalSpend=0,totalRevenue=0,totalClicks=0,totalImpressions=0,totalConversions=0;
+  filtered.forEach(function(a){
+    totalSpend+=a.spend||0; totalRevenue+=a.revenue||0; totalClicks+=a.clicks||0;
+    totalImpressions+=a.impressions||0; totalConversions+=a.conversions||0;
+  });
+  var roas = totalSpend ? (totalRevenue/totalSpend).toFixed(2) : 0;
+  var cpa = totalConversions ? Math.round(totalSpend/totalConversions) : 0;
+  var ctr = totalImpressions ? (totalClicks/totalImpressions*100).toFixed(2) : 0;
+
+  var c = document.getElementById('kpiCards');
+  while(c.firstChild) c.removeChild(c.firstChild);
+  var items = [
+    {n:roas+'x',l:'ROAS',status:roas>=4?'on':roas>=3.5?'watch':'risk'},
+    {n:cpa.toLocaleString()+' KRW',l:'CPA',status:cpa<=15000?'on':cpa<=20000?'watch':'risk'},
+    {n:ctr+'%',l:'CTR',status:ctr>=1.5?'on':ctr>=1?'watch':'risk'},
+    {n:totalConversions,l:'Conversions',status:null},
+    {n:Math.round(totalSpend/10000)+'M KRW',l:'Total Spend',status:null}
+  ];
+  items.forEach(function(item){
+    var card = document.createElement('div');
+    card.className = 'kpi-card blue';
+    var header = document.createElement('div');
+    header.className = 'kpi-header';
+    var lbl = document.createElement('span');
+    lbl.className = 'kpi-label';
+    lbl.textContent = item.l;
+    header.appendChild(lbl);
+    if (item.status) {
+      var dot = document.createElement('span');
+      dot.className = 'kpi-status ' + item.status;
+      header.appendChild(dot);
+    }
+    var num = document.createElement('div');
+    num.className = 'kpi-value';
+    num.textContent = item.n;
+    card.appendChild(header);
+    card.appendChild(num);
+    c.appendChild(card);
+  });
+}
+
+function renderTable() {
+  var tbody = document.getElementById('adsTable');
+  while(tbody.firstChild) tbody.removeChild(tbody.firstChild);
+  getFiltered().forEach(function(ad){
+    var tr = document.createElement('tr');
+    var vals = [ad.campaign_name, ad.creative_name, ad.platform, Math.round(ad.spend/10000)+'M', ad.roas+'x', ad.cpa.toLocaleString()+' KRW', ad.ctr+'%', ad.conversions];
+    vals.forEach(function(v,i){
+      var td = document.createElement('td');
+      td.textContent = v;
+      if (i===4 && ad.roas<3.0) td.className='danger';
+      if (i===5 && ad.cpa>25000) td.className='danger';
+      if (i===6 && ad.ctr<1.0) td.className='danger';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderChart() {
+  var dates = {};
+  allAds.forEach(function(a){
+    var d = a.date;
+    if (!dates[d]) dates[d]={spend:0,revenue:0};
+    dates[d].spend += a.spend;
+    dates[d].revenue += a.revenue;
+  });
+  var sorted = Object.keys(dates).sort().slice(-7);
+  var roasData = sorted.map(function(d){ return dates[d].spend ? +(dates[d].revenue/dates[d].spend).toFixed(2) : 0; });
+  new Chart(document.getElementById('trendChart'), {
+    type:'line',
+    data:{labels:sorted.map(function(d){return d.slice(5);}), datasets:[
+      {label:'ROAS', data:roasData, borderColor:'#8b5cf6', tension:.3, fill:false, pointRadius:4, borderWidth:2}
+    ]},
+    options:{responsive:true, plugins:{legend:{labels:{color:'#ccc'}}}, scales:{y:{ticks:{color:'#888'},grid:{color:'#222'}},x:{ticks:{color:'#888'}}}}
+  });
+}
+
+function checkAlerts() {
+  var alertAds = allAds.filter(function(a){ return (a.alerts||[]).length > 0; });
+  var banner = document.getElementById('alertBanner');
+  var alertText = document.getElementById('alertText');
+  if (alertAds.length) {
+    banner.classList.add('visible');
+    var msgs = alertAds.map(function(a){
+      return a.creative_name + ': ' + (a.alerts||[]).map(function(al){return al.metric+' '+al.value;}).join(', ');
+    });
+    alertText.textContent = 'Anomaly detected: ' + alertAds.length + ' items -- ' + msgs.slice(0,3).join(' | ');
+    lucide.createIcons();
+  }
+}
+
+async function addAd() {
+  var body = {
+    campaign_name: document.getElementById('f_campaign').value,
+    creative_name: document.getElementById('f_creative').value,
+    platform: document.getElementById('f_platform').value,
+    spend: Number(document.getElementById('f_spend').value)||0,
+    impressions: Number(document.getElementById('f_impressions').value)||0,
+    clicks: Number(document.getElementById('f_clicks').value)||0,
+    conversions: Number(document.getElementById('f_conversions').value)||0,
+    revenue: Number(document.getElementById('f_revenue').value)||0,
+    date: document.getElementById('f_date').value
+  };
+  await fetch('/api/ads', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  document.getElementById('addMsg').textContent = 'Added successfully';
+  loadData();
+}
+
+async function sendSlack() {
+  var alerts = allAds.filter(function(a){return(a.alerts||[]).length>0;});
+  var msg = 'Ad Performance Alert\nAnomalies detected: ' + alerts.length + '\n';
+  alerts.forEach(function(a){ msg += '- ' + a.creative_name + ': ROAS ' + a.roas + 'x, CPA ' + a.cpa + ' KRW\n'; });
+  var res = await fetch('/api/slack/send', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message:msg})});
+  var result = await res.json();
+  document.getElementById('addMsg').textContent = result.status==='sent' ? 'Slack sent successfully' : 'Simulation mode';
+}
+
+function sendChat() {
+  var input = document.getElementById('chatInput');
+  var msg = input.value.trim();
+  if (!msg) return;
+  var container = document.getElementById('chatMessages');
+  var userDiv = document.createElement('div');
+  userDiv.className = 'chat-message user';
+  userDiv.textContent = msg;
+  container.appendChild(userDiv);
+  input.value = '';
+  setTimeout(function(){
+    var botDiv = document.createElement('div');
+    botDiv.className = 'chat-message bot';
+    botDiv.textContent = '[Ads Bot] I received your message. This feature is under development.';
+    container.appendChild(botDiv);
+    container.scrollTop = container.scrollHeight;
+  }, 500);
+}
+
+loadData();
+lucide.createIcons();
+</script>
+</body>
+</html>

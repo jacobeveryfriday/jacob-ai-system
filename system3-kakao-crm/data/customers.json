@@ -1,0 +1,10 @@
+[
+  {"id":"cust001","name":"김민지","phone":"010-1234-5678","product":"500달톤 히알루론산 세럼","purchase_date":"2026-01-05","sent_steps":[0,7,30,90],"created_at":"2026-01-05T10:00:00"},
+  {"id":"cust002","name":"이서연","phone":"010-2345-6789","product":"500달톤 콜라겐 크림","purchase_date":"2026-02-15","sent_steps":[0,7,30],"created_at":"2026-02-15T14:00:00"},
+  {"id":"cust003","name":"박지우","phone":"010-3456-7890","product":"500달톤 비타민C 앰플","purchase_date":"2026-03-01","sent_steps":[0,7],"created_at":"2026-03-01T09:00:00"},
+  {"id":"cust004","name":"최수아","phone":"010-4567-8901","product":"500달톤 히알루론산 세럼","purchase_date":"2026-03-20","sent_steps":[0,7],"created_at":"2026-03-20T11:00:00"},
+  {"id":"cust005","name":"정하은","phone":"010-5678-9012","product":"500달톤 레티놀 에센스","purchase_date":"2026-03-29","sent_steps":[0],"created_at":"2026-03-29T16:00:00"},
+  {"id":"cust006","name":"강예린","phone":"010-6789-0123","product":"500달톤 나이아신아마이드 토너","purchase_date":"2026-04-01","sent_steps":[0],"created_at":"2026-04-01T10:00:00"},
+  {"id":"cust007","name":"윤소율","phone":"010-7890-1234","product":"500달톤 콜라겐 크림","purchase_date":"2026-04-03","sent_steps":[0],"created_at":"2026-04-03T13:00:00"},
+  {"id":"cust008","name":"임다현","phone":"010-8901-2345","product":"500달톤 비타민C 앰플","purchase_date":"2026-04-05","sent_steps":[],"created_at":"2026-04-05T09:00:00"}
+]
