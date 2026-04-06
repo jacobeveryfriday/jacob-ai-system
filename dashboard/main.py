@@ -27,6 +27,12 @@ DASH_PASS = os.getenv("DASH_PASS", "")
 security = HTTPBasic()
 
 
+@app.get("/health")
+async def health_check():
+    """Railway 헬스체크용 (인증 불필요)"""
+    return {"status": "ok"}
+
+
 def check_auth(credentials: HTTPBasicCredentials = Depends(security)):
     """DASH_USER/DASH_PASS 설정 시 기본 인증 적용. 미설정 시 통과."""
     if not DASH_USER or not DASH_PASS:
