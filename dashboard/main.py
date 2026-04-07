@@ -1,12 +1,14 @@
-"""Jacob AI Command Center — 통합 대시보드 + Google Sheets API"""
+"""Jacob AI Command Center — 통합 대시보드 + Google Sheets API + Anthropic AI Agents"""
 import hashlib
 import json
 import os
+import re
 import secrets
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict
+from zoneinfo import ZoneInfo
 
 import httpx
 import requests as req_lib
@@ -18,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 
 load_dotenv()
 app = FastAPI(title="Command Center")
+KST = ZoneInfo("Asia/Seoul")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -115,8 +118,8 @@ KPI_FILE = DATA_DIR / "kpi_summary.json"
 
 # ===== Google Sheets Config =====
 GSHEETS_API_KEY = os.getenv("GOOGLE_SHEETS_API_KEY", "")
-SHEET_INBOUND = "1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8"
-SHEET_CONTRACT = "1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q"
+SHEET_INBOUND = os.getenv("INBOUND_SHEET_ID", "1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8")
+SHEET_CONTRACT = os.getenv("GOOGLE_SHEETS_ID", "1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q")
 SHEET_INFLUENCER = "1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs"
 SHEET_ADS = "1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU"
 
@@ -256,72 +259,190 @@ def _dummy_ads_performance():
     }
 
 
-# ===== Live Sheets Parsing (2026-04-06 컬럼 확인 + 미처리 로직) =====
+# ===== 날짜/채널 헬퍼 =====
+def _is_date_today(date_val: str, now: datetime) -> bool:
+    """날짜 문자열이 오늘(KST)인지 판단. 5가지 형식 지원."""
+    if not date_val:
+        return False
+    td, tm = now.day, now.month
+    for p in [f"{tm}/{td}", f"{tm}/{td:02d}", f"{tm:02d}/{td}", f"{tm:02d}/{td:02d}"]:
+        if date_val == p:
+            return True
+    today_iso = now.strftime("%Y-%m-%d")
+    if date_val.startswith(today_iso):
+        return True
+    today_ymd = now.strftime("%Y%m%d")
+    clean = date_val.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
+    if clean.startswith(today_ymd):
+        return True
+    return False
+
+
+def _is_date_this_month(date_val: str, now: datetime) -> bool:
+    """날짜 문자열이 이번 달인지 판단."""
+    if not date_val:
+        return False
+    try:
+        if "/" in date_val:
+            return int(date_val.split("/")[0]) == now.month
+        elif "-" in date_val:
+            parts = date_val.split("-")
+            if len(parts) >= 2 and len(parts[0]) == 4:
+                return int(parts[0]) == now.year and int(parts[1]) == now.month
+    except (ValueError, IndexError):
+        pass
+    return False
+
+
+def _classify_channel(channel: str) -> str:
+    """유입채널 분류."""
+    if not channel:
+        return "기타"
+    ch = channel.lower()
+    if any(k in ch for k in ["sns", "메타", "insta", "meta", "facebook", "fb"]):
+        return "SNS(메타)"
+    if any(k in ch for k in ["email", "이메일", "mail"]):
+        return "이메일"
+    if any(k in ch for k in ["cpc", "네이버", "naver", "검색", "search"]):
+        return "CPC(네이버)"
+    if any(k in ch for k in ["google_sa", "google", "구글"]):
+        return "구글(SA)"
+    if any(k in ch for k in ["brandthumb", "브랜드썸"]):
+        return "브랜드썸"
+    if any(k in ch for k in ["blog", "블로그", "youtube", "유튜브"]):
+        return "블로그/유튜브"
+    return channel[:10] if channel else "기타"
+
+
+def _find_col(headers, *keywords):
+    """헤더 리스트에서 키워드 포함 컬럼 인덱스 반환. 줄바꿈 제거 후 매칭."""
+    for i, h in enumerate(headers):
+        h_clean = h.replace("\n", " ")
+        for kw in keywords:
+            if kw in h_clean:
+                return i
+    return None
+
+
+def _find_header_row(rows, *marker_keywords):
+    """시트에서 실제 헤더 행 찾기. marker_keywords 중 하나를 포함하는 첫 번째 행 반환."""
+    for ri, row in enumerate(rows[:10]):
+        row_text = " ".join(str(c).replace("\n", " ") for c in row)
+        for kw in marker_keywords:
+            if kw in row_text:
+                return ri
+    return 0
+
+
+def _auto_detect_date_col(headers, sample_rows):
+    """날짜 컬럼 자동 감지: 헤더명 우선, 없으면 데이터 패턴으로."""
+    for i, h in enumerate(headers):
+        h_clean = h.replace("\n", " ")
+        if any(k in h_clean for k in ['날짜', 'date', '일자', '일시', 'Date']):
+            return i
+    for row in sample_rows[:5]:
+        for ci in range(min(len(row), 15)):
+            val = str(row[ci]).strip()
+            if re.match(r'^\d{1,2}/\d{1,2}$', val) or re.match(r'^\d{4}-\d{2}-\d{2}', val):
+                return ci
+    return None
+
+
+# ===== Live Sheets Parsing (헤더 기반 자동 감지) =====
 def _parse_inbound(rows):
-    """인바운드 파센문의 탭. J(9)=유입채널, O(14)=담당자, Q(16)=컨택현황. 미처리=담당자or컨택 없음."""
-    today = datetime.now()
-    this_month = f"{today.year}.{today.month:02d}"
-    today_day = f"{today.month}/{today.day}"
-    today_day2 = f"{today.month}/{today.day:02d}"
-    today_day3 = f"{today.month:02d}/{today.day}"
-    today_day4 = f"{today.month:02d}/{today.day:02d}"
-    skip_kw = ["국가", "주의사항", "본 리스트", "[ ", "*", "brand name", "월"]
+    """인바운드 시트 파싱 — 헤더 기반 컬럼 자동 감지. 컨텍현황='워킹 중' → 유효DB."""
+    now = datetime.now(KST)
+    this_month_str = f"{now.year}.{now.month:02d}"
+
     result = {"today_inbound": 0, "today_valid": 0, "today_unhandled": 0, "today_handled": 0,
               "month_inbound": 0, "month_valid": 0, "month_unhandled": 0,
+              "cumul_inbound": 0, "cumul_valid": 0, "cumul_invalid": 0,
               "channel_stats": {}, "staff_stats": {}, "source_stats": {},
               "unhandled_brands": [],
               "pipeline_items": {"인입DB": [], "유효DB": [], "미팅": [], "계약서": [], "재계약": []}}
-    for row in rows:
+
+    if not rows or len(rows) < 3:
+        return result
+
+    # 실제 헤더 행 자동 감지 (인바운드 시트: "국가"/"월"/"날짜" 포함 행)
+    hdr_idx = _find_header_row(rows, "국가", "컨택현황", "컨텍현황", "담당자")
+    headers = [str(h).replace("\n", " ").strip() for h in rows[hdr_idx]]
+    data_rows = rows[hdr_idx + 1:]
+
+    date_idx = _auto_detect_date_col(headers, data_rows[:5])
+    contact_status_idx = _find_col(headers, "컨텍현황", "컨택현황", "consulting")
+    brand_idx = _find_col(headers, "업체명", "브랜드", "상호", "brand name")
+    channel_idx = _find_col(headers, "유입채널")
+    staff_idx = _find_col(headers, "담당자")
+    month_idx = _find_col(headers, "월")
+    source_idx = _find_col(headers, "유입소재", "유입경로", "소스")
+
+    # 폴백: 기존 하드코딩 인덱스 (파센문의 탭)
+    if brand_idx is None and len(headers) > 4:
+        brand_idx = 4
+    if channel_idx is None and len(headers) > 9:
+        channel_idx = 9
+    if staff_idx is None and len(headers) > 14:
+        staff_idx = 14
+    if contact_status_idx is None and len(headers) > 16:
+        contact_status_idx = 16
+    if date_idx is None and len(headers) > 2:
+        date_idx = 2
+    if month_idx is None and len(headers) > 1:
+        month_idx = 1
+
+    skip_kw = ["국가", "주의사항", "본 리스트", "[ ", "*", "brand name"]
+    this_year_month_prefix = f"{now.year}.{now.month:02d}"  # "2026.04"
+    this_year_iso_prefix = f"{now.year}-{now.month:02d}"     # "2026-04"
+
+    def _is_current_year_month(month_val: str, date_val: str) -> bool:
+        """월 컬럼 또는 날짜 컬럼이 현재 연월(2026.04)에 해당하는지 판단."""
+        if this_year_month_prefix in month_val:
+            return True
+        # 월 컬럼에 ISO 타임스탬프가 들어간 경우 (예: "2026-04-07 12:12:45")
+        if month_val.startswith(this_year_iso_prefix):
+            return True
+        # 월 컬럼이 비어있을 때 날짜 컬럼으로 판단
+        if not month_val and date_val and date_val.startswith(f"{now.year}-{now.month:02d}"):
+            return True
+        return False
+
+    for row in data_rows:
         if not row or len(row) < 3:
             continue
-        country = str(row[0]).strip()
-        if not country or any(k in country for k in skip_kw):
+        first_cell = str(row[0]).strip()
+        if not first_cell or any(k in first_cell for k in skip_kw):
             continue
-        month_val = str(row[1]).strip() if len(row) > 1 else ""
-        date_val = str(row[2]).strip() if len(row) > 2 else ""
-        brand = str(row[4]).strip() if len(row) > 4 else ""
-        channel_j = str(row[9]).strip() if len(row) > 9 else ""
-        channel_d = str(row[3]).strip() if len(row) > 3 else ""
-        channel = channel_j if channel_j else channel_d
-        source = str(row[10]).strip() if len(row) > 10 else ""
-        staff = str(row[14]).strip() if len(row) > 14 else ""
-        status = str(row[16]).strip() if len(row) > 16 else ""
-        # 이번 달 판단: B열 "YYYY.MM" 또는 C열 날짜에서 월 추출
-        is_month_a = this_month in month_val
-        is_month_b = False
-        if not month_val and date_val:
-            try:
-                if "/" in date_val:
-                    is_month_b = (int(date_val.split("/")[0]) == today.month)
-                elif "-" in date_val:
-                    is_month_b = (int(date_val.split("-")[1]) == today.month)
-            except (ValueError, IndexError):
-                pass
-        is_month = is_month_a or is_month_b
-        # 오늘 판단: "4/6" 또는 "2026-04-06..." 타임스탬프
-        today_iso = today.strftime("%Y-%m-%d")
-        is_today = (date_val == today_day or date_val == today_day2 or date_val == today_day3 or date_val == today_day4 or date_val.startswith(today_iso))
-        is_valid = "워킹" in status
+
+        def _g(idx):
+            return str(row[idx]).strip() if idx is not None and idx < len(row) else ""
+
+        date_val = _g(date_idx)
+        brand = _g(brand_idx)
+        channel = _g(channel_idx)
+        staff = _g(staff_idx)
+        status = _g(contact_status_idx)
+        month_val = _g(month_idx)
+        source = _g(source_idx)
+
+        # 누적 (전체 기간, 날짜 필터 없음)
+        result["cumul_inbound"] += 1
+        if status in ("워킹 중", "워킹중"):
+            result["cumul_valid"] += 1
+
+        # 이번 달 판단: 월 컬럼이 현재 연월인지 확인 (연도 교차 방지)
+        is_month = _is_current_year_month(month_val, date_val)
+        # 오늘 판단: 날짜 매칭 AND 월이 현재 연월 (2020/4/7 등 과거 제외)
+        is_today = _is_date_today(date_val, now) and is_month
+
+        # 유효DB = 컨텍현황 "워킹중" (trim 후 비교)
+        is_valid = status in ("워킹 중", "워킹중")
         is_unhandled = (not staff) or (not status)
-        ch = channel.lower()
-        if any(k in ch for k in ["sns", "메타", "insta", "meta", "facebook", "fb"]):
-            ch_key = "SNS(메타)"
-        elif any(k in ch for k in ["email", "이메일", "mail"]):
-            ch_key = "이메일"
-        elif any(k in ch for k in ["cpc", "네이버", "naver", "검색", "search"]):
-            ch_key = "CPC(네이버)"
-        elif any(k in ch for k in ["google_sa", "google", "구글"]):
-            ch_key = "구글(SA)"
-        elif any(k in ch for k in ["brandthumb", "브랜드썸"]):
-            ch_key = "브랜드썸"
-        elif any(k in ch for k in ["blog", "블로그", "youtube", "유튜브"]):
-            ch_key = "블로그/유튜브"
-        elif channel:
-            ch_key = channel[:10]
-        else:
-            ch_key = "기타"
+        ch_key = _classify_channel(channel)
+
         card = {"name": brand, "channel": ch_key, "staff": staff or "미배정", "date": date_val,
                 "source": source, "status": status if status else "미처리", "unhandled": is_unhandled}
+
         if is_month:
             result["month_inbound"] += 1
             result["channel_stats"][ch_key] = result["channel_stats"].get(ch_key, 0) + 1
@@ -340,7 +461,8 @@ def _parse_inbound(rows):
                 result["pipeline_items"]["인입DB"].append(card)
             if is_unhandled:
                 result["month_unhandled"] += 1
-        if is_today and is_month:  # 오늘 AND 이번 달 (다른 연도 4/6 제외)
+
+        if is_today:
             result["today_inbound"] += 1
             if is_valid:
                 result["today_valid"] += 1
@@ -350,46 +472,95 @@ def _parse_inbound(rows):
                                                     "date": date_val, "reason": "담당자 없음" if not staff else "컨택현황 미입력"})
             else:
                 result["today_handled"] += 1
+
+    result["cumul_invalid"] = result["cumul_inbound"] - result["cumul_valid"]
     return result
 
 
 def _parse_contracts(rows):
-    """계산서발행 탭 파싱. B(idx0)=작성일자,D(idx2)=작성월,G(idx5)=신규/재계약,I(idx7)=상호,T(idx18)=공급가액"""
-    today = datetime.now()
-    this_month = f"{today.year}.{today.month:02d}"
-    prev_dt = today.replace(day=1) - timedelta(days=1)
-    prev_month = f"{prev_dt.year}.{prev_dt.month:02d}"
-    ly_month = f"{today.year - 1}.{today.month:02d}"
-    today_ymd = today.strftime("%Y%m%d")
+    """세금계산서 시트 파싱 — 헤더 기반. 등록기준일/공급가액/공급받는자 상호."""
+    now = datetime.now(KST)
+    today_ymd = now.strftime("%Y%m%d")
+    today_iso = now.strftime("%Y-%m-%d")
+    this_ym = f"{now.year}{now.month:02d}"
+    this_month_dot = f"{now.year}.{now.month:02d}"
+    prev_dt = now.replace(day=1) - timedelta(days=1)
+    prev_ym = f"{prev_dt.year}{prev_dt.month:02d}"
+    prev_month_dot = f"{prev_dt.year}.{prev_dt.month:02d}"
+    ly_ym = f"{now.year - 1}{now.month:02d}"
+
     result = {"today_contract": 0, "month_contract": 0, "prev_month_contract": 0,
               "last_year_contract": 0, "month_renewal": 0, "prev_month_renewal": 0,
               "today_revenue": 0, "month_revenue": 0, "prev_month_revenue": 0,
-              "last_year_revenue": 0, "brands": [], "today_brands": []}
-    for row in rows:
+              "last_year_revenue": 0, "brands": [], "today_brands": [], "brand_list": []}
+
+    if not rows or len(rows) < 2:
+        return result
+
+    # 실제 헤더 행 자동 감지 (계산서: "작성일자"/"공급가액"/"공급받는자" 포함 행)
+    hdr_idx = _find_header_row(rows, "작성일자", "공급가액", "공급받는자")
+    headers = [str(h).replace("\n", " ").strip() for h in rows[hdr_idx]]
+    data_rows = rows[hdr_idx + 1:]
+
+    date_idx = _find_col(headers, "작성일자", "등록기준일", "발행일")
+    amount_idx = _find_col(headers, "공급가액")
+    brand_idx = _find_col(headers, "공급받는자 상호")  # 구체적 매칭 (등록번호 제외)
+    type_idx = _find_col(headers, "신규/", "재계약", "신규")
+    staff_idx = _find_col(headers, "요청담당자", "담당자")
+    month_idx = _find_col(headers, "작성월", "월매출")
+
+    # 폴백 (기존 B:U 기준)
+    if date_idx is None:
+        date_idx = 1  # B열 = 작성일자
+    if amount_idx is None and len(headers) > 19:
+        amount_idx = 19  # T열 (A=0기준)
+    if brand_idx is None and len(headers) > 8:
+        brand_idx = 8  # I열
+    if type_idx is None and len(headers) > 6:
+        type_idx = 6  # G열
+
+    brand_set = set()
+
+    for row in data_rows:
         if not row or len(row) < 3:
             continue
-        date_b = str(row[0]).strip() if len(row) > 0 else ""
-        month_d = str(row[2]).strip() if len(row) > 2 else ""
-        staff = str(row[3]).strip() if len(row) > 3 else ""
-        ctype = str(row[5]).strip() if len(row) > 5 else ""
-        brand = str(row[7]).strip() if len(row) > 7 else ""
-        revenue_raw = str(row[18]).strip() if len(row) > 18 else "0"
+
+        def _g(idx):
+            return str(row[idx]).strip() if idx is not None and idx < len(row) else ""
+
+        date_raw = _g(date_idx)
+        revenue_raw = _g(amount_idx)
+        brand = _g(brand_idx)
+        ctype = _g(type_idx)
+        staff = _g(staff_idx)
+        month_val = _g(month_idx)
+
+        # 금액 파싱
         try:
-            revenue = int(float(revenue_raw.replace(",", "").replace("\u20a9", ""))) if revenue_raw and revenue_raw not in ["-", ""] else 0
+            revenue = int(float(revenue_raw.replace(",", "").replace("₩", "").replace(" ", ""))) if revenue_raw and revenue_raw not in ["-", ""] else 0
         except (ValueError, TypeError):
             revenue = 0
         if revenue < 0:
             revenue = 0
-        date_clean = date_b.replace("-", "").replace(".", "").replace("/", "")
+
+        # 날짜 정리
+        date_clean = date_raw.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
         if len(date_clean) < 6 or not date_clean[:6].isdigit():
             continue
-        is_today_row = (date_clean[:8] == today_ymd)
-        is_this_month = (this_month in month_d or date_clean[:6] == f"{today.year}{today.month:02d}")
-        is_prev_month = prev_month in month_d
-        is_last_year = ly_month in month_d
+
+        if brand:
+            brand_set.add(brand)
+
+        is_today = (date_clean[:8] == today_ymd) or date_raw.startswith(today_iso)
+        is_this_month = (date_clean[:6] == this_ym) or (this_month_dot in month_val)
+        is_prev_month = (date_clean[:6] == prev_ym) or (prev_month_dot in month_val)
+        is_last_year = date_clean[:6] == ly_ym
         is_renewal = (ctype and "신규" not in ctype and "확인필요" not in ctype and ctype != "-")
-        brand_card = {"name": brand, "type": "재계약" if is_renewal else "신규", "staff": staff, "date": date_b, "revenue": revenue}
-        if is_today_row:
+
+        brand_card = {"name": brand, "type": "재계약" if is_renewal else "신규",
+                      "staff": staff, "date": date_raw, "revenue": revenue}
+
+        if is_today:
             result["today_contract"] += 1
             result["today_revenue"] += revenue
             result["today_brands"].append(brand_card)
@@ -407,6 +578,8 @@ def _parse_contracts(rows):
         if is_last_year:
             result["last_year_contract"] += 1
             result["last_year_revenue"] += revenue
+
+    result["brand_list"] = sorted(brand_set)
     return result
 
 
@@ -482,18 +655,31 @@ async def add_checklist_item(request: Request):
 
 # ===== Google Sheets API Endpoints =====
 @app.get("/api/brand-pipeline")
-async def api_brand_pipeline():
-    """브랜드 파이프라인 (Google Sheets 연동 or 더미). 2026-04-06 컬럼 확인 반영."""
+async def api_brand_pipeline(brand_filter: Optional[str] = Query(None)):
+    """브랜드 파이프라인 (Google Sheets 연동 or 더미). 헤더 기반 자동 감지."""
     if not GSHEETS_API_KEY:
         dummy = _dummy_brand_pipeline()
         dummy["note"] = "GOOGLE_SHEETS_API_KEY 미입력"
         dummy["not_connected"] = ["광고CPA", "CS", "유효DB(컨택현황 업데이트 필요)"]
         return dummy
     try:
-        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:R", "파센문의", ttl_key="inbound")
-        contract_rows = fetch_sheet(SHEET_CONTRACT, "B:U", "계산서발행", ttl_key="contract")
+        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
         ib = _parse_inbound(inbound_rows) if inbound_rows else {}
         ct = _parse_contracts(contract_rows) if contract_rows else {}
+
+        # 브랜드 필터 적용
+        brands_data = ct.get("brands", [])
+        today_brands_data = ct.get("today_brands", [])
+        if brand_filter:
+            brands_data = [b for b in brands_data if b.get("name") == brand_filter]
+            today_brands_data = [b for b in today_brands_data if b.get("name") == brand_filter]
+            filtered_month_revenue = sum(b["revenue"] for b in brands_data)
+            filtered_today_revenue = sum(b["revenue"] for b in today_brands_data)
+        else:
+            filtered_month_revenue = ct.get("month_revenue", 0)
+            filtered_today_revenue = ct.get("today_revenue", 0)
+
         return {
             "source": "live",
             "today": {
@@ -502,15 +688,20 @@ async def api_brand_pipeline():
                 "unhandled": ib.get("today_unhandled", 0),
                 "handled": ib.get("today_handled", 0),
                 "contract": ct.get("today_contract", 0),
-                "revenue": ct.get("today_revenue", 0),
+                "revenue": filtered_today_revenue,
             },
             "month": {
                 "inbound": ib.get("month_inbound", 0),
                 "valid": ib.get("month_valid", 0),
                 "unhandled": ib.get("month_unhandled", 0),
                 "contract": ct.get("month_contract", 0),
-                "revenue": ct.get("month_revenue", 0),
+                "revenue": filtered_month_revenue,
                 "renewal": ct.get("month_renewal", 0),
+            },
+            "cumul": {
+                "inbound": ib.get("cumul_inbound", 0),
+                "valid": ib.get("cumul_valid", 0),
+                "invalid": ib.get("cumul_invalid", 0),
             },
             "prev_month": {
                 "contract": ct.get("prev_month_contract", 0),
@@ -532,6 +723,8 @@ async def api_brand_pipeline():
             ],
             "pipeline": ib.get("pipeline_items", {}),
             "unhandled_brands": ib.get("unhandled_brands", []),
+            "brand_list": ct.get("brand_list", []),
+            "today_brands": today_brands_data,
             "not_connected": ["광고CPA", "CS"],
         }
     except Exception as e:
@@ -669,6 +862,7 @@ async def api_kpi_summary():
     last_roas = trend[-1].get("roas", 0) if trend else 0
     month_revenue = month.get("revenue", 0)
     month_contract = month.get("contract", 0)
+    cumul = brand.get("cumul", {})
     return {
         "source": brand.get("source", "dummy"),
         "not_connected": brand.get("not_connected", []),
@@ -689,6 +883,11 @@ async def api_kpi_summary():
             "renewal": month.get("renewal", 0),
             "roas": last_roas,
             "influencer_pool": 1400000,
+        },
+        "cumul": {
+            "inbound": cumul.get("inbound", 0),
+            "valid": cumul.get("valid", 0),
+            "invalid": cumul.get("invalid", 0),
         },
         "prev_month": {"revenue": prev.get("revenue", 0), "contract": prev.get("contract", 0)},
         "last_year": {"revenue": ly.get("revenue", 0), "contract": ly.get("contract", 0)},
@@ -734,89 +933,233 @@ async def api_sheets_status():
     }
 
 
-# ===== AI Agent (OpenAI GPT-4o-mini) =====
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+# ===== AI Agent (Anthropic Claude — 7 Personas) =====
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
+
+AGENT_PERSONAS = {
+    "overview": {
+        "name": "카일",
+        "system": """당신은 공팔리터글로벌 총괄 KPI 에이전트 카일입니다.
+냉철한 데이터 전략가로서 매일 KPI를 점검하고 병목을 찾아냅니다.
+현재 KPI: 금일 인입DB {금일인입DB}건 / 금일 유효DB {금일유효DB}건 / 무대응 {무대응건}건 / 이번달 계약 {계약건수}건(목표 38건) / 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표 1.6억) / CPA {CPA}원
+답변 규칙:
+1) 현황분석 2) 원인진단 3) 오늘/이번주/이번달 액션 각 1가지
+AT RISK 항목은 ⚠️ 강조 표시. 한국어로 답변.
+사용자가 "무대응 건 처리해줘"라고 하면 무대응 리스트를 보여주고 건별 담당자 배정 제안 + 1차 응대 스크립트를 생성하세요."""
+    },
+    "kpi": {
+        "name": "카일",
+        "system": """당신은 공팔리터글로벌 총괄 KPI 에이전트 카일입니다.
+냉철한 데이터 전략가로서 매일 KPI를 점검하고 병목을 찾아냅니다.
+현재 KPI: 금일 인입DB {금일인입DB}건 / 금일 유효DB {금일유효DB}건 / 무대응 {무대응건}건 / 이번달 계약 {계약건수}건(목표 38건) / 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표 1.6억) / CPA {CPA}원
+답변 규칙:
+1) 현황분석 2) 원인진단 3) 오늘/이번주/이번달 액션 각 1가지
+AT RISK 항목은 ⚠️ 강조 표시. 한국어.
+사용자가 "무대응 건 처리해줘"라고 하면 무대응 리스트를 보여주고 건별 담당자 배정 제안 + 1차 응대 스크립트를 생성하세요."""
+    },
+    "brand": {
+        "name": "루나",
+        "system": """당신은 공팔리터글로벌 브랜드 영업 에이전트 루나입니다.
+브랜드 클라이언트 관계와 파이프라인 관리 전문가입니다.
+현재 KPI: 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표 1.6억) / 계약건수 {계약건수}건 / 평균계약단가 {계약단가}원 / 재접촉 대상 {재접촉건수}건
+미처리 파이프라인과 오늘 컨텍 우선순위를 먼저 안내하세요.
+사용자가 "재접촉 메시지 작성해줘" 또는 "제안서 보내줘"라고 하면:
+1) 재접촉 대상 업체명/이전 컨텍 내용 기반 맞춤 제안 메시지 자동 생성
+2) 이메일 / 카카오톡 / 문자 3가지 버전으로 각각 생성
+답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK 항목은 ⚠️. 한국어."""
+    },
+    "influencer": {
+        "name": "피치",
+        "system": """당신은 공팔리터글로벌 인플루언서 매칭 에이전트 피치입니다.
+수백만 인플루언서 데이터를 분석해 최적 매칭을 찾는 큐레이터입니다.
+현재 KPI: 인플루언서 풀 {풀수}명(목표 155만) / 국가별: {국가별현황} / 플랫폼별: {플랫폼별현황}
+부족한 카테고리/국가를 진단하고 확보 전략을 제안하세요.
+답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+    },
+    "ads": {
+        "name": "맥스",
+        "system": """당신은 공팔리터글로벌 광고센터 에이전트 맥스입니다.
+ROI에 집착하는 퍼포먼스 마케터입니다.
+현재 KPI: CPA {CPA}원(목표 5만원 이하) / 오가닉 리드 {오가닉리드}건/일(목표 15건) / 채널별: {채널별효율}
+채널별 효율 분석과 예산 재배분을 제안하세요.
+답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+    },
+    "sns": {
+        "name": "소피",
+        "system": """당신은 공팔리터글로벌 SNS 운영 에이전트 소피입니다.
+공팔리터의 브랜드 목소리를 지키는 콘텐츠 전략가입니다.
+현재 KPI: {채널별현황} / 이번주 콘텐츠: {이번주콘텐츠현황}
+이번 주 추천 콘텐츠 주제 3가지와 성과 분석을 제공하세요.
+답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+    },
+    "management": {
+        "name": "레이",
+        "system": """당신은 공팔리터글로벌 경영지원 에이전트 레이입니다.
+CEO 시간을 지키는 운영 전문가로 행정 이슈를 선제적으로 챙깁니다.
+현재 현황: 미처리 세금계산서 {미처리건}건 / 입금 미확인 {미확인건}건 / 이번주 체크리스트: 세금계산서 발행, 미수금 확인, 정부지원 마감 점검
+이번 주 경영지원 우선순위 체크리스트를 제공하세요.
+답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+    },
+    "cs": {
+        "name": "하나",
+        "system": """당신은 공팔리터글로벌 CS 에이전트 하나입니다.
+클라이언트 만족을 최우선으로 하는 따뜻하고 신속한 전문가입니다.
+현재 현황: 미응답 CS {미응답건}건 / 재계약률 {재계약률}% / 오늘 처리 우선순위: 미응답 건 즉시 배정
+미처리 CS 우선순위와 응대 스크립트를 제공하세요.
+답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+    },
+}
+
+
+async def _gather_kpi_context() -> dict:
+    """실시간 KPI 데이터를 수집하여 에이전트 system prompt에 주입할 변수 딕셔너리 반환."""
+    ctx = {}
+    try:
+        brand = await api_brand_pipeline()
+        t = brand.get("today", {})
+        m = brand.get("month", {})
+        ctx["금일인입DB"] = t.get("inbound", 0)
+        ctx["금일유효DB"] = t.get("valid", 0)
+        ctx["무대응건"] = t.get("unhandled", 0)
+        ctx["인입DB"] = m.get("inbound", 0)
+        ctx["유효DB"] = m.get("valid", 0)
+        ctx["계약건수"] = m.get("contract", 0)
+        ctx["매출"] = f"{m.get('revenue', 0):,}"
+        ctx["당일매출"] = f"{t.get('revenue', 0):,}"
+        ctx["이번달매출"] = f"{m.get('revenue', 0):,}"
+        ctx["파이프라인건수"] = m.get("inbound", 0)
+        ctx["계약단가"] = f"{int(m.get('revenue', 0) / max(m.get('contract', 1), 1)):,}"
+        ctx["미처리건"] = t.get("unhandled", 0)
+        ctx["미확인건"] = 0
+        # 재접촉 건수
+        ctx["재접촉건수"] = len(brand.get("unhandled_brands", []))
+    except Exception:
+        pass
+    try:
+        inf = await api_influencer_db()
+        ctx["풀수"] = f"{inf.get('total', 0):,}"
+        stats = inf.get("stats", {})
+        bc = stats.get("by_country", {})
+        bp = stats.get("by_platform", {})
+        ctx["국가별현황"] = " / ".join(f"{k}:{v}" for k, v in sorted(bc.items(), key=lambda x: -x[1])[:5])
+        ctx["플랫폼별현황"] = " / ".join(f"{k}:{v}" for k, v in sorted(bp.items(), key=lambda x: -x[1])[:5])
+    except Exception:
+        ctx["풀수"] = "0"
+        ctx["국가별현황"] = "데이터 없음"
+        ctx["플랫폼별현황"] = "데이터 없음"
+    try:
+        ads = await api_ads_performance()
+        mt = ads.get("month", {}).get("total", {})
+        ctx["CPA"] = f"{mt.get('cpa', 0):,}"
+        ctx["오가닉리드"] = 6
+        ctx["채널별효율"] = "Meta/네이버/구글/카카오"
+    except Exception:
+        ctx["CPA"] = "0"
+        ctx["오가닉리드"] = 0
+        ctx["채널별효율"] = "데이터 없음"
+    try:
+        sns = await api_sns_performance()
+        channels = sns.get("channels", {})
+        parts = []
+        for k, v in channels.items():
+            f_count = v.get("followers", v.get("subscribers", 0))
+            parts.append(f"{k}: {f_count:,}")
+        ctx["채널별현황"] = " / ".join(parts) if parts else "데이터 없음"
+        ctx["이번주콘텐츠현황"] = "릴스 2건, TikTok 1건, 뉴스레터 1건 예정"
+    except Exception:
+        ctx["채널별현황"] = "데이터 없음"
+        ctx["이번주콘텐츠현황"] = "데이터 없음"
+    ctx.setdefault("미응답건", 4)
+    ctx.setdefault("재계약률", 65)
+    ctx.setdefault("금일인입DB", 0)
+    ctx.setdefault("금일유효DB", 0)
+    ctx.setdefault("무대응건", 0)
+    ctx.setdefault("재접촉건수", 0)
+    return ctx
+
 
 @app.post("/api/chat")
 async def api_chat(request: Request):
-    """AI 에이전트 채팅 — OpenAI GPT-4o-mini. API키 없으면 룰베이스 폴백."""
+    """AI 에이전트 채팅 — Anthropic Claude (7 페르소나). API키 없으면 룰베이스 폴백."""
     body = await request.json()
     user_msg = body.get("message", "").strip()
-    if not user_msg:
+    page = body.get("page", "overview")
+    is_briefing = body.get("briefing", False)
+
+    if not user_msg and not is_briefing:
         return {"reply": "질문을 입력해 주세요.", "source": "system"}
 
-    # Gather real data context
-    context_parts = []
+    # KPI 컨텍스트 수집
+    kpi = await _gather_kpi_context()
+
+    # 페르소나 선택
+    persona = AGENT_PERSONAS.get(page, AGENT_PERSONAS["overview"])
+    agent_name = persona["name"]
+
+    # system prompt에 실시간 KPI 주입
     try:
-        brand = await api_brand_pipeline()
-        if brand.get("source") == "live":
-            t = brand.get("today", {})
-            m = brand.get("month", {})
-            context_parts.append(f"[실시간 데이터] 오늘: 인입DB {t.get('inbound',0)}건, 유효DB {t.get('valid',0)}건, 계약 {t.get('contract',0)}건, 매출 {t.get('revenue',0):,}원")
-            context_parts.append(f"이번달: 인입DB {m.get('inbound',0)}건, 유효DB {m.get('valid',0)}건, 계약 {m.get('contract',0)}건, 매출 {m.get('revenue',0):,}원")
-            if t.get('unhandled', 0) > 0:
-                context_parts.append(f"⚠️ 미처리 {t.get('unhandled',0)}건 즉시 대응 필요")
-    except:
-        pass
+        all_keys = ["인입DB", "유효DB", "계약건수", "매출", "당일매출", "이번달매출",
+             "파이프라인건수", "계약단가", "풀수", "국가별현황", "플랫폼별현황", "CPA", "오가닉리드",
+             "채널별현황", "채널별효율", "이번주콘텐츠현황", "미처리건", "미확인건", "미응답건", "재계약률",
+             "금일인입DB", "금일유효DB", "무대응건", "재접촉건수"]
+        system_prompt = persona["system"].format(**{k: kpi.get(k, "N/A") for k in all_keys})
+    except (KeyError, IndexError):
+        system_prompt = persona["system"]
 
-    data_context = "\n".join(context_parts) if context_parts else "실시간 데이터 로딩 실패"
+    if is_briefing:
+        user_msg = "페이지에 처음 진입했습니다. 현재 핵심 KPI와 오늘의 우선순위를 간결하게 브리핑해주세요."
 
-    if not OPENAI_API_KEY:
-        # Rule-based fallback
-        reply = _rule_based_reply(user_msg, data_context)
-        return {"reply": reply, "source": "rule-based"}
+    if not ANTHROPIC_API_KEY:
+        reply = _rule_based_reply(user_msg, kpi, page)
+        return {"reply": reply, "source": "rule-based", "agent": agent_name}
 
-    # OpenAI call
+    # Anthropic Messages API 호출
     try:
-        system_prompt = f"""너는 공팔리터글로벌(08Liter Global) AI 수석 보좌관이다.
-인플루언서 마케팅 회사의 대시보드 AI로서 정확한 데이터 기반으로 답변한다.
-현재 실시간 데이터:
-{data_context}
-
-규칙:
-- 한국어로 답변
-- 수치는 정확히, 모르면 "확인 필요"
-- 실행 가능한 액션 제안 우선
-- 간결하게 핵심만"""
-
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                },
                 json={
-                    "model": "gpt-4o-mini",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_msg}
-                    ],
-                    "max_tokens": 500,
-                    "temperature": 0.7,
+                    "model": ANTHROPIC_MODEL,
+                    "max_tokens": 1024,
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": user_msg}],
                 }
             )
             if resp.status_code == 200:
                 data = resp.json()
-                reply = data["choices"][0]["message"]["content"]
-                return {"reply": reply, "source": "gpt-4o-mini"}
+                reply = data["content"][0]["text"]
+                return {"reply": reply, "source": "claude-sonnet", "agent": agent_name}
             else:
-                return {"reply": f"OpenAI 오류 ({resp.status_code}). 룰베이스로 전환합니다.\n\n" + _rule_based_reply(user_msg, data_context), "source": "fallback"}
+                err_detail = resp.text[:200]
+                print(f"Anthropic API error {resp.status_code}: {err_detail}")
+                return {"reply": _rule_based_reply(user_msg, kpi, page),
+                        "source": "fallback", "agent": agent_name}
     except Exception as e:
-        return {"reply": f"AI 연결 실패. 룰베이스로 답변합니다.\n\n" + _rule_based_reply(user_msg, data_context), "source": "fallback"}
+        print(f"Anthropic API exception: {e}")
+        return {"reply": _rule_based_reply(user_msg, kpi, page),
+                "source": "fallback", "agent": agent_name}
 
 
-def _rule_based_reply(msg: str, context: str) -> str:
-    """OpenAI API 키 없을 때 룰베이스 폴백"""
-    msg_lower = msg.lower()
-    if any(k in msg_lower for k in ["현황", "요약", "상태", "보고"]):
-        return f"현재 시스템 현황입니다.\n\n{context}\n\n상세 내용은 각 페이지에서 확인하세요."
+def _rule_based_reply(msg: str, kpi: dict, page: str) -> str:
+    """Anthropic API 키 없을 때 룰베이스 폴백"""
+    persona = AGENT_PERSONAS.get(page, AGENT_PERSONAS["overview"])
+    name = persona["name"]
+    ctx = f"인입DB {kpi.get('인입DB', 0)}건 / 유효DB {kpi.get('유효DB', 0)}건 / 계약 {kpi.get('계약건수', 0)}건 / 매출 {kpi.get('매출', '0')}원"
+
+    msg_lower = msg.lower() if msg else ""
+    if any(k in msg_lower for k in ["현황", "요약", "상태", "보고", "브리핑", "진입"]):
+        return f"[{name}] 현재 현황입니다.\n\n{ctx}\n\n📌 오늘 액션: 미처리 건 우선 대응\n📌 이번주 액션: 파이프라인 정리\n📌 이번달 액션: 목표 달성률 점검\n\nANTHROPIC_API_KEY를 설정하면 더 정확한 AI 분석을 받을 수 있습니다."
     if any(k in msg_lower for k in ["미처리", "대응", "긴급"]):
-        return f"미처리 현황 확인 중입니다.\n\n{context}\n\n미처리 건은 브랜드 페이지에서 상세 확인 가능합니다."
+        return f"[{name}] 미처리 현황: {kpi.get('미처리건', 0)}건\n\n{ctx}\n\n📌 오늘: 미처리 건 즉시 배정\n📌 이번주: 응답 시간 10분 이내 달성\n📌 이번달: SLA 준수율 95% 목표"
     if any(k in msg_lower for k in ["매출", "계약", "실적"]):
-        return f"매출/계약 현황입니다.\n\n{context}\n\n상세 분석은 총괄 KPI에서 확인하세요."
-    if any(k in msg_lower for k in ["인플루언서", "풀", "발굴"]):
-        return "인플루언서 현황은 '맞춤 인플루언서' 페이지에서 실시간 확인 가능합니다."
-    if any(k in msg_lower for k in ["광고", "cpa", "roas"]):
-        return "광고 성과는 '광고센터 운영' 페이지에서 채널별 상세 데이터를 확인하세요."
-    return f"질문을 분석 중입니다.\n\n{context}\n\nOpenAI API Key를 설정하면 더 정확한 AI 답변을 받을 수 있습니다."
+        return f"[{name}] 매출/계약 현황\n\n{ctx}\n\n📌 오늘: 견적 발송 우선\n📌 이번주: 미팅 전환율 개선\n📌 이번달: 계약 목표 38건 달성 집중"
+    return f"[{name}] {ctx}\n\n📌 오늘 액션: 핵심 미처리 건 대응\n📌 이번주 액션: 주간 리뷰 준비\n📌 이번달 액션: KPI 목표 달성 점검"
 
 
 # ===== Slack Webhook =====
@@ -876,6 +1219,106 @@ async def api_sns_performance():
         "today_new": 60,
         "organic_leads": {"today": 6, "month": 125, "target": 330},
     }
+
+
+# ===== 재접촉 대상 추출 API =====
+@app.get("/api/recontact-leads")
+async def api_recontact_leads():
+    """최근 6개월 유효DB 중 계약 미체결 브랜드 추출."""
+    try:
+        now = datetime.now(KST)
+        six_months_ago = now - timedelta(days=180)
+        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+        # 계약 브랜드 Set
+        ct_hdr = _find_header_row(contract_rows, "작성일자", "공급가액", "공급받는자")
+        ct_headers = [str(h).replace("\n", " ").strip() for h in contract_rows[ct_hdr]]
+        ct_brand_idx = _find_col(ct_headers, "공급받는자 상호")
+        if ct_brand_idx is None:
+            ct_brand_idx = 8
+        contracted = set()
+        for row in contract_rows[ct_hdr + 1:]:
+            if ct_brand_idx < len(row):
+                b = str(row[ct_brand_idx]).strip()
+                if b:
+                    contracted.add(b.lower())
+        # 인바운드 유효DB 중 미계약
+        ib_hdr = _find_header_row(inbound_rows, "국가", "컨택현황", "컨텍현황", "담당자")
+        ib_headers = [str(h).replace("\n", " ").strip() for h in inbound_rows[ib_hdr]]
+        brand_idx = _find_col(ib_headers, "업체명", "브랜드") or 4
+        status_idx = _find_col(ib_headers, "컨텍현황", "컨택현황") or 16
+        email_idx = _find_col(ib_headers, "이메일") or 6
+        contact_idx = _find_col(ib_headers, "연락처") or 5
+        date_idx = 2
+        month_idx = 1
+        leads = []
+        seen = set()
+        for row in inbound_rows[ib_hdr + 1:]:
+            if len(row) < 5:
+                continue
+            status = str(row[status_idx]).strip() if status_idx < len(row) else ""
+            if status not in ("워킹 중", "워킹중"):
+                continue
+            brand = str(row[brand_idx]).strip() if brand_idx < len(row) else ""
+            if not brand or brand.lower() in contracted or brand.lower() in seen:
+                continue
+            email = str(row[email_idx]).strip() if email_idx < len(row) else ""
+            contact = str(row[contact_idx]).strip() if contact_idx < len(row) else ""
+            date_val = str(row[date_idx]).strip() if date_idx < len(row) else ""
+            month_val = str(row[month_idx]).strip() if month_idx < len(row) else ""
+            seen.add(brand.lower())
+            leads.append({"name": brand, "email": email, "contact": contact, "date": date_val,
+                          "month": month_val, "status": status})
+        return {"count": len(leads), "leads": leads[:100]}
+    except Exception as e:
+        return {"count": 0, "leads": [], "error": str(e)}
+
+
+# ===== 무대응 건 추출 API =====
+@app.get("/api/no-response-leads")
+async def api_no_response_leads():
+    """금일 무대응 건 (담당자 없거나 컨텍현황 미입력) 추출."""
+    brand = await api_brand_pipeline()
+    unhandled = brand.get("unhandled_brands", [])
+    return {"count": len(unhandled), "leads": unhandled}
+
+
+# ===== 이메일 발송 (네이버 웍스 SMTP) =====
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+SMTP_HOST = os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com")
+SMTP_PORT = int(os.getenv("NAVER_WORKS_SMTP_PORT", "587"))
+SMTP_USER = os.getenv("NAVER_WORKS_SMTP_USER", "luna@08liter.com")
+SMTP_PASS = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
+SENDER_NAME = os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)")
+
+
+@app.post("/api/send-email")
+async def api_send_email(request: Request):
+    """네이버 웍스 SMTP로 이메일 발송."""
+    if not SMTP_PASS:
+        return {"status": "error", "message": "NAVER_WORKS_SMTP_PASSWORD 미설정"}
+    body = await request.json()
+    to_email = body.get("to", "")
+    subject = body.get("subject", "")
+    html_body = body.get("body", "")
+    if not to_email or not subject:
+        return {"status": "error", "message": "to, subject 필수"}
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["From"] = f"{SENDER_NAME} <{SMTP_USER}>"
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_USER, [to_email], msg.as_string())
+        return {"status": "ok", "to": to_email}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.get("/api/cache-clear")

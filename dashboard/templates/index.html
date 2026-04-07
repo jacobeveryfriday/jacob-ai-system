@@ -71,14 +71,14 @@
 
 <!-- OVERVIEW -->
 <div id="page-overview" class="active">
-<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 공팔리터 글로벌</div><div class="section-hdr-sub">이번 달 핵심 지표</div></div>
-<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번 달 매출</div><div class="kpi-status watch"></div></div><div class="kpi-value">1.22<span class="kpi-unit">억원</span></div><div class="kpi-detail">목표: <span class="v">1.6억원</span> / 달성률: <span class="v">76%</span></div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" style="width:76%"></div></div></div><div class="mt-4"><span class="badge badge-watch">WATCH</span></div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번 달 계약</div><div class="kpi-status risk"></div></div><div class="kpi-value">6<span class="kpi-unit">건</span></div><div class="kpi-detail">목표: <span class="v">38건</span> / 달성률: <span class="v">16%</span></div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill risk" style="width:16%"></div></div></div><div class="mt-4"><span class="badge badge-risk">AT RISK</span></div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">평균 계약단가</div><div class="kpi-status watch"></div></div><div class="kpi-value">370<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">420만원</span></div><div class="mt-4"><span class="badge badge-watch">WATCH</span></div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">오가닉 리드</div><div class="kpi-status risk"></div></div><div class="kpi-value">6<span class="kpi-unit">건/일</span></div><div class="kpi-detail">목표: <span class="v">15건</span></div><div class="mt-4"><span class="badge badge-risk">AT RISK</span></div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">광고 리드 CPA</div><div class="kpi-status on"></div></div><div class="kpi-value">3.2<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">5만원 이하</span></div><div class="mt-4"><span class="badge badge-on">ON TRACK</span></div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">인플루언서 풀</div><div class="kpi-status watch"></div></div><div class="kpi-value">140<span class="kpi-unit">만명</span></div><div class="kpi-detail">목표: <span class="v">155만명</span></div><div class="mt-4"><span class="badge badge-watch">WATCH</span></div></div>
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 공팔리터 글로벌</div><div class="section-hdr-sub">이번 달 핵심 지표 (실시간)</div></div>
+<div id="overview-kpi-grid" class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">금일 매출</div></div><div class="kpi-value" id="ov-today-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-today-rev-sub">로딩중...</div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 누적 매출</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-month-rev-sub">목표 1.6억원 / 달성률 -</div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 계약</div></div><div class="kpi-value" id="ov-month-contract">-<span class="kpi-unit">건</span></div><div class="kpi-detail" id="ov-month-contract-sub">목표 38건 / 달성률 -</div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill risk" id="ov-contract-bar" style="width:0%"></div></div></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">금일 인바운드</div></div><div class="kpi-value" id="ov-today-inbound">-</div><div class="kpi-detail" id="ov-today-inbound-sub">유효 - / 무대응 -</div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">오가닉 리드</div></div><div class="kpi-value">6<span class="kpi-unit">건/일</span></div><div class="kpi-detail">목표: <span class="v">15건</span></div><div class="mt-4"><span class="badge badge-risk">AT RISK</span></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">광고 CPA</div></div><div class="kpi-value">3.2<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">5만원 이하</span></div><div class="mt-4"><span class="badge badge-on">ON TRACK</span></div></div>
 </div></div>
 
 <div id="page-alerts"><div class="card"><div class="card-title">알림 센터</div><div id="alertList"></div></div></div>
@@ -90,11 +90,11 @@
     <button id="brand-tab-monthly" onclick="setBrandTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">누적</button>
   </div>
   <div id="brand-kpi-cards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
-    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">인입 DB</p><p id="kpi-inbound" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-inbound-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
-    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">유효 DB</p><p id="kpi-valid" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-valid-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
-    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">미팅</p><p id="kpi-meeting" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-meeting-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
-    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">계약서</p><p id="kpi-contract" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-contract-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
-    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #7C3AED;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">재계약</p><p id="kpi-renewal" style="font-family:monospace;font-size:24px;font-weight:700;color:#E8EBF2">-</p><p id="kpi-renewal-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #EF4444;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">금일 매출</p><p id="kpi-today-revenue" style="font-family:monospace;font-size:24px;font-weight:700;color:#EF4444">-</p><p id="kpi-today-revenue-sub" style="font-size:10px;color:#4A5568;margin-top:4px">-</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">이번달 매출</p><p id="kpi-month-revenue" style="font-family:monospace;font-size:24px;font-weight:700;color:#F97316">-</p><p id="kpi-month-revenue-sub" style="font-size:10px;color:#4A5568;margin-top:4px">목표 1.6억</p><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" id="brand-rev-bar" style="width:0%"></div></div></div></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">계약 / 단가</p><p id="kpi-contract" style="font-family:monospace;font-size:24px;font-weight:700;color:#22C55E">-</p><p id="kpi-contract-sub" style="font-size:10px;color:#4A5568;margin-top:4px">평균 단가 -</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #EF4444;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">미처리 파이프라인</p><p id="kpi-unhandled" style="font-family:monospace;font-size:24px;font-weight:700;color:#EF4444">-</p><p id="kpi-unhandled-sub" style="font-size:10px;color:#4A5568;margin-top:4px">즉시 대응 필요</p></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:16px"><p style="font-size:10px;color:#8B95A6;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">전월 대비</p><p id="kpi-mom-change" style="font-family:monospace;font-size:24px;font-weight:700;color:#0EA5E9">-</p><p id="kpi-mom-change-sub" style="font-size:10px;color:#4A5568;margin-top:4px">매출 증감률</p></div>
   </div>
   <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden;margin-bottom:20px">
     <div style="padding:14px 20px;border-bottom:1px solid #1E2433;display:flex;justify-content:space-between"><p style="font-size:13px;font-weight:700;color:#E8EBF2">기간별 비교</p><span id="brand-data-source" style="font-size:10px;color:#4A5568">샘플 데이터</span></div>
@@ -102,7 +102,7 @@
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">유입채널별 DB 수</p><div style="position:relative;height:180px"><canvas id="chart-channel-db"></canvas></div></div>
-    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">담당자별 성과</p><table style="width:100%;border-collapse:collapse"><thead><tr><th style="font-size:9px;color:#4A5568;text-align:left;padding:6px 0">담당자</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">인입DB</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">유효DB</th><th style="font-size:9px;color:#4A5568;text-align:right;padding:6px 0">전환율</th></tr></thead><tbody id="staff-tbody"><tr><td colspan="4" style="text-align:center;padding:12px;color:#4A5568;font-size:11px">로딩중...</td></tr></tbody></table></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">무대응 현황</p><div id="noresponse-summary" style="font-size:12px;color:#8B95A6">로딩중...</div></div>
   </div>
   <div style="margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -170,16 +170,16 @@ var m6=['11월','12월','1월','2월','3월','4월'];
 var renderedPages={};var currentAgentId='overview';
 var CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:11}}}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}};
 
-// ===== AGENTS =====
+// ===== AGENTS (7 페르소나) =====
 var AGENTS={
-overview:{name:'전체 총괄 에이전트',color:'#7C3AED',greeting:'Jacob AI 수석 보좌입니다. 공팔리터 글로벌 전체 현황을 보고합니다.',ex:['오늘 이상 감지 항목 요약해줘','이번 달 목표 달성률 알려줘','가장 급한 처리 항목이 뭐야'],reply:function(t){if(/이상|알림/.test(t))return'이상 감지 항목\n\n- 계약: 6/38건 (16%) AT RISK\n- 오가닉 리드: 6/15건 AT RISK\n\n즉시 확인 필요합니다.';if(/달성률|목표/.test(t))return'이번 달 달성률\n\n- 매출: 1.22억/1.6억 (76%)\n- 계약: 6/38건 (16%)\n- 단가: 370만/420만 (88%)\n- 인플루언서: 140만/155만 (90%)';return'시스템 분석 중입니다.'}},
-kpi:{name:'총괄 KPI 에이전트',color:'#F97316',greeting:'공팔리터 총괄 KPI AI입니다.',ex:['계약 목표 달성률은?','단가 하락 원인 분석해줘','P1 목표 달성 가능?'],reply:function(t){if(/계약|달성/.test(t))return'계약 현황\n\n- 이번 달: 6건/목표 38건 (16%)\n- 평균단가: 370만 (목표 420만)\n- Growth 제안율: 35% (목표 70%)';if(/단가/.test(t))return'단가 하락 분석\n\n- 현재: 370만 (목표 420만, -12%)\n- 원인: Starter 비중 60%+\n\nGrowth 기본 제안 전환 필요';return'KPI 분석 중입니다.'}},
-brand:{name:'브랜드 AI 에이전트',color:'#F97316',greeting:'브랜드 AI 에이전트입니다. 파이프라인 현황을 보고합니다.',ex:['오늘 파이프라인 현황은?','계약 가능성 높은 브랜드는?','이번 달 매출 달성 가능해?'],reply:function(t){if(/파이프라인|현황/.test(t))return'파이프라인 현황\n\n- DB 인입: 3건\n- 1차 상담: 7건\n- 2차상담/미팅: 5건\n- 계약완료: 6건\n\n2차상담 5건 중 3건 계약 유력합니다.';if(/계약.*가능|유력/.test(t))return'계약 유력 브랜드\n\n- 뷰티M: 600만 (계약서 검토중)\n- 스킨N: 800만 (내부 결재중)\n- 브랜드K: 520만 (견적 검토중)\n\n합산 1,920만원 예상';return'브랜드 데이터 확인 중입니다.'}},
-influencer:{name:'인플루언서 AI 에이전트',color:'#F97316',greeting:'인플루언서 AI 에이전트입니다.',ex:['뷰티 카테고리 동남아 인플루언서 현황은?','팔로워 10만 이상 KR 인플루언서 몇 명?','오늘 신규 발굴 현황 알려줘'],reply:function(t){if(/발굴|스크리닝/.test(t))return'오늘 발굴 현황\n\n- 스크리닝: 28명 (목표 40명)\n- KR: 11명 / SEA: 9명\n- US: 6명 / JP: 2명';if(/동남아|SEA/.test(t))return'동남아 인플루언서 현황\n\n- 총 풀: 42만명 (30%)\n- 뷰티 카테고리: 12.6만명\n- 평균 참여율: 6.2%\n- 평균 단가: 95만원';return'인플루언서 데이터 확인 중입니다.'}},
-ads:{name:'광고센터 AI 에이전트',color:'#F97316',greeting:'광고센터 AI 에이전트입니다.',ex:['오늘 채널별 광고 성과는?','CPA가 가장 높은 채널은?','리드 획득 효율 개선 방법은?'],reply:function(t){if(/CPA|효율/.test(t))return'채널별 CPA\n\n- Meta: 50,000원 (목표 달성)\n- 네이버: 66,700원 (목표 초과)\n- 구글: 55,600원\n- 카카오: 50,000원 (목표 달성)\n\n네이버 소재 교체가 시급합니다.';if(/리드|성과/.test(t))return'이번 달 리드\n\n- 총: 43건\n- Meta: 18 / 네이버: 12\n- 구글: 9 / 카카오: 4\n- 평균 CPA: 55,800원';return'광고센터 데이터 확인 중입니다.'}},
-sns:{name:'SNS 운영 AI 에이전트',color:'#F97316',greeting:'SNS 운영 AI 에이전트입니다.',ex:['오늘 채널별 성과는?','팔로워 증가율 가장 높은 채널은?','오가닉 리드 전환 현황은?'],reply:function(t){if(/팔로워|성과/.test(t))return'오늘 SNS 현황\n\n- IG: +12명 (8,420명)\n- TikTok: +25명 (12,800명)\n- YouTube: +8명 (2,150명)\n- 뉴스레터: +15명 (20,000명)\n\nTikTok 성장세가 가장 좋습니다.';if(/리드/.test(t))return'오가닉 리드 현황\n\n- 오늘: 6건\n- 이번 달: 125건 (목표 330건)\n- 주요 유입: TikTok > IG > 뉴스레터';return'SNS 데이터 확인 중입니다.'}},
-management:{name:'경영지원 AI 에이전트',color:'#F97316',greeting:'경영지원 AI 에이전트입니다.',ex:['이번 달 자금 현황 요약해줘','진행중인 정부지원사업 알려줘','미수금 현황 확인해줘'],reply:function(t){if(/자금|현금/.test(t))return'자금 현황\n\n- 보유 현금: 3.2억원\n- 수금 예정: 4,800만원\n- 미수금: 1,200만원\n- 영업이익률: 30.3%';if(/지원|정부/.test(t))return'정부지원사업\n\n- 진행중: 2건\n- 선정완료: K-뷰티 수출 바우처\n- 신청예정: 마감 5/15\n\nAI 마케팅 지원 신청 시급';if(/미수금/.test(t))return'미수금 현황\n\n- 총: 1,200만원\n- 브랜드A: 250만 (입금 요청중)\n- 브랜드B: 420만 (30일 초과)\n- 브랜드C: 130만 (잔금 대기)\n\n브랜드B 즉시 연락 필요';return'경영지원 데이터 확인 중입니다.'}},
-cs:{name:'CS AI 에이전트',color:'#F97316',greeting:'CS AI 에이전트입니다.',ex:['오늘 미처리 문의 있어?','인플루언서 카카오톡 대기 건은?','브랜드 환불 문의 처리 방법은?'],reply:function(t){if(/대기|문의/.test(t))return'CS 현황\n\n[브랜드] 대기: 3건 / 처리중: 3건\n[인플루언서] 대기: 1건 / 처리중: 2건\n\n총 4건 즉시 배정 필요';if(/환불/.test(t))return'환불 처리 절차\n\n1. 계약서 환불 조항 확인\n2. 캠페인 진행율 확인\n3. 팀장 승인 후 처리\n4. 사유 기록 필수';return'CS 데이터 확인 중입니다.'}}
+overview:{name:'카일 — 총괄 에이전트',color:'#7C3AED',ex:['오늘 이상 감지 항목 요약해줘','이번 달 목표 달성률 알려줘','가장 급한 처리 항목이 뭐야']},
+kpi:{name:'카일 — 총괄 KPI',color:'#F97316',ex:['계약 목표 달성률은?','단가 하락 원인 분석해줘','P1 목표 달성 가능?']},
+brand:{name:'루나 — 브랜드 영업',color:'#F97316',ex:['오늘 파이프라인 현황은?','계약 가능성 높은 브랜드는?','이번 달 매출 달성 가능해?']},
+influencer:{name:'피치 — 인플루언서 매칭',color:'#F97316',ex:['뷰티 동남아 인플루언서 현황은?','팔로워 10만 이상 KR 몇 명?','오늘 신규 발굴 현황 알려줘']},
+ads:{name:'맥스 — 광고센터',color:'#F97316',ex:['오늘 채널별 광고 성과는?','CPA가 가장 높은 채널은?','리드 획득 효율 개선 방법은?']},
+sns:{name:'소피 — 공식 SNS',color:'#F97316',ex:['오늘 채널별 성과는?','팔로워 증가율 가장 높은 채널은?','이번 주 콘텐츠 추천해줘']},
+management:{name:'레이 — 경영지원',color:'#F97316',ex:['이번 달 자금 현황 요약해줘','진행중인 정부지원사업 알려줘','미수금 현황 확인해줘']},
+cs:{name:'하나 — CS',color:'#F97316',ex:['오늘 미처리 문의 있어?','인플루언서 카카오톡 대기 건은?','브랜드 환불 문의 처리 방법은?']}
 };
 
 // ===== HELPERS =====
@@ -516,17 +516,30 @@ document.getElementById('chatAgentName').textContent=a.name;
 document.getElementById('chatHdr').style.borderLeftColor=a.color;
 var ex=document.getElementById('chatExamples');while(ex.firstChild)ex.removeChild(ex.firstChild);
 a.ex.forEach(function(q){var btn=document.createElement('button');btn.className='chat-ex-btn';btn.textContent=q;btn.addEventListener('click',function(){document.getElementById('chatInput').value=q;sendChat()});ex.appendChild(btn)});
+// 히스토리 초기화
 var msgs=document.getElementById('chatMessages');while(msgs.firstChild)msgs.removeChild(msgs.firstChild);
-var g=document.createElement('div');g.className='chat-msg agent';g.textContent=a.greeting;var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent='System';g.appendChild(ts);msgs.appendChild(g)}
+// 자동 브리핑 요청
+var loading=document.createElement('div');loading.className='chat-msg agent';loading.style.cssText='color:#4A5568;font-style:italic';loading.textContent=a.name.split(' — ')[0]+' 에이전트 접속 중...';msgs.appendChild(loading);
+fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page:pid,briefing:true})}).then(function(r){return r.json()}).then(function(data){
+msgs.removeChild(loading);var g=document.createElement('div');g.className='chat-msg agent';g.style.whiteSpace='pre-line';g.textContent=data.reply||'브리핑을 준비 중입니다.';var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent=(data.source||'system')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});g.appendChild(ts);msgs.appendChild(g);msgs.scrollTop=msgs.scrollHeight
+}).catch(function(){msgs.removeChild(loading);var g=document.createElement('div');g.className='chat-msg agent';g.textContent=a.name+' 에이전트입니다. 무엇을 도와드릴까요?';var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent='System';g.appendChild(ts);msgs.appendChild(g)})}
 
 document.getElementById('chatSendBtn').addEventListener('click',sendChat);
 document.getElementById('chatInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}});
 function sendChat(){var input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;var msgs=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=text;var t=document.createElement('div');t.className='chat-msg-time';t.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});u.appendChild(t);msgs.appendChild(u);input.value='';msgs.scrollTop=msgs.scrollHeight;
 // AI API call with fallback
 var typing=document.createElement('div');typing.className='chat-msg agent';typing.style.cssText='color:#4A5568;font-style:italic';typing.textContent='분석 중...';msgs.appendChild(typing);
-fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text})}).then(function(r){return r.json()}).then(function(data){
-msgs.removeChild(typing);var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=data.reply||'응답 오류';var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=(data.source||'ai')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight
-}).catch(function(){msgs.removeChild(typing);var agent=AGENTS[currentAgentId]||AGENTS.overview;var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=agent.reply(text);var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight})}
+fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,page:currentAgentId})}).then(function(r){return r.json()}).then(function(data){
+msgs.removeChild(typing);var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=data.reply||'응답 오류';
+var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=(data.agent||'AI')+' · '+(data.source||'ai')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);
+// 실행 버튼 추가
+var btns=document.createElement('div');btns.style.cssText='display:flex;gap:4px;flex-wrap:wrap;margin-top:8px';
+[{label:'리스트 보기',icon:'list',action:function(){var q=currentAgentId==='brand'?'재접촉 대상 리스트 보여줘':'무대응 리스트 보여줘';document.getElementById('chatInput').value=q;sendChat()}},
+{label:'메시지 초안',icon:'edit',action:function(){document.getElementById('chatInput').value='맞춤 제안 메시지 이메일/카톡/문자 3가지 버전으로 작성해줘';sendChat()}},
+{label:'다음 액션 3가지',icon:'zap',action:function(){document.getElementById('chatInput').value='오늘/이번주/이번달 액션 각 1가지 알려줘';sendChat()}}
+].forEach(function(b){var btn=document.createElement('button');btn.className='chat-ex-btn';btn.textContent=b.label;btn.addEventListener('click',b.action);btns.appendChild(btn)});
+r.appendChild(btns);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight
+}).catch(function(){msgs.removeChild(typing);var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent='연결 오류. 잠시 후 다시 시도해주세요.';var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight})}
 
 document.querySelectorAll('[data-page]').forEach(function(el){el.addEventListener('click',function(e){e.preventDefault();showPage(this.getAttribute('data-page'))})});
 document.getElementById('headerDate').textContent=new Date().toISOString().split('T')[0];
@@ -572,6 +585,20 @@ var bx=document.createElement('div');var lb=document.createElement('div');lb.sty
 var vl=document.createElement('div');vl.style.cssText='font-size:16px;font-weight:700;font-family:monospace;color:'+d2[2];vl.textContent=d2[1];bx.appendChild(vl);g.appendChild(bx)});ae.appendChild(g);
 var cp=document.createElement('div');cp.style.cssText='font-size:11px;color:#8B95A6';cp.textContent='평균 CPA: '+(total.cpa||558000).toLocaleString()+'원';ae.appendChild(cp);
 var as=document.createElement('div');as.style.cssText='font-size:9px;color:#4A5568;margin-top:4px';as.textContent='데이터: '+(adsData.source==='live'?'실시간':'샘플');ae.appendChild(as)}
+// Update overview KPI cards (실시간)
+var ovT=kpiData.today||{};var ovM=kpiData.month||{};
+var e1=document.getElementById('ov-today-rev');if(e1)e1.textContent=Math.round((ovT.revenue||0)/10000).toLocaleString()+'만원';
+var e1s=document.getElementById('ov-today-rev-sub');if(e1s)e1s.textContent='계약 '+(ovT.contract||0)+'건';
+var e2=document.getElementById('ov-month-rev');if(e2)e2.textContent=Math.round((ovM.revenue||0)/10000).toLocaleString()+'만원';
+var ovRevPct=Math.round((ovM.revenue||0)/160000000*100);
+var e2s=document.getElementById('ov-month-rev-sub');if(e2s)e2s.textContent='목표 1.6억 / 달성률 '+ovRevPct+'%';
+var e2b=document.getElementById('ov-month-rev-bar');if(e2b){e2b.style.width=Math.min(ovRevPct,100)+'%';e2b.className='kpi-progress-fill '+(ovRevPct>=70?'on':ovRevPct>=40?'watch':'risk')}
+var ovCtPct=Math.round((ovM.contract||0)/38*100);
+var e3=document.getElementById('ov-month-contract');if(e3)e3.textContent=(ovM.contract||0)+'건';
+var e3s=document.getElementById('ov-month-contract-sub');if(e3s)e3s.textContent='목표 38건 / 달성률 '+ovCtPct+'%';
+var e3b=document.getElementById('ov-contract-bar');if(e3b){e3b.style.width=Math.min(ovCtPct,100)+'%';e3b.className='kpi-progress-fill '+(ovCtPct>=50?'on':ovCtPct>=25?'watch':'risk')}
+var e4=document.getElementById('ov-today-inbound');if(e4)e4.textContent=(ovT.inbound_db||0)+'건';
+var e4s=document.getElementById('ov-today-inbound-sub');if(e4s)e4s.textContent='유효 '+(ovT.valid_db||0)+' / 무대응 '+(ovT.unhandled_db||0);
 console.log('KPI data loaded:',kpiData.source);
 }catch(e){console.error('KPI load error:',e)}}
 loadKpiData();setInterval(loadKpiData,1800000);
@@ -634,11 +661,39 @@ row.appendChild(right);listEl.appendChild(row)});
 if(data.unhandled_brands.length>10){var more=document.createElement('p');more.style.cssText='font-size:10px;color:#4A5568;text-align:center;padding:4px';more.textContent='+'+(data.unhandled_brands.length-10)+'건 더 있음';listEl.appendChild(more)}}}
 
 function updateBrandKpiCards(data){
-var d=_brandTab==='daily'?data.today:data.month;var prev=data.prev_month||{};
-[['kpi-inbound',d.inbound,prev.inbound],['kpi-valid',d.valid,prev.valid],['kpi-meeting',d.meeting,prev.meeting],['kpi-contract',d.contract,prev.contract],['kpi-renewal',d.renewal,prev.renewal]].forEach(function(p){
-var el=document.getElementById(p[0]);var sub=document.getElementById(p[0]+'-sub');
-if(el)el.textContent=(p[1]!==undefined?p[1]:'-')+'건';
-if(sub&&p[2]!==undefined&&p[1]!==undefined){var diff=p[1]-p[2];var pct=p[2]>0?((diff/p[2])*100).toFixed(1):0;var c=diff>=0?'#22C55E':'#EF4444';var a=diff>=0?'+':'';sub.textContent=a+pct+'% vs 전월';sub.style.color=c}})}
+var t=data.today||{};var m=data.month||{};var prev=data.prev_month||{};
+// 1. 금일 매출
+var revEl=document.getElementById('kpi-today-revenue');var revSub=document.getElementById('kpi-today-revenue-sub');
+if(revEl)revEl.textContent=Math.round((t.revenue||0)/10000).toLocaleString()+'만원';
+if(revSub)revSub.textContent='계약 '+(t.contract||0)+'건';
+// 2. 이번달 매출
+var mRevEl=document.getElementById('kpi-month-revenue');var mRevSub=document.getElementById('kpi-month-revenue-sub');
+var monthRev=m.revenue||0;var revPct=Math.round(monthRev/160000000*100);
+if(mRevEl)mRevEl.textContent=Math.round(monthRev/10000).toLocaleString()+'만원';
+if(mRevSub)mRevSub.textContent='목표 1.6억 / 달성률 '+revPct+'%';
+var revBar=document.getElementById('brand-rev-bar');
+if(revBar){revBar.style.width=Math.min(revPct,100)+'%';revBar.className='kpi-progress-fill '+(revPct>=70?'on':revPct>=40?'watch':'risk')}
+// 3. 계약 / 단가
+var ctEl=document.getElementById('kpi-contract');var ctSub=document.getElementById('kpi-contract-sub');
+var mContract=m.contract||0;var avgPrice=mContract>0?Math.round(monthRev/mContract/10000):0;
+if(ctEl)ctEl.textContent=mContract+'건';
+if(ctSub)ctSub.textContent='평균 단가 '+avgPrice.toLocaleString()+'만원';
+// 4. 미처리
+var uhEl=document.getElementById('kpi-unhandled');var uhSub=document.getElementById('kpi-unhandled-sub');
+if(uhEl)uhEl.textContent=(t.unhandled||0)+'건';
+if(uhSub)uhSub.textContent=(t.unhandled||0)>0?'즉시 대응 필요':'양호';
+// 5. 전월 대비
+var momEl=document.getElementById('kpi-mom-change');var momSub=document.getElementById('kpi-mom-change-sub');
+var prevRev=prev.revenue||0;var momPct=prevRev>0?((monthRev-prevRev)/prevRev*100).toFixed(1):'0';
+if(momEl){momEl.textContent=(parseFloat(momPct)>=0?'+':'')+momPct+'%';momEl.style.color=parseFloat(momPct)>=0?'#22C55E':'#EF4444'}
+if(momSub)momSub.textContent='매출 증감률 vs 전월';
+// 무대응 현황
+var nrEl=document.getElementById('noresponse-summary');
+if(nrEl){var uh=data.unhandled_brands||[];
+while(nrEl.firstChild)nrEl.removeChild(nrEl.firstChild);
+if(uh.length>0){var hd=document.createElement('div');hd.style.cssText='color:#EF4444;font-weight:700;margin-bottom:8px';hd.textContent='무대응 '+uh.length+'건';nrEl.appendChild(hd);
+uh.slice(0,5).forEach(function(b){var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1E2433';var nm=document.createElement('span');nm.textContent=b.name||'';row.appendChild(nm);var rs=document.createElement('span');rs.style.cssText='color:#EF4444;font-size:10px';rs.textContent=b.reason||'';row.appendChild(rs);nrEl.appendChild(row)})}
+else{var ok=document.createElement('div');ok.style.color='#22C55E';ok.textContent='무대응 없음';nrEl.appendChild(ok)}}}
 
 function updateBrandCompareTable(data){
 var tbody=document.getElementById('brand-compare-table');if(!tbody)return;
