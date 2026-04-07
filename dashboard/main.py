@@ -1342,7 +1342,18 @@ def _smtp_send(to_email: str, subject: str, html: str) -> dict:
     msg["To"] = to_email
     msg["Subject"] = subject
     msg.attach(MIMEText(html, "html", "utf-8"))
-    # 1차: 포트 587 STARTTLS 시도
+    errors = []
+    # 1차: 포트 465 SSL (네이버웍스 기본 권장)
+    try:
+        with smtplib.SMTP_SSL(cfg["host"], 465, timeout=10) as srv:
+            srv.login(cfg["user"], cfg["password"])
+            srv.sendmail(cfg["user"], [to_email], msg.as_string())
+        return {"status": "ok", "to": to_email, "method": "SSL:465"}
+    except smtplib.SMTPAuthenticationError as e:
+        return {"status": "error", "message": f"SMTP 인증 실패: {e}. 네이버웍스 앱 비밀번호를 확인하세요."}
+    except Exception as e1:
+        errors.append(f"465 SSL: {e1}")
+    # 2차: 포트 587 STARTTLS 폴백
     try:
         with smtplib.SMTP(cfg["host"], cfg["port"], timeout=10) as srv:
             srv.ehlo()
@@ -1351,19 +1362,15 @@ def _smtp_send(to_email: str, subject: str, html: str) -> dict:
             srv.login(cfg["user"], cfg["password"])
             srv.sendmail(cfg["user"], [to_email], msg.as_string())
         return {"status": "ok", "to": to_email, "method": "STARTTLS:587"}
-    except (TimeoutError, OSError, smtplib.SMTPConnectError) as e1:
-        # 2차: 포트 465 SSL 폴백
-        try:
-            with smtplib.SMTP_SSL(cfg["host"], 465, timeout=10) as srv:
-                srv.login(cfg["user"], cfg["password"])
-                srv.sendmail(cfg["user"], [to_email], msg.as_string())
-            return {"status": "ok", "to": to_email, "method": "SSL:465"}
-        except Exception as e2:
-            return {"status": "error", "message": f"587 STARTTLS: {e1} / 465 SSL: {e2}"}
-    except smtplib.SMTPAuthenticationError:
-        return {"status": "error", "message": "SMTP 인증 실패. 네이버웍스 앱 비밀번호를 확인하세요."}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except smtplib.SMTPAuthenticationError as e:
+        return {"status": "error", "message": f"SMTP 인증 실패: {e}. 네이버웍스 앱 비밀번호를 확인하세요."}
+    except Exception as e2:
+        errors.append(f"587 STARTTLS: {e2}")
+    return {
+        "status": "error",
+        "message": "SMTP 포트 차단 (Railway 환경에서 아웃바운드 SMTP 제한). " + " / ".join(errors),
+        "guide": "해결 방법: (1) Railway Pro 플랜 업그레이드, (2) 외부 이메일 API (Resend/SendGrid) 사용, (3) 로컬 서버에서 발송",
+    }
 
 
 @app.post("/api/send-email")
