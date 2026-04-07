@@ -1337,23 +1337,31 @@ def _smtp_send(to_email: str, subject: str, html: str) -> dict:
     if not cfg["password"]:
         raw = os.getenv("NAVER_WORKS_SMTP_PASSWORD")
         return {"status": "error", "message": f"NAVER_WORKS_SMTP_PASSWORD 미설정 (env raw={raw!r}). Railway Variables 확인 필요."}
+    msg = MIMEMultipart("alternative")
+    msg["From"] = formataddr((cfg["sender_name"], cfg["user"]))
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(html, "html", "utf-8"))
+    # 1차: 포트 587 STARTTLS 시도
     try:
-        msg = MIMEMultipart("alternative")
-        msg["From"] = formataddr((cfg["sender_name"], cfg["user"]))
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(html, "html", "utf-8"))
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=15) as srv:
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=10) as srv:
             srv.ehlo()
             srv.starttls()
             srv.ehlo()
             srv.login(cfg["user"], cfg["password"])
             srv.sendmail(cfg["user"], [to_email], msg.as_string())
-        return {"status": "ok", "to": to_email}
+        return {"status": "ok", "to": to_email, "method": "STARTTLS:587"}
+    except (TimeoutError, OSError, smtplib.SMTPConnectError) as e1:
+        # 2차: 포트 465 SSL 폴백
+        try:
+            with smtplib.SMTP_SSL(cfg["host"], 465, timeout=10) as srv:
+                srv.login(cfg["user"], cfg["password"])
+                srv.sendmail(cfg["user"], [to_email], msg.as_string())
+            return {"status": "ok", "to": to_email, "method": "SSL:465"}
+        except Exception as e2:
+            return {"status": "error", "message": f"587 STARTTLS: {e1} / 465 SSL: {e2}"}
     except smtplib.SMTPAuthenticationError:
-        return {"status": "error", "message": "SMTP 인증 실패. 비밀번호를 확인하세요."}
-    except smtplib.SMTPConnectError:
-        return {"status": "error", "message": "SMTP 서버 연결 실패. smtp.worksmobile.com:587 확인."}
+        return {"status": "error", "message": "SMTP 인증 실패. 네이버웍스 앱 비밀번호를 확인하세요."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
