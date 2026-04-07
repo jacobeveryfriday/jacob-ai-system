@@ -1289,11 +1289,15 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
 
-SMTP_HOST = os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com")
-SMTP_PORT = int(os.getenv("NAVER_WORKS_SMTP_PORT", "587"))
-SMTP_USER = os.getenv("NAVER_WORKS_SMTP_USER", "luna@08liter.com")
-SMTP_PASS = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
-SENDER_NAME = os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)")
+def _smtp_cfg():
+    """SMTP 설정을 매 호출마다 환경변수에서 읽어 반환."""
+    return {
+        "host": os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com"),
+        "port": int(os.getenv("NAVER_WORKS_SMTP_PORT", "587")),
+        "user": os.getenv("NAVER_WORKS_SMTP_USER", "luna@08liter.com"),
+        "password": os.getenv("NAVER_WORKS_SMTP_PASSWORD", ""),
+        "sender_name": os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)"),
+    }
 
 
 def _build_pitch_html(brand_name: str, body_text: str) -> str:
@@ -1323,21 +1327,22 @@ def _build_pitch_html(brand_name: str, body_text: str) -> str:
 
 
 def _smtp_send(to_email: str, subject: str, html: str) -> dict:
-    """네이버 웍스 SMTP STARTTLS로 이메일 1건 발송."""
-    if not SMTP_PASS:
+    """네이버 웍스 SMTP STARTTLS로 이메일 1건 발송. 매 호출마다 환경변수 재로드."""
+    cfg = _smtp_cfg()
+    if not cfg["password"]:
         return {"status": "error", "message": "NAVER_WORKS_SMTP_PASSWORD 미설정. Railway Variables에 추가 필요."}
     try:
         msg = MIMEMultipart("alternative")
-        msg["From"] = formataddr((SENDER_NAME, SMTP_USER))
+        msg["From"] = formataddr((cfg["sender_name"], cfg["user"]))
         msg["To"] = to_email
         msg["Subject"] = subject
         msg.attach(MIMEText(html, "html", "utf-8"))
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as srv:
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=15) as srv:
             srv.ehlo()
             srv.starttls()
             srv.ehlo()
-            srv.login(SMTP_USER, SMTP_PASS)
-            srv.sendmail(SMTP_USER, [to_email], msg.as_string())
+            srv.login(cfg["user"], cfg["password"])
+            srv.sendmail(cfg["user"], [to_email], msg.as_string())
         return {"status": "ok", "to": to_email}
     except smtplib.SMTPAuthenticationError:
         return {"status": "error", "message": "SMTP 인증 실패. 비밀번호를 확인하세요."}
@@ -1373,8 +1378,9 @@ async def api_test_email():
         "SMTP 연동이 정상적으로 작동하고 있습니다.\n\n"
         f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)"
     )
-    result = _smtp_send(SMTP_USER, "[Jacob AI] SMTP 테스트 이메일", html)
-    result["sent_to"] = SMTP_USER
+    cfg = _smtp_cfg()
+    result = _smtp_send(cfg["user"], "[Jacob AI] SMTP 테스트 이메일", html)
+    result["sent_to"] = cfg["user"]
     return result
 
 
