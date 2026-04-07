@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-load_dotenv()
+load_dotenv(override=False)  # OS 환경변수(Railway)가 .env보다 우선
 app = FastAPI(title="Command Center")
 KST = ZoneInfo("Asia/Seoul")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
@@ -47,7 +47,7 @@ async def health_check():
     slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
     status["slack"] = "connected" if slack_url else "not_configured"
     # SMTP
-    smtp_pass = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
+    smtp_pass = os.getenv("NAVER_WORKS_SMTP_PASSWORD")
     status["smtp"] = "connected" if smtp_pass else "not_configured"
     # Anthropic
     status["anthropic"] = "connected" if os.getenv("ANTHROPIC_API_KEY", "") else "not_configured"
@@ -1300,7 +1300,7 @@ def _smtp_cfg():
         "host": os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com"),
         "port": int(os.getenv("NAVER_WORKS_SMTP_PORT", "587")),
         "user": os.getenv("NAVER_WORKS_SMTP_USER", "luna@08liter.com"),
-        "password": os.getenv("NAVER_WORKS_SMTP_PASSWORD", ""),
+        "password": os.getenv("NAVER_WORKS_SMTP_PASSWORD") or "",
         "sender_name": os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)"),
     }
 
@@ -1335,7 +1335,8 @@ def _smtp_send(to_email: str, subject: str, html: str) -> dict:
     """네이버 웍스 SMTP STARTTLS로 이메일 1건 발송. 매 호출마다 환경변수 재로드."""
     cfg = _smtp_cfg()
     if not cfg["password"]:
-        return {"status": "error", "message": "NAVER_WORKS_SMTP_PASSWORD 미설정. Railway Variables에 추가 필요."}
+        raw = os.getenv("NAVER_WORKS_SMTP_PASSWORD")
+        return {"status": "error", "message": f"NAVER_WORKS_SMTP_PASSWORD 미설정 (env raw={raw!r}). Railway Variables 확인 필요."}
     try:
         msg = MIMEMultipart("alternative")
         msg["From"] = formataddr((cfg["sender_name"], cfg["user"]))
