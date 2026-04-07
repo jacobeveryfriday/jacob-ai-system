@@ -46,6 +46,11 @@ async def health_check():
     # Slack
     slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
     status["slack"] = "connected" if slack_url else "not_configured"
+    # SMTP
+    smtp_pass = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
+    status["smtp"] = "connected" if smtp_pass else "not_configured"
+    # Anthropic
+    status["anthropic"] = "connected" if os.getenv("ANTHROPIC_API_KEY", "") else "not_configured"
     # Cache stats
     status["cache_entries"] = len(_cache)
     return status
