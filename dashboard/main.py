@@ -1283,10 +1283,11 @@ async def api_no_response_leads():
     return {"count": len(unhandled), "leads": unhandled}
 
 
-# ===== 이메일 발송 (네이버 웍스 SMTP) =====
+# ===== 이메일 발송 (네이버 웍스 SMTP — STARTTLS) =====
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formataddr
 
 SMTP_HOST = os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com")
 SMTP_PORT = int(os.getenv("NAVER_WORKS_SMTP_PORT", "587"))
@@ -1295,30 +1296,147 @@ SMTP_PASS = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
 SENDER_NAME = os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)")
 
 
-@app.post("/api/send-email")
-async def api_send_email(request: Request):
-    """네이버 웍스 SMTP로 이메일 발송."""
+def _build_pitch_html(brand_name: str, body_text: str) -> str:
+    """브랜드 색상 #FF6B00 HTML 이메일 템플릿."""
+    # body_text 내 줄바꿈을 <br>로 변환하되 XSS 방지
+    safe_brand = brand_name.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    safe_body = body_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff">
+<tr><td style="background:#FF6B00;padding:24px 32px">
+<h1 style="margin:0;color:#ffffff;font-size:20px">공팔리터글로벌</h1>
+<p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:13px">인플루언서 마케팅 파트너</p>
+</td></tr>
+<tr><td style="padding:32px">
+<p style="margin:0 0 8px;color:#333;font-size:15px;font-weight:600">{safe_brand} 담당자님께</p>
+<div style="margin:16px 0;color:#555;font-size:14px;line-height:1.7">{safe_body}</div>
+<table cellpadding="0" cellspacing="0" style="margin:24px 0"><tr>
+<td style="background:#FF6B00;border-radius:6px;padding:12px 28px">
+<a href="https://08liter.com" style="color:#ffffff;text-decoration:none;font-size:14px;font-weight:600">상담 예약하기</a>
+</td></tr></table>
+</td></tr>
+<tr><td style="background:#f9f9f9;padding:20px 32px;border-top:1px solid #eee">
+<p style="margin:0;color:#999;font-size:11px">공팔리터글로벌 | luna@08liter.com | 02-000-0000</p>
+<p style="margin:4px 0 0;color:#bbb;font-size:10px">본 메일은 발신 전용입니다.</p>
+</td></tr></table></body></html>"""
+
+
+def _smtp_send(to_email: str, subject: str, html: str) -> dict:
+    """네이버 웍스 SMTP STARTTLS로 이메일 1건 발송."""
     if not SMTP_PASS:
-        return {"status": "error", "message": "NAVER_WORKS_SMTP_PASSWORD 미설정"}
-    body = await request.json()
-    to_email = body.get("to", "")
-    subject = body.get("subject", "")
-    html_body = body.get("body", "")
-    if not to_email or not subject:
-        return {"status": "error", "message": "to, subject 필수"}
+        return {"status": "error", "message": "NAVER_WORKS_SMTP_PASSWORD 미설정. Railway Variables에 추가 필요."}
     try:
         msg = MIMEMultipart("alternative")
-        msg["From"] = f"{SENDER_NAME} <{SMTP_USER}>"
+        msg["From"] = formataddr((SENDER_NAME, SMTP_USER))
         msg["To"] = to_email
         msg["Subject"] = subject
-        msg.attach(MIMEText(html_body, "html", "utf-8"))
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(SMTP_USER, [to_email], msg.as_string())
+        msg.attach(MIMEText(html, "html", "utf-8"))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as srv:
+            srv.ehlo()
+            srv.starttls()
+            srv.ehlo()
+            srv.login(SMTP_USER, SMTP_PASS)
+            srv.sendmail(SMTP_USER, [to_email], msg.as_string())
         return {"status": "ok", "to": to_email}
+    except smtplib.SMTPAuthenticationError:
+        return {"status": "error", "message": "SMTP 인증 실패. 비밀번호를 확인하세요."}
+    except smtplib.SMTPConnectError:
+        return {"status": "error", "message": "SMTP 서버 연결 실패. smtp.worksmobile.com:587 확인."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/send-email")
+async def api_send_email(request: Request):
+    """네이버 웍스 SMTP로 이메일 1건 발송. body에 raw HTML 또는 brand_name+body_text로 템플릿 사용."""
+    body = await request.json()
+    to_email = body.get("to", "").strip()
+    subject = body.get("subject", "").strip()
+    if not to_email or not subject:
+        return {"status": "error", "message": "to, subject 필수"}
+    # HTML 직접 전달 또는 템플릿 사용
+    html = body.get("html", "")
+    if not html:
+        brand_name = body.get("brand_name", "")
+        body_text = body.get("body_text", body.get("body", ""))
+        html = _build_pitch_html(brand_name, body_text)
+    return _smtp_send(to_email, subject, html)
+
+
+@app.get("/api/test-email")
+async def api_test_email():
+    """luna@08liter.com으로 테스트 메일 발송."""
+    html = _build_pitch_html(
+        "테스트",
+        "안녕하세요!\n\n이 메일은 Jacob AI Command Center에서 발송한 테스트 이메일입니다.\n"
+        "SMTP 연동이 정상적으로 작동하고 있습니다.\n\n"
+        f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)"
+    )
+    result = _smtp_send(SMTP_USER, "[Jacob AI] SMTP 테스트 이메일", html)
+    result["sent_to"] = SMTP_USER
+    return result
+
+
+@app.post("/api/campaign/recontact")
+async def api_campaign_recontact(request: Request):
+    """루나 재접촉 캠페인 실행: 미계약 유효DB에 맞춤 이메일 발송."""
+    body = await request.json()
+    dry_run = body.get("dry_run", True)  # 기본 미리보기 모드
+    limit = min(body.get("limit", 10), 50)
+
+    # 1. 재접촉 대상 추출
+    leads_data = await api_recontact_leads()
+    leads = leads_data.get("leads", [])
+    if not leads:
+        return {"status": "no_leads", "message": "재접촉 대상이 없습니다.", "count": 0}
+
+    targets = [l for l in leads if l.get("email") and "@" in l.get("email", "")][:limit]
+    if not targets:
+        return {"status": "no_email", "message": f"재접촉 대상 {len(leads)}건 중 이메일 보유 건이 없습니다.", "count": len(leads)}
+
+    # 2. 맞춤 메시지 생성 (Anthropic API)
+    results = []
+    for lead in targets:
+        brand_name = lead["name"]
+        pitch_body = (
+            f"안녕하세요, 공팔리터글로벌 브랜드 파트너십 팀 루나입니다.\n\n"
+            f"지난번 {brand_name} 관련 문의를 주셨을 때 좋은 대화를 나눴었는데요,\n"
+            f"이후 진행 상황이 궁금하여 다시 연락드립니다.\n\n"
+            f"최근 저희는 인플루언서 마케팅 분야에서 새로운 성과를 거두고 있으며,\n"
+            f"{brand_name}에 최적화된 캠페인 전략을 준비했습니다.\n\n"
+            f"편하신 시간에 15분만 투자해 주시면 맞춤 제안을 드리겠습니다.\n"
+            f"아래 버튼을 클릭하시면 바로 상담 예약이 가능합니다.\n\n"
+            f"감사합니다.\n루나 드림"
+        )
+        subject = f"[공팔리터글로벌] {brand_name} 맞춤 인플루언서 마케팅 제안"
+        html = _build_pitch_html(brand_name, pitch_body)
+
+        entry = {
+            "brand": brand_name,
+            "email": lead["email"],
+            "subject": subject,
+            "preview": pitch_body[:100] + "...",
+        }
+
+        if dry_run:
+            entry["status"] = "preview"
+        else:
+            send_result = _smtp_send(lead["email"], subject, html)
+            entry["status"] = send_result["status"]
+            entry["detail"] = send_result.get("message", "")
+
+        results.append(entry)
+
+    sent = sum(1 for r in results if r["status"] == "ok")
+    return {
+        "status": "ok",
+        "dry_run": dry_run,
+        "total_leads": len(leads),
+        "targeted": len(targets),
+        "sent": sent,
+        "results": results,
+    }
 
 
 @app.get("/api/cache-clear")
