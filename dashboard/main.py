@@ -1443,6 +1443,33 @@ async def api_cache_clear():
     return {"status": "cleared"}
 
 
+@app.get("/api/debug-env")
+async def api_debug_env():
+    """환경변수 로딩 상태 디버그. 값은 마스킹 처리."""
+    keys = [
+        "RESEND_API_KEY", "RESEND_FROM_EMAIL",
+        "ANTHROPIC_API_KEY", "GOOGLE_SHEETS_API_KEY",
+        "NAVER_WORKS_SMTP_PASSWORD", "SENDER_NAME",
+        "SLACK_WEBHOOK_URL", "DASH_USER",
+    ]
+    result = {}
+    for k in keys:
+        val = os.environ.get(k)
+        if val is None:
+            result[k] = "NOT_IN_OS_ENVIRON"
+        elif val == "":
+            result[k] = "EMPTY_STRING"
+        else:
+            result[k] = f"SET({len(val)}chars):{val[:4]}***"
+    # .env 파일 존재 여부
+    env_path = Path(__file__).parent / ".env"
+    result["_dotenv_file_exists"] = env_path.exists()
+    if env_path.exists():
+        env_text = env_path.read_text()
+        result["_dotenv_has_RESEND_API_KEY"] = "RESEND_API_KEY" in env_text
+    return result
+
+
 if __name__ == "__main__":
     import uvicorn
     print("Jacob AI Command Center -> http://localhost:8000")
