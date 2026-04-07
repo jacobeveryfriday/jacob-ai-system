@@ -46,9 +46,8 @@ async def health_check():
     # Slack
     slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
     status["slack"] = "connected" if slack_url else "not_configured"
-    # SMTP
-    smtp_pass = os.getenv("NAVER_WORKS_SMTP_PASSWORD")
-    status["smtp"] = "connected" if smtp_pass else "not_configured"
+    # Resend Email
+    status["email"] = "connected" if os.getenv("RESEND_API_KEY") else "not_configured"
     # Anthropic
     status["anthropic"] = "connected" if os.getenv("ANTHROPIC_API_KEY", "") else "not_configured"
     # Cache stats
@@ -1288,21 +1287,7 @@ async def api_no_response_leads():
     return {"count": len(unhandled), "leads": unhandled}
 
 
-# ===== 이메일 발송 (네이버 웍스 SMTP — STARTTLS) =====
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.utils import formataddr
-
-def _smtp_cfg():
-    """SMTP 설정을 매 호출마다 환경변수에서 읽어 반환."""
-    return {
-        "host": os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com"),
-        "port": int(os.getenv("NAVER_WORKS_SMTP_PORT", "587")),
-        "user": os.getenv("NAVER_WORKS_SMTP_USER", "luna@08liter.com"),
-        "password": os.getenv("NAVER_WORKS_SMTP_PASSWORD") or "",
-        "sender_name": os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)"),
-    }
+# ===== 이메일 발송 (Resend HTTP API) =====
 
 
 def _build_pitch_html(brand_name: str, body_text: str) -> str:
@@ -1331,77 +1316,61 @@ def _build_pitch_html(brand_name: str, body_text: str) -> str:
 </td></tr></table></body></html>"""
 
 
-def _smtp_send(to_email: str, subject: str, html: str) -> dict:
-    """네이버 웍스 SMTP STARTTLS로 이메일 1건 발송. 매 호출마다 환경변수 재로드."""
-    cfg = _smtp_cfg()
-    if not cfg["password"]:
-        raw = os.getenv("NAVER_WORKS_SMTP_PASSWORD")
-        return {"status": "error", "message": f"NAVER_WORKS_SMTP_PASSWORD 미설정 (env raw={raw!r}). Railway Variables 확인 필요."}
-    msg = MIMEMultipart("alternative")
-    msg["From"] = formataddr((cfg["sender_name"], cfg["user"]))
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(html, "html", "utf-8"))
-    errors = []
-    # 1차: 포트 465 SSL (네이버웍스 기본 권장)
+def _send_email(to_email: str, subject: str, html: str) -> dict:
+    """Resend HTTP API로 이메일 1건 발송."""
+    api_key = os.getenv("RESEND_API_KEY", "")
+    from_email = os.getenv("RESEND_FROM_EMAIL", "luna@08liter.com")
+    sender_name = os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)")
+    if not api_key:
+        return {"status": "error", "message": "RESEND_API_KEY 미설정. Railway Variables에 추가 필요."}
     try:
-        with smtplib.SMTP_SSL(cfg["host"], 465, timeout=10) as srv:
-            srv.login(cfg["user"], cfg["password"])
-            srv.sendmail(cfg["user"], [to_email], msg.as_string())
-        return {"status": "ok", "to": to_email, "method": "SSL:465"}
-    except smtplib.SMTPAuthenticationError as e:
-        return {"status": "error", "message": f"SMTP 인증 실패: {e}. 네이버웍스 앱 비밀번호를 확인하세요."}
-    except Exception as e1:
-        errors.append(f"465 SSL: {e1}")
-    # 2차: 포트 587 STARTTLS 폴백
-    try:
-        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=10) as srv:
-            srv.ehlo()
-            srv.starttls()
-            srv.ehlo()
-            srv.login(cfg["user"], cfg["password"])
-            srv.sendmail(cfg["user"], [to_email], msg.as_string())
-        return {"status": "ok", "to": to_email, "method": "STARTTLS:587"}
-    except smtplib.SMTPAuthenticationError as e:
-        return {"status": "error", "message": f"SMTP 인증 실패: {e}. 네이버웍스 앱 비밀번호를 확인하세요."}
-    except Exception as e2:
-        errors.append(f"587 STARTTLS: {e2}")
-    return {
-        "status": "error",
-        "message": "SMTP 포트 차단 (Railway 환경에서 아웃바운드 SMTP 제한). " + " / ".join(errors),
-        "guide": "해결 방법: (1) Railway Pro 플랜 업그레이드, (2) 외부 이메일 API (Resend/SendGrid) 사용, (3) 로컬 서버에서 발송",
-    }
+        resp = req_lib.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "from": f"{sender_name} <{from_email}>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html,
+            },
+            timeout=15,
+        )
+        data = resp.json()
+        if resp.status_code == 200:
+            return {"status": "ok", "to": to_email, "id": data.get("id", ""), "method": "resend"}
+        return {"status": "error", "message": data.get("message", resp.text[:200]), "code": resp.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.post("/api/send-email")
 async def api_send_email(request: Request):
-    """네이버 웍스 SMTP로 이메일 1건 발송. body에 raw HTML 또는 brand_name+body_text로 템플릿 사용."""
+    """Resend API로 이메일 1건 발송. body에 raw HTML 또는 brand_name+body_text로 템플릿 사용."""
     body = await request.json()
     to_email = body.get("to", "").strip()
     subject = body.get("subject", "").strip()
     if not to_email or not subject:
         return {"status": "error", "message": "to, subject 필수"}
-    # HTML 직접 전달 또는 템플릿 사용
     html = body.get("html", "")
     if not html:
         brand_name = body.get("brand_name", "")
         body_text = body.get("body_text", body.get("body", ""))
         html = _build_pitch_html(brand_name, body_text)
-    return _smtp_send(to_email, subject, html)
+    return _send_email(to_email, subject, html)
 
 
 @app.get("/api/test-email")
 async def api_test_email():
-    """luna@08liter.com으로 테스트 메일 발송."""
+    """발신 이메일로 테스트 메일 발송 (Resend API)."""
+    from_email = os.getenv("RESEND_FROM_EMAIL", "luna@08liter.com")
     html = _build_pitch_html(
         "테스트",
-        "안녕하세요!\n\n이 메일은 Jacob AI Command Center에서 발송한 테스트 이메일입니다.\n"
-        "SMTP 연동이 정상적으로 작동하고 있습니다.\n\n"
+        "안녕하세요!\n\n이 메일은 Jacob AI Command Center에서 Resend API를 통해 발송한 테스트 이메일입니다.\n"
+        "이메일 연동이 정상적으로 작동하고 있습니다.\n\n"
         f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)"
     )
-    cfg = _smtp_cfg()
-    result = _smtp_send(cfg["user"], "[Jacob AI] SMTP 테스트 이메일", html)
-    result["sent_to"] = cfg["user"]
+    result = _send_email(from_email, "[Jacob AI] Resend 테스트 이메일", html)
+    result["sent_to"] = from_email
     return result
 
 
@@ -1449,7 +1418,7 @@ async def api_campaign_recontact(request: Request):
         if dry_run:
             entry["status"] = "preview"
         else:
-            send_result = _smtp_send(lead["email"], subject, html)
+            send_result = _send_email(lead["email"], subject, html)
             entry["status"] = send_result["status"]
             entry["detail"] = send_result.get("message", "")
 
