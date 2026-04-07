@@ -1322,7 +1322,8 @@ def _send_email(to_email: str, subject: str, html: str) -> dict:
     from_email = os.getenv("RESEND_FROM_EMAIL", "luna@08liter.com")
     sender_name = os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)")
     if not api_key:
-        return {"status": "error", "message": "RESEND_API_KEY 미설정. Railway Variables에 추가 필요."}
+        in_env = "RESEND_API_KEY" in os.environ
+        return {"status": "error", "message": f"RESEND_API_KEY 미설정. in_os_environ={in_env}. Railway Variables에 추가 필요."}
     try:
         resp = req_lib.post(
             "https://api.resend.com/emails",
@@ -1445,28 +1446,24 @@ async def api_cache_clear():
 
 @app.get("/api/debug-env")
 async def api_debug_env():
-    """환경변수 로딩 상태 디버그. 값은 마스킹 처리."""
+    """환경변수 설정 여부 확인. 실제 값은 숨기고 SET/NOT_SET만 표시."""
     keys = [
         "RESEND_API_KEY", "RESEND_FROM_EMAIL",
         "ANTHROPIC_API_KEY", "GOOGLE_SHEETS_API_KEY",
         "NAVER_WORKS_SMTP_PASSWORD", "SENDER_NAME",
-        "SLACK_WEBHOOK_URL", "DASH_USER",
+        "SLACK_WEBHOOK_URL", "DASH_USER", "DASH_PASS",
     ]
     result = {}
     for k in keys:
         val = os.environ.get(k)
         if val is None:
-            result[k] = "NOT_IN_OS_ENVIRON"
+            result[k] = "NOT_SET"
         elif val == "":
-            result[k] = "EMPTY_STRING"
+            result[k] = "EMPTY"
         else:
-            result[k] = f"SET({len(val)}chars):{val[:4]}***"
-    # .env 파일 존재 여부
+            result[k] = "SET"
     env_path = Path(__file__).parent / ".env"
     result["_dotenv_file_exists"] = env_path.exists()
-    if env_path.exists():
-        env_text = env_path.read_text()
-        result["_dotenv_has_RESEND_API_KEY"] = "RESEND_API_KEY" in env_text
     return result
 
 
