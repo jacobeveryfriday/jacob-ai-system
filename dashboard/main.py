@@ -180,7 +180,7 @@ _cache: Dict[str, list] = {}
 _cache_time: Dict[str, float] = {}
 CACHE_TTLS = {
     "inbound": 300,      # 5 min
-    "contract": 300,     # 5 min - 매출 실시간 반영
+    "contract": 0,       # 실시간 - 매출 즉시 반영
     "influencer": 21600, # 6 hours
     "ads": 3600,         # 1 hour
     "default": 1800,     # 30 min fallback
@@ -543,9 +543,11 @@ def _parse_contracts(rows):
     ly_ym = f"{now.year - 1}{now.month:02d}"
 
     result = {"today_contract": 0, "month_contract": 0, "prev_month_contract": 0,
-              "last_year_contract": 0, "month_renewal": 0, "prev_month_renewal": 0,
+              "last_year_contract": 0, "month_renewal": 0, "month_new": 0,
+              "prev_month_renewal": 0, "prev_month_new": 0,
               "today_revenue": 0, "month_revenue": 0, "prev_month_revenue": 0,
-              "last_year_revenue": 0, "brands": [], "today_brands": [], "brand_list": []}
+              "last_year_revenue": 0, "brands": [], "today_brands": [], "brand_list": [],
+              "monthly_payback": {}}
 
     if not rows or len(rows) < 2:
         return result
@@ -562,6 +564,8 @@ def _parse_contracts(rows):
     staff_idx = _find_col(headers, "요청담당자", "담당자")
     month_idx = _find_col(headers, "작성월", "월매출")
 
+    payback_idx = _find_col(headers, "페이백비", "충전금", "구매평충전금")
+
     # 폴백 (기존 B:U 기준)
     if date_idx is None:
         date_idx = 1  # B열 = 작성일자
@@ -571,8 +575,12 @@ def _parse_contracts(rows):
         brand_idx = 8  # I열
     if type_idx is None and len(headers) > 6:
         type_idx = 6  # G열
+    if payback_idx is None and len(headers) > 18:
+        payback_idx = 18  # S열
 
     brand_set = set()
+    # 브랜드 첫 등장 여부 추적 (신규/재계약 자동 분류)
+    brand_first_seen = {}
 
     for row in data_rows:
         if not row or len(row) < 3:
@@ -596,6 +604,15 @@ def _parse_contracts(rows):
         if revenue < 0:
             revenue = 0
 
+        # 페이백비 파싱
+        payback_raw = str(row[payback_idx]).strip() if payback_idx is not None and payback_idx < len(row) else "0"
+        try:
+            payback = int(float(payback_raw.replace(",", "").replace("₩", "").replace(" ", ""))) if payback_raw and payback_raw not in ["-", ""] else 0
+        except (ValueError, TypeError):
+            payback = 0
+        if payback < 0:
+            payback = 0
+
         # 날짜 정리
         date_clean = date_raw.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
         if len(date_clean) < 6 or not date_clean[:6].isdigit():
@@ -608,10 +625,28 @@ def _parse_contracts(rows):
         is_this_month = (date_clean[:6] == this_ym) or (this_month_dot in month_val)
         is_prev_month = (date_clean[:6] == prev_ym) or (prev_month_dot in month_val)
         is_last_year = date_clean[:6] == ly_ym
-        is_renewal = (ctype and "신규" not in ctype and "확인필요" not in ctype and ctype != "-")
+
+        # 신규/재계약 자동 분류: type 컬럼이 있으면 사용, 없으면 브랜드 첫 등장 여부로 판단
+        if ctype and ctype != "-" and "확인필요" not in ctype:
+            is_renewal = "신규" not in ctype
+        else:
+            brand_lower = brand.lower() if brand else ""
+            if brand_lower:
+                if brand_lower not in brand_first_seen:
+                    brand_first_seen[brand_lower] = date_clean[:8]
+                    is_renewal = False
+                else:
+                    is_renewal = True
+            else:
+                is_renewal = False
 
         brand_card = {"name": brand, "type": "재계약" if is_renewal else "신규",
                       "staff": staff, "date": date_raw, "revenue": revenue}
+
+        # 월별 페이백비 집계
+        if payback > 0 and len(date_clean) >= 6:
+            ym_key = date_clean[:4] + "." + date_clean[4:6]
+            result["monthly_payback"][ym_key] = result["monthly_payback"].get(ym_key, 0) + payback
 
         if is_today:
             result["today_contract"] += 1
@@ -622,12 +657,16 @@ def _parse_contracts(rows):
             result["month_revenue"] += revenue
             if is_renewal:
                 result["month_renewal"] += 1
+            else:
+                result["month_new"] += 1
             result["brands"].append(brand_card)
         if is_prev_month:
             result["prev_month_contract"] += 1
             result["prev_month_revenue"] += revenue
             if is_renewal:
                 result["prev_month_renewal"] += 1
+            else:
+                result["prev_month_new"] += 1
         if is_last_year:
             result["last_year_contract"] += 1
             result["last_year_revenue"] += revenue
@@ -750,6 +789,7 @@ async def api_brand_pipeline(brand_filter: Optional[str] = Query(None)):
                 "contract": ct.get("month_contract", 0),
                 "revenue": filtered_month_revenue,
                 "renewal": ct.get("month_renewal", 0),
+                "new": ct.get("month_new", 0),
             },
             "cumul": {
                 "inbound": ib.get("cumul_inbound", 0),
@@ -967,6 +1007,7 @@ async def api_kpi_summary():
             "inbound_db": month.get("inbound", 0),
             "valid_db": month.get("valid", 0),
             "renewal": month.get("renewal", 0),
+            "new": month.get("new", 0),
             "roas": last_roas,
             "influencer_pool": 1400000,
         },
@@ -1917,6 +1958,11 @@ async def api_kpi_trend():
                 pb_val = 0
             if pb_val > 0:
                 daily_payback[day_key] = daily_payback.get(day_key, 0) + pb_val
+    # 월별 충전금(페이백비) 집계
+    monthly_payback = {}
+    ct2 = _parse_contracts(ct_rows) if ct_rows else {}
+    monthly_payback = ct2.get("monthly_payback", {})
+
     return {
         "monthly_revenue": [{"month": k, "revenue": v} for k, v in sorted(monthly_rev.items())[-12:]],
         "monthly_trend": monthly[-12:],
@@ -1924,6 +1970,7 @@ async def api_kpi_trend():
         "daily_contracts": [{"date": k, "new": daily_new.get(k, 0), "renew": daily_renew.get(k, 0)} for k in sorted(set(list(daily_new.keys()) + list(daily_renew.keys())))[-90:]],
         "product_distribution": [{"category": k, "revenue": v} for k, v in sorted(product_dist.items(), key=lambda x: -x[1])],
         "daily_payback": [{"date": k, "amount": v} for k, v in sorted(daily_payback.items())[-90:]],
+        "monthly_payback": [{"month": k, "amount": v} for k, v in sorted(monthly_payback.items())[-12:]],
     }
 
 

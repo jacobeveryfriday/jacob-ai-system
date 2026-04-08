@@ -73,26 +73,36 @@
 <div id="page-overview" class="active">
 <div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 공팔리터 글로벌</div><div class="section-hdr-sub">이번 달 핵심 지표 (실시간)</div></div>
 <div id="overview-kpi-grid" class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">금일 매출</div></div><div class="kpi-value" id="ov-today-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-today-rev-sub">로딩중...</div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 누적 매출</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-month-rev-sub">목표 1.6억원 / 달성률 -</div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">금일 매출</div></div><div class="kpi-value" id="ov-today-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-today-rev-sub">로딩중...</div><p style="font-size:11px;color:#888888;margin-top:4px">금일매출 = 인바운드시트 계약금액 합산(기준:계약일자=오늘KST)</p></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 누적 매출</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-month-rev-sub">목표 1.6억원 / 달성률 -</div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div><p style="font-size:11px;color:#888888;margin-top:4px">누적매출 = 이번달 1일~오늘 전체합산 / 출처: 구글시트 인바운드탭</p></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 계약</div></div><div class="kpi-value" id="ov-month-contract">-<span class="kpi-unit">건</span></div><div class="kpi-detail" id="ov-month-contract-sub">목표 38건 / 달성률 -</div><div class="kpi-progress"><div class="kpi-progress-bar"><div class="kpi-progress-fill risk" id="ov-contract-bar" style="width:0%"></div></div></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">신규 / 재계약</div></div><div class="kpi-value" id="ov-new-renew">-<span class="kpi-unit">건</span></div><div class="kpi-detail" id="ov-new-renew-sub">-</div><p style="font-size:11px;color:#888888;margin-top:4px">신규계약 = 브랜드명 첫등장 행 COUNT(이번달) / 재계약 = 동일브랜드 2회이상 COUNT</p></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">금일 인바운드</div></div><div class="kpi-value" id="ov-today-inbound">-</div><div class="kpi-detail" id="ov-today-inbound-sub">유효 - / 무대응 -</div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">오가닉 리드</div></div><div class="kpi-value">6<span class="kpi-unit">건/일</span></div><div class="kpi-detail">목표: <span class="v">15건</span></div><div class="mt-4"><span class="badge badge-risk">AT RISK</span></div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">광고 CPA</div></div><div class="kpi-value">3.2<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">5만원 이하</span></div><div class="mt-4"><span class="badge badge-on">ON TRACK</span></div></div>
 </div>
 <div style="margin-top:20px"><p style="font-size:14px;font-weight:700;color:#E8EBF2;margin-bottom:12px">전체현황 그래프 (구글시트 실데이터)</p>
 <div style="display:flex;gap:4px;margin-bottom:12px"><button onclick="loadOverviewCharts('daily')" id="ov-chart-daily" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#F97316;color:#fff">일간</button><button onclick="loadOverviewCharts('monthly')" id="ov-chart-monthly" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;color:#64748B">월간</button></div>
 <div id="ov-charts" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규매출</p><div style="position:relative;height:200px"><canvas id="chart-ov-rev"></canvas></div></div>
-<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규계약 / 재계약</p><div style="position:relative;height:200px"><canvas id="chart-ov-contracts"></canvas></div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규매출</p><div style="position:relative;height:200px"><canvas id="chart-ov-rev"></canvas></div><p id="ov-rev-basis" style="font-size:11px;color:#888888;margin-top:4px">일간: 출처: 인바운드 구글시트 / 계산: 일별 계약금액 SUM / 기간: 오늘KST 기준 최근 30일</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규계약 / 재계약</p><div style="position:relative;height:200px"><canvas id="chart-ov-contracts"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">출처: 세금계산서 시트 / 신규=브랜드 첫등장 / 재계약=동일브랜드 2회이상</p></div>
 <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">계약상품별 분포</p><div style="position:relative;height:200px"><canvas id="chart-ov-products"></canvas></div></div>
-<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">브랜드 충전금액</p><div style="position:relative;height:200px"><canvas id="chart-ov-payback"></canvas></div></div>
-<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px;grid-column:1/3"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">인플루언서 보상신청금액</p><div style="padding:40px;text-align:center;color:#4A5568;font-size:12px">추후 연결 예정 — 데이터 연동 후 자동 표시</div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">충전금 vs 보상 비교</p><div style="position:relative;height:200px"><canvas id="chart-ov-payback"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">충전금: 세금계산서발행시트 S열 월별SUM / 보상비율 = 보상÷충전금×100</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px;grid-column:1/3">
+<p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">충전금/보상 요약</p>
+<div id="payback-summary-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+<div style="background:#161B27;border-radius:6px;padding:12px;text-align:center"><p style="font-size:10px;color:#8B95A6">총 충전금</p><p id="sum-payback" style="font-family:monospace;font-size:18px;font-weight:700;color:#0EA5E9">0원</p></div>
+<div style="background:#161B27;border-radius:6px;padding:12px;text-align:center"><p style="font-size:10px;color:#8B95A6">총 보상</p><p id="sum-reward" style="font-family:monospace;font-size:18px;font-weight:700;color:#F97316">0원</p><p style="font-size:9px;color:#4A5568">추후연동 예정</p></div>
+<div style="background:#161B27;border-radius:6px;padding:12px;text-align:center"><p style="font-size:10px;color:#8B95A6">잔여금액</p><p id="sum-remain" style="font-family:monospace;font-size:18px;font-weight:700;color:#22C55E">0원</p></div>
+<div style="background:#161B27;border-radius:6px;padding:12px;text-align:center"><p style="font-size:10px;color:#8B95A6">보상비율</p><p id="sum-ratio" style="font-family:monospace;font-size:18px;font-weight:700;color:#7C3AED">0%</p></div>
+</div></div>
 </div></div>
 </div>
 
 <div id="page-alerts">
-<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 알림센터</div><div class="section-hdr-sub"><button onclick="runAgentCycle()" style="padding:4px 12px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">KPI 점검 실행</button></div></div>
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 알림센터 게시판</div><div class="section-hdr-sub" style="display:flex;gap:8px;align-items:center">
+<select id="alert-agent-filter" onchange="loadAlertBoard()" style="padding:4px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">전체 에이전트</option><option value="카일">카일</option><option value="루나">루나</option><option value="피치">피치</option><option value="맥스">맥스</option><option value="소피">소피</option><option value="레이">레이</option><option value="하나">하나</option></select>
+<button onclick="runAgentCycle()" style="padding:4px 12px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">KPI 점검 실행</button></div></div>
+<p style="font-size:11px;color:#888888;margin-bottom:12px">자동게시: 전일 KPI 80% 미만 에이전트만 / 달성시 게시없음 / 최신순 정렬</p>
 <div id="alertBoard" style="display:flex;flex-direction:column;gap:10px"></div>
 </div>
 <div id="page-kpi"></div>
@@ -165,36 +175,42 @@
 
 <div id="page-influencer">
   <div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
-    <button onclick="setInfMainTab('members')" id="inf-main-tab-members" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">회원현황</button>
-    <button onclick="setInfMainTab('list')" id="inf-main-tab-list" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">키인플루언서</button>
-    <button onclick="setInfMainTab('pitch')" id="inf-main-tab-pitch" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">피치 에이전트</button>
+    <button onclick="setInfMainTab('members')" id="inf-main-tab-members" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">플랫폼 회원현황</button>
+    <button onclick="setInfMainTab('list')" id="inf-main-tab-list" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">키인플루언서 현황</button>
   </div>
   <div id="inf-tab-members-content" style="margin-bottom:20px">
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px;margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <p style="font-size:13px;font-weight:700;color:#E8EBF2">국가별 신규/누적 인플루언서 등록 추이</p>
-        <div style="display:flex;gap:4px" id="inf-country-filters"></div>
+        <div style="display:flex;gap:4px" id="inf-country-filters">
+          <button onclick="filterInfCountry('')" class="inf-country-btn active" style="padding:4px 12px;border-radius:4px;border:1px solid #1E2433;cursor:pointer;font-size:10px;font-weight:600;background:#F97316;color:#fff">전체</button>
+          <button onclick="filterInfCountry('US')" class="inf-country-btn" style="padding:4px 12px;border-radius:4px;border:1px solid #1E2433;cursor:pointer;font-size:10px;font-weight:600;background:transparent;color:#64748B">US</button>
+          <button onclick="filterInfCountry('VT')" class="inf-country-btn" style="padding:4px 12px;border-radius:4px;border:1px solid #1E2433;cursor:pointer;font-size:10px;font-weight:600;background:transparent;color:#64748B">VT</button>
+          <button onclick="filterInfCountry('KR')" class="inf-country-btn" style="padding:4px 12px;border-radius:4px;border:1px solid #1E2433;cursor:pointer;font-size:10px;font-weight:600;background:transparent;color:#64748B">한국</button>
+          <button onclick="filterInfCountry('JP')" class="inf-country-btn" style="padding:4px 12px;border-radius:4px;border:1px solid #1E2433;cursor:pointer;font-size:10px;font-weight:600;background:transparent;color:#64748B">일본</button>
+          <button onclick="filterInfCountry('OTHER')" class="inf-country-btn" style="padding:4px 12px;border-radius:4px;border:1px solid #1E2433;cursor:pointer;font-size:10px;font-weight:600;background:transparent;color:#64748B">기타</button>
+        </div>
       </div>
       <div style="position:relative;height:250px"><canvas id="chart-inf-trend"></canvas></div>
-      <p style="font-size:9px;color:#4A5568;margin-top:6px">출처: 구글시트 '현황시트(수동매칭)' A열(컨택날짜) / 계산: 해당 날짜 행 COUNT / 누적: 해당일까지 전체 행 COUNT</p>
+      <p style="font-size:11px;color:#888888;margin-top:6px">출처: 구글시트 현황시트(수동매칭) A열(컨택날짜) / 신규: 해당날짜 행 COUNT / 누적: 해당일까지 전체 행 누적 COUNT / 국가필터: C열 값 기준</p>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">채널별 인플루언서</p><div style="position:relative;height:180px"><canvas id="chart-inf-platform"></canvas></div><p style="font-size:9px;color:#4A5568;margin-top:4px">출처: E열(플랫폼) COUNT</p></div>
-      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">카테고리별 인플루언서</p><div style="position:relative;height:180px"><canvas id="chart-inf-category"></canvas></div><p style="font-size:9px;color:#4A5568;margin-top:4px">출처: D열(카테고리) COUNT</p></div>
-      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">팔로워 구간별</p><div style="position:relative;height:180px"><canvas id="chart-inf-followers"></canvas></div><p style="font-size:9px;color:#4A5568;margin-top:4px">출처: H열 팔로워 K/k 변환 구간 분류</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">채널별 인플루언서</p><div style="position:relative;height:180px"><canvas id="chart-inf-platform"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">출처: 구글시트 현황시트(수동매칭) / E열 플랫폼 COUNT / 필터: 선택국가 C열</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">카테고리별 인플루언서</p><div style="position:relative;height:180px"><canvas id="chart-inf-category"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">출처: 구글시트 현황시트(수동매칭) / D열 카테고리 COUNT / 필터: 선택국가 C열</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">팔로워 구간별</p><div style="position:relative;height:180px"><canvas id="chart-inf-followers"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">출처: 구글시트 현황시트(수동매칭) / H열 팔로워 구간분류 / 구간: ~1K/1K~10K/10K~100K/100K~500K/500K~1M/1M+</p></div>
     </div>
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px">
       <p style="font-size:11px;color:#8B95A6;margin-bottom:8px">진행상태별 현황</p>
       <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px;font-size:10px;color:#4A5568">진행상태</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">건수</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">비율</th></tr></thead><tbody id="inf-status-table"></tbody></table>
-      <p style="font-size:9px;color:#4A5568;margin-top:4px">출처: K열(진행상태) COUNT 집계</p>
+      <p style="font-size:11px;color:#888888;margin-top:4px">출처: K열(진행상태) 값별 COUNT 집계</p>
     </div>
   </div>
   <div id="inf-tab-list-content" style="display:none">
     <div id="inf-kpi-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">총 등록</p><p id="inf-kpi-total" style="font-family:monospace;font-size:22px;font-weight:700;color:#E8EBF2">-</p><p style="font-size:8px;color:#4A5568">전체 행 수</p></div>
-      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">이번달 신규</p><p id="inf-kpi-new" style="font-family:monospace;font-size:22px;font-weight:700;color:#22C55E">-</p><p style="font-size:8px;color:#4A5568">A열 이번달 COUNT</p></div>
-      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">10만+ 인플루언서</p><p id="inf-kpi-mid" style="font-family:monospace;font-size:22px;font-weight:700;color:#0EA5E9">-</p><p style="font-size:8px;color:#4A5568">H열 100K+ COUNT</p></div>
-      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #7C3AED;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">100만+ 메가</p><p id="inf-kpi-mega" style="font-family:monospace;font-size:22px;font-weight:700;color:#7C3AED">-</p><p style="font-size:8px;color:#4A5568">H열 1M+ COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">총 등록 인플루언서</p><p id="inf-kpi-total" style="font-family:monospace;font-size:22px;font-weight:700;color:#E8EBF2">-</p><p style="font-size:11px;color:#888888;margin-top:4px">현황시트 전체 데이터 행 COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">이번달 신규</p><p id="inf-kpi-new" style="font-family:monospace;font-size:22px;font-weight:700;color:#22C55E">-</p><p style="font-size:11px;color:#888888;margin-top:4px">A열 이번달 1일~오늘 COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">팔로워 10만+ (가성비핵심)</p><p id="inf-kpi-mid" style="font-family:monospace;font-size:22px;font-weight:700;color:#0EA5E9">-</p><p style="font-size:11px;color:#888888;margin-top:4px">H열 파싱 후 100000 이상 COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #7C3AED;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">팔로워 100만+ (메가)</p><p id="inf-kpi-mega" style="font-family:monospace;font-size:22px;font-weight:700;color:#7C3AED">-</p><p style="font-size:11px;color:#888888;margin-top:4px">H열 파싱 후 1000000 이상 COUNT</p></div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <p style="font-size:13px;font-weight:700;color:#E8EBF2">맞춤 키인플루언서 리스트</p>
@@ -211,30 +227,20 @@
       </div>
       <button onclick="addInfluencer()" style="margin-top:8px;padding:6px 16px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">저장</button>
     </div>
-  <div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
-    <button id="inf-tab-daily" onclick="setInfTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">당일</button>
-    <button id="inf-tab-monthly" onclick="setInfTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">누적</button>
-  </div>
-  <div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><p style="font-size:13px;font-weight:700;color:#E8EBF2">국가별 인플루언서 현황</p><span id="inf-data-source" style="font-size:10px;color:#4A5568">샘플 데이터</span></div><div id="country-cards" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px"><div style="text-align:center;padding:20px;color:#4A5568;font-size:12px">로딩중...</div></div></div>
-  <button onclick="toggleInfDetail()" style="width:100%;padding:8px;background:#161B27;border:1px solid #1E2433;border-radius:8px;color:#8B95A6;font-size:11px;cursor:pointer;margin-bottom:16px"><span id="inf-detail-btn-text">추이 그래프 자세히 보기</span></button>
-  <div id="inf-detail-panel" style="display:none;margin-bottom:20px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:12px">최근 1개월 확보 추이 (주별)</p><div style="position:relative;height:200px"><canvas id="chart-inf-1m"></canvas></div></div><div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:12px">최근 3개월 확보 추이 (월별)</p><div style="position:relative;height:200px"><canvas id="chart-inf-3m"></canvas></div></div></div></div>
+  <div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><p style="font-size:13px;font-weight:700;color:#E8EBF2">맞춤 키인플루언서 리스트</p><span id="inf-data-source" style="font-size:10px;color:#4A5568">샘플 데이터</span></div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
     <select id="filter-country" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">국가 전체</option><option value="KR">KR</option><option value="US">US</option><option value="JP">JP</option><option value="CN">CN</option><option value="MY">MY</option><option value="SG">SG</option><option value="TH">TH</option><option value="ID">ID</option><option value="VT">VN</option></select>
     <select id="filter-platform" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">플랫폼 전체</option><option value="Instagram">Instagram</option><option value="TikTok">TikTok</option><option value="YouTube">YouTube</option></select>
     <select id="filter-category" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">카테고리 전체</option><option value="뷰티">뷰티</option><option value="패션">패션</option><option value="라이프">라이프</option><option value="푸드">푸드</option><option value="여행">여행</option><option value="피트니스">피트니스</option></select>
+    <select id="filter-followers" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">팔로워 전체</option><option value="1000">~1K</option><option value="10000">1K~10K</option><option value="100000">10K~100K</option><option value="500000">100K~500K</option><option value="1000000">500K~1M</option><option value="1000001">1M+</option></select>
     <select id="filter-status" onchange="applyInfluencerFilter()" style="padding:6px 10px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="">상태 전체</option><option value="단순리스트업">단순리스트업</option><option value="사례활용가능">사례활용가능</option><option value="제안발송">제안발송</option><option value="거절">거절</option></select>
     <input id="filter-search" oninput="applyInfluencerFilter()" placeholder="계정명 검색..." style="padding:6px 12px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px;flex:1;min-width:140px">
   </div>
   <div style="background:rgba(249,115,22,0.06);border:1px dashed rgba(249,115,22,0.3);border-radius:8px;padding:12px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center"><div><p style="font-size:11px;color:#8B95A6;margin-bottom:2px">현재 필터 조건 매칭</p><p id="target-count" style="font-family:monospace;font-size:22px;font-weight:700;color:#F97316">-</p></div><button onclick="showTargetList()" style="padding:10px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer">연락처 포함 리스트 보기</button></div>
   <div id="target-result-panel" style="display:none;margin-bottom:16px"></div>
-  <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="background:#161B27"><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568;text-transform:uppercase">컨택날짜</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">국가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">플랫폼</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">계정명</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">팔로워</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">카테고리</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">진행상태</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">협업단가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">이메일</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">연락처</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">담당자</th></tr></thead><tbody id="inf-table-body"><tr><td colspan="11" style="text-align:center;padding:20px;color:#4A5568;font-size:12px">로딩중...</td></tr></tbody></table></div><div style="padding:8px 16px;border-top:1px solid #1E2433;display:flex;justify-content:space-between"><p id="inf-filter-count" style="font-size:10px;color:#4A5568">-</p><button onclick="exportTargetCSV()" style="padding:4px 14px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer">CSV 내보내기</button></div></div>
+  <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="background:#161B27"><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568;text-transform:uppercase">컨택날짜</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">국가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">카테고리</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">플랫폼</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">채널명</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">팔로워</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">이메일</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">진행상태</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">계정링크</th></tr></thead><tbody id="inf-table-body"><tr><td colspan="9" style="text-align:center;padding:20px;color:#4A5568;font-size:12px">로딩중...</td></tr></tbody></table></div><div style="padding:8px 16px;border-top:1px solid #1E2433;display:flex;justify-content:space-between"><p id="inf-filter-count" style="font-size:10px;color:#4A5568">-</p><button onclick="exportTargetCSV()" style="padding:4px 14px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer">CSV 내보내기</button></div>
+<p style="font-size:11px;color:#888888;margin-top:4px;padding:0 16px 8px">출처: 구글시트 현황시트(수동매칭) 전체행 / 팔로워파싱: K/k 포함시 숫자x1000 / 읽기전용 접근</p></div>
   </div>
-  <div id="inf-tab-pitch-content" style="display:none">
-    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px">
-      <p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:8px">피치 에이전트와 대화</p>
-      <p style="font-size:11px;color:#8B95A6;margin-bottom:12px">우측 채팅창에서 피치와 대화하세요. "캠페인 대상 추출해줘" 등을 입력하면 자동 실행합니다.</p>
-      <button onclick="showPage('influencer');document.getElementById('chatInput').value='캠페인 대상 추출해줘';sendChat()" style="padding:8px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">캠페인 대상 추출</button>
-    </div>
   </div>
 </div>
 
@@ -275,7 +281,63 @@
 </div>
 </div>
 
-<div id="page-management"></div><div id="page-cs"></div>
+<div id="page-management"></div>
+<div id="page-cs">
+<div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
+<button onclick="setCsTab('brand')" id="cs-tab-brand" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">브랜드</button>
+<button onclick="setCsTab('influencer')" id="cs-tab-influencer" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">인플루언서</button>
+</div>
+<div id="cs-brand-content">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #EF4444;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">대기중</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#EF4444">3</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F59E0B;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">처리중</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#F59E0B">3</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">오늘완료</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#22C55E">5</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">평균응답시간</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#0EA5E9">12분</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #7C3AED;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">최장미처리</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#7C3AED">2.5h</p></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">브랜드 문의유형</p><div style="position:relative;height:180px"><canvas id="chart-cs-brand-type"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">출처: 브랜드CS / 견적문의/계약문의/정산문의/불만/기타 분류</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px">
+<p style="font-size:11px;color:#8B95A6;margin-bottom:8px">문의유형별 비율</p>
+<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px;font-size:10px;color:#4A5568">유형</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">건수</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">비율</th></tr></thead>
+<tbody><tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#F97316">견적문의</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">12</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">35%</td></tr>
+<tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#22C55E">계약문의</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">8</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">24%</td></tr>
+<tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#0EA5E9">정산문의</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">7</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">21%</td></tr>
+<tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#EF4444">불만</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">4</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">12%</td></tr>
+<tr><td style="padding:6px;font-size:11px;color:#8B95A6">기타</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">3</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">9%</td></tr></tbody></table>
+</div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px;margin-bottom:16px">
+<p style="font-size:11px;color:#8B95A6;margin-bottom:8px">시간대별 브랜드 문의 (09~22시)</p>
+<div style="position:relative;height:180px"><canvas id="chart-cs-brand-hour"></canvas></div>
+<p style="font-size:11px;color:#888888;margin-top:4px">출처: 브랜드CS 시간대별 접수 COUNT / 처리완료+미처리 분리 집계</p>
+</div>
+</div>
+<div id="cs-influencer-content" style="display:none">
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #EF4444;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">대기중</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#EF4444">1</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F59E0B;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">처리중</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#F59E0B">2</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">오늘완료</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#22C55E">3</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">평균응답시간</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#0EA5E9">8분</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #7C3AED;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">최장미처리</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#7C3AED">1.2h</p></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">인플루언서 문의유형</p><div style="position:relative;height:180px"><canvas id="chart-cs-inf-type"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">출처: 인플루언서CS / 협찬신청/보상문의/포스팅문의/계정문제/기타 분류</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px">
+<p style="font-size:11px;color:#8B95A6;margin-bottom:8px">문의유형별 비율</p>
+<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px;font-size:10px;color:#4A5568">유형</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">건수</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">비율</th></tr></thead>
+<tbody><tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#F97316">협찬신청</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">8</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">40%</td></tr>
+<tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#22C55E">보상문의</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">4</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">20%</td></tr>
+<tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#0EA5E9">포스팅문의</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">4</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">20%</td></tr>
+<tr style="border-bottom:1px solid #1E2433"><td style="padding:6px;font-size:11px;color:#EF4444">계정문제</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">2</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">10%</td></tr>
+<tr><td style="padding:6px;font-size:11px;color:#8B95A6">기타</td><td style="padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2">2</td><td style="padding:6px;text-align:right;font-size:11px;color:#8B95A6">10%</td></tr></tbody></table>
+</div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px;margin-bottom:16px">
+<p style="font-size:11px;color:#8B95A6;margin-bottom:8px">시간대별 인플루언서 문의 (09~22시)</p>
+<div style="position:relative;height:180px"><canvas id="chart-cs-inf-hour"></canvas></div>
+<p style="font-size:11px;color:#888888;margin-top:4px">출처: 인플루언서CS 시간대별 접수 COUNT / 처리완료+미처리 분리 집계</p>
+</div>
+</div>
+</div>
 </div></main>
 
 <aside class="chat-panel">
@@ -610,26 +672,7 @@ mkTable(el,['사업명','지원기관','신청금액','상태','마감일','담�
 mkChart(el,[{title:'월별 수입 vs 지출 (백만원)',fn:function(c){new Chart(c,{type:'line',data:{labels:m8,datasets:[{label:'수입',data:[240,238,262,158,122,99,155,122],borderColor:'#22C55E',tension:.3,pointRadius:3,borderWidth:2,fill:false},{label:'지출',data:[180,175,190,130,100,85,120,95],borderColor:'#EF4444',tension:.3,pointRadius:3,borderWidth:2,fill:false}]},options:CD})}},{title:'미수금 현황 (만원)',fn:function(c){new Chart(c,{type:'bar',data:{labels:['브랜드A','브랜드B','브랜드C'],datasets:[{data:[250,420,130],backgroundColor:['#F59E0B','#EF4444','#F97316']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}}]);
 mkPanels(el,[['오늘 입금 예정','2건 (870만)'],['미수금 30일 초과','1건'],['정부지원 마감','1건 (4/30)'],['진행중 사업','2건']],[['세금계산서 발행 완료',true],['브랜드B 미수금 독촉',false],['AI 마케팅 지원 신청서',false],['4월 비용 정산 확인',false]])},
 
-cs:function(el){
-// Tabs
-var tb=document.createElement('div');tb.className='tab-bar';
-var t1=document.createElement('div');t1.className='tab-btn active';t1.textContent='브랜드 카카오톡 대응';
-var t2=document.createElement('div');t2.className='tab-btn';t2.textContent='인플루언서 카카오톡 대응';
-tb.appendChild(t1);tb.appendChild(t2);el.appendChild(tb);
-var c1=document.createElement('div');c1.className='tab-content active';
-var c2=document.createElement('div');c2.className='tab-content';
-t1.addEventListener('click',function(){t1.classList.add('active');t2.classList.remove('active');c1.classList.add('active');c2.classList.remove('active')});
-t2.addEventListener('click',function(){t2.classList.add('active');t1.classList.remove('active');c2.classList.add('active');c1.classList.remove('active')});
-// Brand tab
-mkKpi(c1,[['오늘 신규 문의','8','건','on',''],['처리중','3','건','watch',''],['처리 완료','5','건','on',''],['평균 응답','12','분','watch','목표 10분']]);
-mkTable(c1,['#','브랜드명','문의 내용','접수','상태','담당자','처리시간'],[['1','뷰티브랜드L','캠페인 견적 문의','09:23','처리완료','김팀장','15분'],['2','코스메틱M','계약 조건 확인','10:05','처리완료','이팀장','8분'],['3','스킨케어N','인플루언서 풀 확인','10:42','처리중','박팀장','-'],['4','뷰티O','Growth 패키지 문의','11:18','처리중','김팀장','-'],['5','코스P','계약서 재발송','11:55','대기중','미배정','-'],['6','브랜드Q','캠페인 결과 보고','12:30','대기중','미배정','-'],['7','스킨R','추가 서비스 문의','13:15','처리중','이팀장','-'],['8','뷰티S','환불 문의','14:02','대기중','미배정','-']],4);
-el.appendChild(c1);
-// Influencer tab
-mkKpi(c2,[['오늘 신규 문의','5','건','on',''],['처리중','2','건','watch',''],['처리 완료','3','건','on',''],['평균 응답','8','분','on','']]);
-mkTable(c2,['#','계정명','문의 내용','접수','상태','담당자','처리시간'],[['1','@beauty_kr1','캠페인 참여 조건','09:45','처리완료','김팀장','10분'],['2','@style_th','정산 문의','10:20','처리완료','이팀장','6분'],['3','@skincare_us','콘텐츠 가이드 요청','11:00','처리완료','박팀장','12분'],['4','@food_jp','캠페인 일정 확인','11:30','처리중','김팀장','-'],['5','@fashion_sg','단가 협의','13:00','처리중','이팀장','-'],['6','@beauty_kr2','리뷰 제출 방법','14:30','대기중','미배정','-']],4);
-el.appendChild(c2);
-mkChart(el,[{title:'문의 유형별 비중',fn:function(c){new Chart(c,{type:'doughnut',data:{labels:['견적문의','계약관련','캠페인','환불/불만','기타'],datasets:[{data:[35,25,20,10,10],backgroundColor:['#F97316','#22C55E','#0EA5E9','#EF4444','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6'}}}}})}}]);
-mkPanels(el,[['브랜드 대기','3건'],['인플루언서 대기','1건'],['평균 응답','12분'],['미배정','4건']],[['오전 문의 처리 완료',true],['대기 4건 담당자 배정',false],['환불 문의 처리 방침',false],['응답 시간 10분 이내 달성',false]])}
+cs:function(el){/* static HTML - loaded via initCsCharts() */}
 };
 
 // ===== NAVIGATION =====
@@ -741,6 +784,9 @@ var e3s=document.getElementById('ov-month-contract-sub');if(e3s)e3s.textContent=
 var e3b=document.getElementById('ov-contract-bar');if(e3b){e3b.style.width=Math.min(ovCtPct,100)+'%';e3b.className='kpi-progress-fill '+(ovCtPct>=50?'on':ovCtPct>=25?'watch':'risk')}
 var e4=document.getElementById('ov-today-inbound');if(e4)e4.textContent=(ovT.inbound_db||0)+'건';
 var e4s=document.getElementById('ov-today-inbound-sub');if(e4s)e4s.textContent='유효 '+(ovT.valid_db||0)+' / 무대응 '+(ovT.unhandled_db||0);
+// 신규/재계약
+var enr=document.getElementById('ov-new-renew');if(enr)enr.textContent=(ovM.new||0)+' / '+(ovM.renewal||0)+'건';
+var enrs=document.getElementById('ov-new-renew-sub');if(enrs)enrs.textContent='신규 '+(ovM.new||0)+'건 / 재계약 '+(ovM.renewal||0)+'건';
 console.log('KPI data loaded:',kpiData.source);
 }catch(e){console.error('KPI load error:',e)}}
 loadKpiData();setInterval(loadKpiData,1800000);
@@ -890,15 +936,16 @@ el.appendChild(card)})}
 
 function renderInfluencerTable(data){var tbody=document.getElementById('inf-table-body');if(!tbody)return;
 while(tbody.firstChild)tbody.removeChild(tbody.firstChild);
-if(!data.length){var tr=document.createElement('tr');var td=document.createElement('td');td.colSpan=11;td.style.cssText='text-align:center;padding:20px;color:#4A5568;font-size:12px';td.textContent='데이터 없음';tr.appendChild(td);tbody.appendChild(tr);return}
-var statusColors={'단순리스트업':'#4A5568','사례활용가능':'#22C55E','제안발송':'#0EA5E9','거절':'#EF4444','워킹중':'#F97316'};
+if(!data.length){var tr=document.createElement('tr');var td=document.createElement('td');td.colSpan=9;td.style.cssText='text-align:center;padding:20px;color:#4A5568;font-size:12px';td.textContent='데이터 없음';tr.appendChild(td);tbody.appendChild(tr);return}
+var statusColors={'단순리스트업':'#8B95A6','사례활용가능':'#22C55E','제안발송':'#0EA5E9','거절':'#EF4444','워킹중':'#F97316'};
 data.slice(0,100).forEach(function(item,i){var tr=document.createElement('tr');tr.style.cssText='border-bottom:1px solid #1E2433;background:'+(i%2===0?'#0F1520':'#161B27');
-var vals=[item.date||'-',item.country||'-',item.platform||'-',null,item.followers||'-',item.category||'-',null,item.price_collab?item.price_collab+'만':'',item.email||'-',item.contact||'-',item.staff||'-'];
+var fw=item.followers_num||0;if(fw>=100000)tr.style.border='1px solid rgba(255,193,7,0.5)';
+// columns: 컨택날짜(A)/국가(C)/카테고리(D)/플랫폼(E)/채널명(F)/팔로워(H)/이메일(I)/진행상태(K)/계정링크(G)
+var vals=[item.date||'-',item.country||'-',item.category||'-',item.platform||'-',item.account||'-',item.followers||'-',item.email||'-',null,null];
 vals.forEach(function(v,ci){var td=document.createElement('td');td.style.cssText='padding:9px 8px;font-size:11px';
-if(ci===3){if(item.url){var a=document.createElement('a');a.href=item.url;a.target='_blank';a.style.cssText='color:#0EA5E9;text-decoration:none';a.textContent=item.account||'-';td.appendChild(a)}else{td.textContent=item.account||'-'}}
-else if(ci===4){td.style.fontFamily='monospace';td.style.textAlign='right';td.style.color='#F97316';td.textContent=v}
-else if(ci===6){var sc=statusColors[item.status]||'#4A5568';var b=document.createElement('span');b.style.cssText='background:'+sc+'20;color:'+sc+';padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600';b.textContent=item.status||'-';td.appendChild(b)}
-else if(ci===7){td.style.fontFamily='monospace';td.style.textAlign='right';td.textContent=v}
+if(ci===5){td.style.fontFamily='monospace';td.style.textAlign='right';td.style.color='#F97316';td.textContent=v}
+else if(ci===7){var sc=statusColors[item.status]||'#4A5568';var b=document.createElement('span');b.style.cssText='background:'+sc+'20;color:'+sc+';padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600';b.textContent=item.status||'-';td.appendChild(b)}
+else if(ci===8){if(item.url){var a=document.createElement('a');a.href=item.url;a.target='_blank';a.style.cssText='color:#0EA5E9;text-decoration:none;font-size:10px';a.textContent='링크';td.appendChild(a)}else{td.style.color='#4A5568';td.textContent='-'}}
 else{td.style.color='#8B95A6';td.textContent=v}
 tr.appendChild(td)});tbody.appendChild(tr)});
 var fc=document.getElementById('inf-filter-count');if(fc)fc.textContent='총 '+data.length+'명 표시 (전체 '+_infData.length+'명)'}
@@ -907,12 +954,17 @@ function applyInfluencerFilter(){
 var country=document.getElementById('filter-country').value;
 var platform=document.getElementById('filter-platform').value;
 var category=document.getElementById('filter-category').value;
+var fwRange=document.getElementById('filter-followers').value;
 var status=document.getElementById('filter-status').value;
 var search=(document.getElementById('filter-search').value||'').toLowerCase();
 _infFiltered=_infData.filter(function(item){
 if(country&&item.country!==country)return false;
 if(platform&&(!item.platform||item.platform.toLowerCase().indexOf(platform.toLowerCase())===-1))return false;
 if(category&&item.category!==category)return false;
+if(fwRange){var fw=item.followers_num||0;var r=parseInt(fwRange);
+if(r===1000&&fw>=1000)return false;if(r===10000&&(fw<1000||fw>=10000))return false;
+if(r===100000&&(fw<10000||fw>=100000))return false;if(r===500000&&(fw<100000||fw>=500000))return false;
+if(r===1000000&&(fw<500000||fw>=1000000))return false;if(r===1000001&&fw<1000000)return false}
 if(status&&(!item.status||item.status.indexOf(status)===-1))return false;
 if(search&&(!item.account||item.account.toLowerCase().indexOf(search)===-1))return false;
 return true});
@@ -1007,11 +1059,11 @@ if(ct&&dr.length)_infCharts.trend=new Chart(ct,{type:'bar',data:{labels:dr.map(f
 
 // ===== 인플루언서 탭 =====
 function setInfMainTab(tab){
-['members','list','pitch'].forEach(function(t){
+['members','list'].forEach(function(t){
 var el=document.getElementById('inf-tab-'+t+'-content');if(el)el.style.display=t===tab?'':'none';
 var btn=document.getElementById('inf-main-tab-'+t);if(btn){btn.style.background=t===tab?'#F97316':'transparent';btn.style.color=t===tab?'#fff':'#64748B'}});
 if(tab==='list')loadInfluencerData();
-if(tab==='members')initMembersForm()}
+if(tab==='members'){loadInfluencerData();initMembersForm()}}
 function initMembersForm(){
 var el=document.getElementById('members-form');if(!el||el.childNodes.length>0)return;
 ['KR','US','JP','CN','MY','SG','TH','ID','VN'].forEach(function(c){
@@ -1053,11 +1105,20 @@ var pd=d.product_distribution||[];
 if(_ovCharts.prod)_ovCharts.prod.destroy();
 var c3=document.getElementById('chart-ov-products');
 if(c3)_ovCharts.prod=new Chart(c3,{type:'doughnut',data:{labels:pd.map(function(r){return r.category}),datasets:[{data:pd.map(function(r){return r.revenue}),backgroundColor:['#F97316','#0EA5E9','#22C55E','#7C3AED','#EF4444','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}}}});
-// 충전금
-var pb=d.daily_payback||[];
+// 충전금 vs 보상 (월별 그룹 바차트)
+var mpb=d.monthly_payback||[];
 if(_ovCharts.pb)_ovCharts.pb.destroy();
 var c4=document.getElementById('chart-ov-payback');
-if(c4)_ovCharts.pb=new Chart(c4,{type:'line',data:{labels:pb.map(function(r){return r.date.slice(6)}),datasets:[{data:pb.map(function(r){return r.amount}),borderColor:'#22C55E',fill:true,backgroundColor:'rgba(34,197,94,0.1)',tension:0.3,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true},grid:{display:false}}}}})
+if(c4&&mpb.length)_ovCharts.pb=new Chart(c4,{type:'bar',data:{labels:mpb.map(function(r){return r.month}),datasets:[{label:'충전금',data:mpb.map(function(r){return r.amount}),backgroundColor:'rgba(14,165,233,0.7)'},{label:'보상',data:mpb.map(function(){return 0}),backgroundColor:'rgba(249,115,22,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{y:{ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#8B95A6'},grid:{display:false}}}}});
+// 충전금 요약 카드
+var totalPb=mpb.reduce(function(s,r){return s+r.amount},0);
+var e_pb=document.getElementById('sum-payback');if(e_pb)e_pb.textContent=(totalPb/10000).toLocaleString()+'만원';
+var e_rw=document.getElementById('sum-reward');if(e_rw)e_rw.textContent='0원';
+var e_rm=document.getElementById('sum-remain');if(e_rm)e_rm.textContent=(totalPb/10000).toLocaleString()+'만원';
+var e_rt=document.getElementById('sum-ratio');if(e_rt)e_rt.textContent='0%';
+// 산정근거 업데이트
+var basisEl=document.getElementById('ov-rev-basis');
+if(basisEl)basisEl.textContent=mode==='daily'?'일간: 출처: 인바운드 구글시트 / 계산: 일별 계약금액 SUM / 기간: 오늘KST 기준 최근 30일':'월간: 출처: 인바운드 구글시트 / 계산: 월별 GROUP BY 후 SUM / 기간: 최근 12개월'
 }).catch(function(){})}
 loadOverviewCharts('daily');
 
@@ -1079,24 +1140,30 @@ if(pageId==='brand')loadBrandPipeline();
 if(pageId==='influencer')loadInfluencerData();
 if(pageId==='alerts')loadAlertBoard();
 if(pageId==='settings')loadGoals();
-if(pageId==='api-status')loadApiStatus()};
+if(pageId==='api-status')loadApiStatus();
+if(pageId==='cs')initCsCharts('brand')};
 
 function loadAlertBoard(){
+var agentFilter='';
+var filterEl=document.getElementById('alert-agent-filter');
+if(filterEl)agentFilter=filterEl.value;
 fetch('/api/alerts-board').then(function(r){return r.json()}).then(function(d){
 var el=document.getElementById('alertBoard');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
-var alerts=d.alerts||[];if(!alerts.length){var p=document.createElement('p');p.style.cssText='color:#4A5568;font-size:12px;padding:20px';p.textContent='알림 없음. KPI 점검 실행 버튼을 눌러주세요.';el.appendChild(p);return}
+var alerts=d.alerts||[];
+if(agentFilter)alerts=alerts.filter(function(a){return a.agent===agentFilter});
+if(!alerts.length){var p=document.createElement('p');p.style.cssText='color:#4A5568;font-size:12px;padding:20px';p.textContent='알림 없음. KPI 점검 실행 버튼을 눌러주세요.';el.appendChild(p);return}
+var agentColors={'카일':'#7C3AED','루나':'#F97316','피치':'#0EA5E9','맥스':'#EF4444','소피':'#E1306C','레이':'#22C55E','하나':'#F59E0B'};
 alerts.forEach(function(a){
-var card=document.createElement('div');card.style.cssText='background:#0F1520;border:1px solid '+(a.resolved?'#1E2433':'#EF4444')+';border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center';
-var left=document.createElement('div');
-var top=document.createElement('div');top.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:4px';
-var badge=document.createElement('span');badge.style.cssText='padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;color:#fff;background:'+(a.severity==='critical'?'#EF4444':a.severity==='warning'?'#F59E0B':'#3B82F6');badge.textContent=a.severity.toUpperCase();top.appendChild(badge);
-var agent=document.createElement('span');agent.style.cssText='font-size:11px;color:#F97316;font-weight:600';agent.textContent=a.agent;top.appendChild(agent);
+var card=document.createElement('div');card.style.cssText='background:#0F1520;border:1px solid '+(a.resolved?'#1E2433':'rgba(239,68,68,0.3)')+';border-radius:10px;padding:16px 20px;border-left:3px solid '+(agentColors[a.agent]||'#F97316');
+var top=document.createElement('div');top.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap';
+var agentTag=document.createElement('span');agentTag.style.cssText='padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:'+(agentColors[a.agent]||'#F97316');agentTag.textContent=a.agent;top.appendChild(agentTag);
 var ts=document.createElement('span');ts.style.cssText='font-size:10px;color:#4A5568';ts.textContent=(a.timestamp||'').slice(0,16);top.appendChild(ts);
+var badge=document.createElement('span');badge.style.cssText='padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:'+(a.severity==='critical'?'#EF4444':a.severity==='warning'?'#F59E0B':'#3B82F6');badge.textContent=a.severity.toUpperCase();top.appendChild(badge);
 if(a.resolved){var rtag=document.createElement('span');rtag.style.cssText='padding:2px 6px;border-radius:4px;font-size:9px;background:#22C55E20;color:#22C55E';rtag.textContent='해결됨';top.appendChild(rtag)}
-left.appendChild(top);
-var summary=document.createElement('p');summary.style.cssText='font-size:12px;color:#E8EBF2;margin:0';summary.textContent=a.summary;left.appendChild(summary);
-card.appendChild(left);
-if(!a.resolved){var btn=document.createElement('button');btn.style.cssText='padding:4px 10px;background:#22C55E;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer;white-space:nowrap';btn.textContent='해결';btn.addEventListener('click',function(){fetch('/api/alerts-board/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})}).then(function(){loadAlertBoard()})});card.appendChild(btn)}
+card.appendChild(top);
+var summary=document.createElement('p');summary.style.cssText='font-size:13px;color:#E8EBF2;margin:0 0 6px 0;font-weight:600';summary.textContent=a.summary;card.appendChild(summary);
+if(a.detail){var detail=document.createElement('p');detail.style.cssText='font-size:11px;color:#8B95A6;margin:0 0 8px 0;line-height:1.5';detail.textContent=a.detail;card.appendChild(detail)}
+if(!a.resolved){var btn=document.createElement('button');btn.style.cssText='padding:4px 12px;background:#22C55E;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer';btn.textContent='해결';btn.addEventListener('click',function(){fetch('/api/alerts-board/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})}).then(function(){loadAlertBoard()})});card.appendChild(btn)}
 el.appendChild(card)})}).catch(function(){})}
 
 function runAgentCycle(){fetch('/api/agent-cycle').then(function(r){return r.json()}).then(function(d){alert('KPI 점검 완료: '+d.alerts_posted+'건 경고');loadAlertBoard()}).catch(function(){alert('실행 실패')})}
@@ -1117,6 +1184,37 @@ function saveGoals(){
 var data={};['revenue','contracts','inbound_db','valid_db','cpa'].forEach(function(k){var el=document.getElementById('goal-'+k);if(el)data[k]=parseInt(el.value)||0});
 var th=document.getElementById('goal-threshold');if(th)data.alert_threshold=parseInt(th.value)/100;
 fetch('/api/goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){var m=document.getElementById('goals-msg');if(m)m.textContent='저장 완료!';setTimeout(function(){if(m)m.textContent=''},2000)}).catch(function(){})}
+
+// ===== 인플루언서 국가 필터 (탭1 회원현황) =====
+var _infCountryFilter='';
+function filterInfCountry(code){
+_infCountryFilter=code;
+document.querySelectorAll('.inf-country-btn').forEach(function(btn){btn.style.background='transparent';btn.style.color='#64748B'});
+event.target.style.background='#F97316';event.target.style.color='#fff';
+loadInfluencerData()}
+
+// ===== CS 탭 전환 =====
+function setCsTab(tab){
+document.getElementById('cs-brand-content').style.display=tab==='brand'?'':'none';
+document.getElementById('cs-influencer-content').style.display=tab==='influencer'?'':'none';
+document.getElementById('cs-tab-brand').style.background=tab==='brand'?'#F97316':'transparent';
+document.getElementById('cs-tab-brand').style.color=tab==='brand'?'#fff':'#64748B';
+document.getElementById('cs-tab-influencer').style.background=tab==='influencer'?'#F97316':'transparent';
+document.getElementById('cs-tab-influencer').style.color=tab==='influencer'?'#fff':'#64748B';
+initCsCharts(tab)}
+
+var _csChartsInit={};
+function initCsCharts(tab){
+if(tab==='brand'&&!_csChartsInit.brand){_csChartsInit.brand=true;
+var c1=document.getElementById('chart-cs-brand-type');
+if(c1)new Chart(c1,{type:'doughnut',data:{labels:['견적문의','계약문의','정산문의','불만','기타'],datasets:[{data:[12,8,7,4,3],backgroundColor:['#F97316','#22C55E','#0EA5E9','#EF4444','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}}}});
+var c2=document.getElementById('chart-cs-brand-hour');
+if(c2)new Chart(c2,{type:'bar',data:{labels:['09','10','11','12','13','14','15','16','17','18','19','20','21','22'],datasets:[{label:'처리완료',data:[1,2,1,0,1,1,0,1,1,0,0,0,0,0],backgroundColor:'#22C55E'},{label:'미처리',data:[0,0,1,1,0,1,0,0,0,0,0,0,0,0],backgroundColor:'#EF4444'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{stacked:true,ticks:{color:'#8B95A6'},grid:{display:false}},y:{stacked:true,ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}
+if(tab==='influencer'&&!_csChartsInit.inf){_csChartsInit.inf=true;
+var c3=document.getElementById('chart-cs-inf-type');
+if(c3)new Chart(c3,{type:'doughnut',data:{labels:['협찬신청','보상문의','포스팅문의','계정문제','기타'],datasets:[{data:[8,4,4,2,2],backgroundColor:['#F97316','#22C55E','#0EA5E9','#EF4444','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}}}});
+var c4=document.getElementById('chart-cs-inf-hour');
+if(c4)new Chart(c4,{type:'bar',data:{labels:['09','10','11','12','13','14','15','16','17','18','19','20','21','22'],datasets:[{label:'처리완료',data:[1,1,1,0,0,0,0,0,0,0,0,0,0,0],backgroundColor:'#22C55E'},{label:'미처리',data:[0,0,0,0,1,1,0,0,0,0,0,0,0,0],backgroundColor:'#EF4444'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{stacked:true,ticks:{color:'#8B95A6'},grid:{display:false}},y:{stacked:true,ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}}
 
 function loadApiStatus(){
 fetch('/health').then(function(r){return r.json()}).then(function(d){
