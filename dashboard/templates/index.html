@@ -443,7 +443,7 @@ var c2=document.createElement('div');c2.className='tab-content';
 t1.addEventListener('click',function(){t1.classList.add('active');t1.style.background='#F97316';t1.style.color='#fff';t2.classList.remove('active');t2.style.background='';t2.style.color='';c1.classList.add('active');c2.classList.remove('active')});
 t2.addEventListener('click',function(){t2.classList.add('active');t2.style.background='#F97316';t2.style.color='#fff';t1.classList.remove('active');t1.style.background='';t1.style.color='';c2.classList.add('active');c1.classList.remove('active')});
 // B2B content
-mkKpi(c1,[['전체 팔로워','24,430','명','watch',''],['이번 달 순증','+1,245','명','watch',''],['이번 달 콘텐츠','67','건','on',''],['평균 참여율','4.1','%','on','']]);
+mkKpi(c1,[['전체 팔로워','-','명','watch','실데이터 연동 예정'],['이번 달 순증','-','명','watch',''],['이번 달 콘텐츠','-','건','watch',''],['평균 참여율','-','%','watch','']]);
 var cc=document.createElement('div');cc.className='ch-cards';
 [{name:'Instagram',line:'#E1306C',rows:[['팔로워','8,420명 (+320)'],['게시물','28건'],['참여율','3.8%'],['도달수','45,000회'],['릴스 평균 조회','8,200회'],['오늘 신규','12명']],s:'watch'},{name:'TikTok',line:'#E8EBF2',rows:[['팔로워','12,800명 (+680)'],['영상','15건'],['참여율','5.2%'],['평균 조회','12,400회'],['오늘 신규','25명']],s:'on'},{name:'YouTube',line:'#FF0000',rows:[['구독자','2,150명 (+185)'],['영상','4건'],['평균 조회','3,200회'],['평균 시청','4분 30초'],['오늘 신규','8명']],s:'watch'},{name:'블로그/뉴스레터',line:'#03C75A',rows:[['구독자','20,000명 (+120)'],['발행','4건'],['오픈율','21%'],['클릭율','3.2%'],['오늘 신규','15명']],s:'watch'}].forEach(function(ch){
 var card=document.createElement('div');card.className='ch-card';card.style.borderTopColor=ch.line;
