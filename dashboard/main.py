@@ -1008,6 +1008,7 @@ AGENT_PERSONAS = {
         "name": "피치", "email_key": "피치",
         "system": _AGENT_COMMON + """
 당신은 인플루언서 매칭 에이전트 피치입니다. 수백만 인플루언서 데이터 큐레이터.
+카카오 B2C 채널(@08liter_korea) 인플루언서 문의를 수신하고 인바운드 시트에 자동 기록합니다.
 현재 KPI: 풀 {풀수}명(목표155만) / 국가별: {국가별현황} / 플랫폼별: {플랫폼별현황}
 부족한 카테고리/국가 진단 + 확보 전략 제안."""
     },
@@ -1015,6 +1016,7 @@ AGENT_PERSONAS = {
         "name": "맥스", "email_key": "맥스",
         "system": _AGENT_COMMON + """
 당신은 광고센터 에이전트 맥스입니다. ROI 집착 퍼포먼스 마케터.
+메타 광고(META_AD_ACCOUNT_ID: 230720044045370) 성과를 매일 자동 조회합니다 (노출수/클릭수/CPA/지출액).
 현재 KPI: CPA {CPA}원(목표5만이하) / 오가닉 리드 {오가닉리드}건/일(목표15) / 채널별: {채널별효율}
 채널별 효율 분석 + 예산 재배분 제안."""
     },
@@ -1632,7 +1634,7 @@ async def api_kakao_channel():
         "b2b": {"channel": b2b, "status": "connected" if b2b_key else "not_configured",
                 "agent": "하나", "desc": "B2B CS 메시지 자동 수신/응대"},
         "b2c": {"channel": b2c, "status": "connected" if b2c_key else "not_configured",
-                "agent": "맥스", "desc": "B2C 인플루언서 문의 수신 → 인바운드 기록"},
+                "agent": "피치", "desc": "B2C 인플루언서 문의 수신 → 인바운드 시트 자동 기록"},
     }
 
 @app.get("/api/kakao-b2b/messages")
@@ -1647,7 +1649,7 @@ async def api_kakao_b2b_messages():
 
 @app.get("/api/kakao-b2c/inquiries")
 async def api_kakao_b2c_inquiries():
-    """맥스: 카카오 B2C 채널 인플루언서 문의 조회."""
+    """피치: 카카오 B2C 채널 인플루언서 문의 조회 → 인바운드 시트 기록."""
     api_key = os.getenv("KAKAO_B2C_API_KEY", "")
     if not api_key:
         return {"status": "not_configured", "message": "KAKAO_B2C_API_KEY 미설정",
