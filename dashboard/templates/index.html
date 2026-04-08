@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Jacob AI Command Center</title>
+<title>08L_AI Command Center</title>
 <link rel="stylesheet" href="/static/style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -44,7 +44,7 @@
 <body>
 <div class="app-layout">
 <aside class="sidebar" id="sidebar">
-<div class="sidebar-header"><a href="/" class="sidebar-logo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> Jacob AI</a><div class="sidebar-sub">08Liter Global</div></div>
+<div class="sidebar-header"><a href="/" class="sidebar-logo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> 08L_AI</a><div class="sidebar-sub">08Liter Global</div></div>
 <nav class="sidebar-nav">
 <div class="nav-group"><div class="nav-group-label" style="margin-top:8px">커맨드</div>
 <a href="#" class="nav-item active" data-page="overview"><i data-lucide="layout-dashboard"></i> 전체 현황</a>
@@ -64,7 +64,7 @@
 </aside>
 
 <main class="main-content">
-<div class="mobile-header"><button class="hamburger-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button><span style="font-weight:700;font-size:15px">Jacob AI</span></div>
+<div class="mobile-header"><button class="hamburger-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button><span style="font-weight:700;font-size:15px">08L_AI</span></div>
 <div class="main-header"><h1 id="pageTitle">전체 현황</h1><div class="header-actions"><span class="header-date" id="headerDate"></span><button class="header-btn" onclick="location.reload()"><i data-lucide="refresh-cw"></i></button></div></div>
 <div class="main-body">
 <div class="alert-banner" id="alertBanner"><i data-lucide="alert-triangle"></i><span id="alertText"></span></div>
@@ -79,7 +79,17 @@
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">금일 인바운드</div></div><div class="kpi-value" id="ov-today-inbound">-</div><div class="kpi-detail" id="ov-today-inbound-sub">유효 - / 무대응 -</div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">오가닉 리드</div></div><div class="kpi-value">6<span class="kpi-unit">건/일</span></div><div class="kpi-detail">목표: <span class="v">15건</span></div><div class="mt-4"><span class="badge badge-risk">AT RISK</span></div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">광고 CPA</div></div><div class="kpi-value">3.2<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">5만원 이하</span></div><div class="mt-4"><span class="badge badge-on">ON TRACK</span></div></div>
+</div>
+<div style="margin-top:20px"><p style="font-size:14px;font-weight:700;color:#E8EBF2;margin-bottom:12px">전체현황 그래프 (구글시트 실데이터)</p>
+<div style="display:flex;gap:4px;margin-bottom:12px"><button onclick="loadOverviewCharts('daily')" id="ov-chart-daily" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#F97316;color:#fff">일간</button><button onclick="loadOverviewCharts('monthly')" id="ov-chart-monthly" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;color:#64748B">월간</button></div>
+<div id="ov-charts" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규매출</p><div style="position:relative;height:200px"><canvas id="chart-ov-rev"></canvas></div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규계약 / 재계약</p><div style="position:relative;height:200px"><canvas id="chart-ov-contracts"></canvas></div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">계약상품별 분포</p><div style="position:relative;height:200px"><canvas id="chart-ov-products"></canvas></div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">브랜드 충전금액</p><div style="position:relative;height:200px"><canvas id="chart-ov-payback"></canvas></div></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px;grid-column:1/3"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">인플루언서 보상신청금액</p><div style="padding:40px;text-align:center;color:#4A5568;font-size:12px">추후 연결 예정 — 데이터 연동 후 자동 표시</div></div>
 </div></div>
+</div>
 
 <div id="page-alerts">
 <div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 알림센터</div><div class="section-hdr-sub"><button onclick="runAgentCycle()" style="padding:4px 12px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">KPI 점검 실행</button></div></div>
@@ -154,6 +164,36 @@
 </div>
 
 <div id="page-influencer">
+  <div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
+    <button onclick="setInfMainTab('members')" id="inf-main-tab-members" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">회원현황</button>
+    <button onclick="setInfMainTab('list')" id="inf-main-tab-list" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">키인플루언서</button>
+    <button onclick="setInfMainTab('pitch')" id="inf-main-tab-pitch" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">피치 에이전트</button>
+  </div>
+  <div id="inf-tab-members-content" style="margin-bottom:20px">
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px;margin-bottom:16px">
+      <p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:12px">국가별 회원수 입력</p>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="members-form"></div>
+      <button onclick="saveMembers()" style="margin-top:10px;padding:8px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
+      <span id="members-msg" style="margin-left:10px;font-size:10px;color:#22C55E"></span>
+    </div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px;text-align:center;color:#4A5568;font-size:12px">추후 플랫폼 연동 예정 — 신규/누적 그래프는 데이터 축적 후 자동 표시</div>
+  </div>
+  <div id="inf-tab-list-content" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <p style="font-size:13px;font-weight:700;color:#E8EBF2">맞춤 키인플루언서 리스트</p>
+      <button onclick="showInfAddForm()" style="padding:6px 16px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;font-weight:600">+ 인플루언서 추가</button>
+    </div>
+    <div id="inf-add-form" style="display:none;background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:16px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <input id="inf-add-name" placeholder="이름/계정명" style="padding:6px;background:#0F1520;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px">
+        <select id="inf-add-platform" style="padding:6px;background:#0F1520;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>블로그</option><option>기타</option></select>
+        <input id="inf-add-followers" placeholder="팔로워수" style="padding:6px;background:#0F1520;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px">
+        <select id="inf-add-country" style="padding:6px;background:#0F1520;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="KR">KR</option><option value="US">US</option><option value="JP">JP</option><option value="TH">TH</option><option value="VN">VN</option><option value="ID">ID</option><option value="MY">MY</option><option value="SG">SG</option></select>
+        <input id="inf-add-email" placeholder="이메일" style="padding:6px;background:#0F1520;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px">
+        <input id="inf-add-contact" placeholder="연락처" style="padding:6px;background:#0F1520;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px">
+      </div>
+      <button onclick="addInfluencer()" style="margin-top:8px;padding:6px 16px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">저장</button>
+    </div>
   <div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="inf-tab-daily" onclick="setInfTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#F97316;color:#fff">당일</button>
     <button id="inf-tab-monthly" onclick="setInfTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#64748B">누적</button>
@@ -171,6 +211,14 @@
   <div style="background:rgba(249,115,22,0.06);border:1px dashed rgba(249,115,22,0.3);border-radius:8px;padding:12px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center"><div><p style="font-size:11px;color:#8B95A6;margin-bottom:2px">현재 필터 조건 매칭</p><p id="target-count" style="font-family:monospace;font-size:22px;font-weight:700;color:#F97316">-</p></div><button onclick="showTargetList()" style="padding:10px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer">연락처 포함 리스트 보기</button></div>
   <div id="target-result-panel" style="display:none;margin-bottom:16px"></div>
   <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="background:#161B27"><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568;text-transform:uppercase">컨택날짜</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">국가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">플랫폼</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">계정명</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">팔로워</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">카테고리</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">진행상태</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">협업단가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">이메일</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">연락처</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">담당자</th></tr></thead><tbody id="inf-table-body"><tr><td colspan="11" style="text-align:center;padding:20px;color:#4A5568;font-size:12px">로딩중...</td></tr></tbody></table></div><div style="padding:8px 16px;border-top:1px solid #1E2433;display:flex;justify-content:space-between"><p id="inf-filter-count" style="font-size:10px;color:#4A5568">-</p><button onclick="exportTargetCSV()" style="padding:4px 14px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer">CSV 내보내기</button></div></div>
+  </div>
+  <div id="inf-tab-pitch-content" style="display:none">
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px">
+      <p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:8px">피치 에이전트와 대화</p>
+      <p style="font-size:11px;color:#8B95A6;margin-bottom:12px">우측 채팅창에서 피치와 대화하세요. "캠페인 대상 추출해줘" 등을 입력하면 자동 실행합니다.</p>
+      <button onclick="showPage('influencer');document.getElementById('chatInput').value='캠페인 대상 추출해줘';sendChat()" style="padding:8px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">캠페인 대상 추출</button>
+    </div>
+  </div>
 </div>
 
 <div id="page-ads">
@@ -217,9 +265,9 @@
 <div id="chatHdr" style="padding:12px 16px;border-bottom:1px solid var(--border);border-left:3px solid #7C3AED;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
 <div id="chatAgentName" style="font-size:13px;font-weight:700;color:var(--text-primary)">전체 총괄 에이전트</div>
 <div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:var(--status-on)"></span><span style="font-size:10px;color:var(--text-muted)">온라인</span></div></div>
-<div class="chat-messages" id="chatMessages"><div class="chat-msg agent">Jacob AI 수석 보좌입니다.<div class="chat-msg-time">System</div></div></div>
+<div class="chat-messages" id="chatMessages"><div class="chat-msg agent">08L_AI 수석 보좌입니다.<div class="chat-msg-time">System</div></div></div>
 <div class="chat-examples" id="chatExamples"></div>
-<div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="Jacob AI에게 질문하세요..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>
+<div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="08L_AI에게 질문하세요..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>
 </aside>
 </div>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -901,6 +949,62 @@ if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A556
 else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
 
 // ===== showPage hook =====
+// ===== 인플루언서 3탭 =====
+function setInfMainTab(tab){
+['members','list','pitch'].forEach(function(t){
+var el=document.getElementById('inf-tab-'+t+'-content');if(el)el.style.display=t===tab?'':'none';
+var btn=document.getElementById('inf-main-tab-'+t);if(btn){btn.style.background=t===tab?'#F97316':'transparent';btn.style.color=t===tab?'#fff':'#64748B'}});
+if(tab==='list')loadInfluencerData();
+if(tab==='members')initMembersForm()}
+function initMembersForm(){
+var el=document.getElementById('members-form');if(!el||el.childNodes.length>0)return;
+['KR','US','JP','CN','MY','SG','TH','ID','VN'].forEach(function(c){
+var d=document.createElement('div');
+var l=document.createElement('label');l.style.cssText='font-size:10px;color:#8B95A6';l.textContent=c;d.appendChild(l);
+var inp=document.createElement('input');inp.type='number';inp.value=0;inp.id='member-'+c;inp.style.cssText='width:100%;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;font-family:monospace';d.appendChild(inp);
+el.appendChild(d)})}
+function saveMembers(){
+var countries={};['KR','US','JP','CN','MY','SG','TH','ID','VN'].forEach(function(c){var el=document.getElementById('member-'+c);countries[c]=parseInt(el?el.value:0)||0});
+fetch('/api/members-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:countries})}).then(function(){var m=document.getElementById('members-msg');if(m){m.textContent='저장!';setTimeout(function(){m.textContent=''},2000)}}).catch(function(){})}
+function showInfAddForm(){var el=document.getElementById('inf-add-form');if(el)el.style.display=el.style.display==='none'?'block':'none'}
+function addInfluencer(){
+var d={name:document.getElementById('inf-add-name').value,platform:document.getElementById('inf-add-platform').value,followers:document.getElementById('inf-add-followers').value,country:document.getElementById('inf-add-country').value,email:document.getElementById('inf-add-email').value,contact:document.getElementById('inf-add-contact').value};
+fetch('/api/influencer-add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){document.getElementById('inf-add-form').style.display='none';loadInfluencerData()}).catch(function(){})}
+initMembersForm();
+
+// ===== 전체현황 그래프 =====
+var _ovCharts={};
+function loadOverviewCharts(mode){
+document.getElementById('ov-chart-daily').style.background=mode==='daily'?'#F97316':'transparent';
+document.getElementById('ov-chart-daily').style.color=mode==='daily'?'#fff':'#64748B';
+document.getElementById('ov-chart-monthly').style.background=mode==='monthly'?'#F97316':'transparent';
+document.getElementById('ov-chart-monthly').style.color=mode==='monthly'?'#fff':'#64748B';
+fetch('/api/kpi-trend').then(function(r){return r.json()}).then(function(d){
+var revData=mode==='daily'?d.daily_revenue||[]:d.monthly_revenue||[];
+var labels=revData.map(function(r){return mode==='daily'?r.date.slice(6):r.month});
+var vals=revData.map(function(r){return r.revenue});
+// 매출 그래프
+if(_ovCharts.rev)_ovCharts.rev.destroy();
+var c1=document.getElementById('chart-ov-rev');
+if(c1)_ovCharts.rev=new Chart(c1,{type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:'rgba(249,115,22,0.6)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}}}}});
+// 계약수 그래프
+var ctData=d.daily_contracts||[];
+if(_ovCharts.ct)_ovCharts.ct.destroy();
+var c2=document.getElementById('chart-ov-contracts');
+if(c2)_ovCharts.ct=new Chart(c2,{type:'bar',data:{labels:ctData.map(function(r){return r.date.slice(6)}),datasets:[{label:'신규',data:ctData.map(function(r){return r.new}),backgroundColor:'#F97316'},{label:'재계약',data:ctData.map(function(r){return r.renew}),backgroundColor:'#7C3AED'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{stacked:true,ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true},grid:{display:false}},y:{stacked:true,ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}});
+// 상품별 분포
+var pd=d.product_distribution||[];
+if(_ovCharts.prod)_ovCharts.prod.destroy();
+var c3=document.getElementById('chart-ov-products');
+if(c3)_ovCharts.prod=new Chart(c3,{type:'doughnut',data:{labels:pd.map(function(r){return r.category}),datasets:[{data:pd.map(function(r){return r.revenue}),backgroundColor:['#F97316','#0EA5E9','#22C55E','#7C3AED','#EF4444','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}}}});
+// 충전금
+var pb=d.daily_payback||[];
+if(_ovCharts.pb)_ovCharts.pb.destroy();
+var c4=document.getElementById('chart-ov-payback');
+if(c4)_ovCharts.pb=new Chart(c4,{type:'line',data:{labels:pb.map(function(r){return r.date.slice(6)}),datasets:[{data:pb.map(function(r){return r.amount}),borderColor:'#22C55E',fill:true,backgroundColor:'rgba(34,197,94,0.1)',tension:0.3,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true},grid:{display:false}}}}})
+}).catch(function(){})}
+loadOverviewCharts('daily');
+
 function saveAdsManual(){
 var d={spend:parseInt(document.getElementById('ads-spend').value)||0,impressions:parseInt(document.getElementById('ads-impressions').value)||0,clicks:parseInt(document.getElementById('ads-clicks').value)||0,cpa:parseInt(document.getElementById('ads-cpa').value)||0};
 fetch('/api/ads-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){var m=document.getElementById('ads-manual-msg');if(m){m.textContent='저장 완료!';setTimeout(function(){m.textContent=''},2000)}}).catch(function(){})}

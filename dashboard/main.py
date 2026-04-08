@@ -1,4 +1,4 @@
-"""Jacob AI Command Center — 통합 대시보드 + Google Sheets API + Anthropic AI Agents"""
+"""08L_AI Command Center — 통합 대시보드 + Google Sheets API + Anthropic AI Agents"""
 import hashlib
 import json
 import os
@@ -73,7 +73,7 @@ async def login_page(request: Request, error: str = ""):
         return RedirectResponse("/", status_code=302)
     html = f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Login — Jacob AI</title>
+<title>Login — 08L_AI</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
@@ -90,7 +90,7 @@ button:hover{{background:#d97706}}
 .err{{color:#f85149;font-size:13px;margin-bottom:12px}}
 </style></head><body>
 <div class="card">
-<h1>⚡ Jacob AI</h1>
+<h1>⚡ 08L_AI</h1>
 <p class="sub">Command Center</p>
 {"<p class='err'>아이디 또는 비밀번호가 틀렸습니다.</p>" if error else ""}
 <form method="post" action="/login">
@@ -179,8 +179,8 @@ SHEET_ADS = "1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU"
 _cache: Dict[str, list] = {}
 _cache_time: Dict[str, float] = {}
 CACHE_TTLS = {
-    "inbound": 300,      # 5 min - 인바운드는 빠르게 갱신
-    "contract": 3600,    # 1 hour
+    "inbound": 300,      # 5 min
+    "contract": 300,     # 5 min - 매출 실시간 반영
     "influencer": 21600, # 6 hours
     "ads": 3600,         # 1 hour
     "default": 1800,     # 30 min fallback
@@ -1238,7 +1238,7 @@ async def slack_test():
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(SLACK_WEBHOOK_URL, json={
-                "text": f"[Jacob AI] 테스트 메시지 — {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+                "text": f"[08L_AI] 테스트 메시지 — {datetime.now().strftime('%Y-%m-%d %H:%M')}"
             })
             return {"status": "ok" if resp.status_code == 200 else "error", "code": resp.status_code}
     except Exception as e:
@@ -1253,7 +1253,7 @@ async def slack_kpi_report():
         brand = await api_brand_pipeline()
         t = brand.get("today", {})
         m = brand.get("month", {})
-        text = f"""📊 *[Jacob AI] 오전 KPI 리포트* — {datetime.now().strftime('%Y-%m-%d %H:%M')}
+        text = f"""📊 *[08L_AI] 오전 KPI 리포트* — {datetime.now().strftime('%Y-%m-%d %H:%M')}
 
 *오늘*: 인입DB {t.get('inbound',0)}건 | 유효DB {t.get('valid',0)}건 | 계약 {t.get('contract',0)}건 | 매출 {t.get('revenue',0):,}원
 *이번달*: 인입DB {m.get('inbound',0)}건 | 유효DB {m.get('valid',0)}건 | 계약 {m.get('contract',0)}건 | 매출 {m.get('revenue',0):,}원
@@ -1429,11 +1429,11 @@ async def api_test_email():
     from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
     html = _build_pitch_html(
         "테스트",
-        "안녕하세요!\n\n이 메일은 Jacob AI Command Center에서 Resend API를 통해 발송한 테스트 이메일입니다.\n"
+        "안녕하세요!\n\n이 메일은 08L_AI Command Center에서 Resend API를 통해 발송한 테스트 이메일입니다.\n"
         "이메일 연동이 정상적으로 작동하고 있습니다.\n\n"
         f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)"
     )
-    result = _send_email(from_email, "[Jacob AI] Resend 테스트 이메일", html)
+    result = _send_email(from_email, "[08L_AI] Resend 테스트 이메일", html)
     result["sent_to"] = from_email
     return result
 
@@ -1814,9 +1814,84 @@ async def api_kpi_trend():
                     rev = 0
                 if rev > 0:
                     monthly_rev[mv] = monthly_rev.get(mv, 0) + rev
+    # 일별 매출 + 계약수 + 상품별 + 충전금 (최근 90일)
+    daily_rev = {}
+    daily_new = {}
+    daily_renew = {}
+    product_dist = {}
+    daily_payback = {}
+    brand_history = set()  # 이번달 이전 계약 브랜드
+    if ct_rows:
+        cat_idx = _find_col(headers, "품목 재분류", "재분류") or 24
+        payback_idx = _find_col(headers, "페이백비", "충전금") or 18
+        brand_idx = _find_col(headers, "공급받는자 상호") or 8
+        type_idx = _find_col(headers, "신규/", "재계약") or 6
+        now = datetime.now(KST)
+        cutoff = (now - timedelta(days=90)).strftime("%Y%m%d")
+        this_ym = f"{now.year}{now.month:02d}"
+        for row in ct_rows[hdr + 1:]:
+            if len(row) < 3:
+                continue
+            dr = str(row[date_idx]).strip() if date_idx < len(row) else ""
+            dc = dr.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
+            if len(dc) < 8 or not dc[:8].isdigit():
+                continue
+            brand = str(row[brand_idx]).strip() if brand_idx < len(row) else ""
+            if dc[:6] < this_ym and brand:
+                brand_history.add(brand.lower())
+        for row in ct_rows[hdr + 1:]:
+            if len(row) < 3:
+                continue
+            dr = str(row[date_idx]).strip() if date_idx < len(row) else ""
+            dc = dr.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
+            if len(dc) < 8 or not dc[:8].isdigit() or dc[:8] < cutoff:
+                continue
+            day_key = dc[:8]
+            rv = str(row[amount_idx]).strip() if amount_idx < len(row) else "0"
+            try:
+                rev = int(float(rv.replace(",", "").replace("₩", "").replace(" ", "")))
+            except (ValueError, TypeError):
+                rev = 0
+            if rev <= 0:
+                continue
+            daily_rev[day_key] = daily_rev.get(day_key, 0) + rev
+            brand = str(row[brand_idx]).strip() if brand_idx < len(row) else ""
+            is_renew = brand and brand.lower() in brand_history
+            if is_renew:
+                daily_renew[day_key] = daily_renew.get(day_key, 0) + 1
+            else:
+                daily_new[day_key] = daily_new.get(day_key, 0) + 1
+            cat = str(row[cat_idx]).strip() if cat_idx < len(row) else ""
+            if cat:
+                # 그룹핑
+                cl = cat.lower()
+                if "시딩" in cl or "체험단" in cl:
+                    cat = "국내체험단(시딩)"
+                elif "키인플" in cl or "수동" in cl:
+                    cat = "맞춤형키인플(수동)"
+                elif "구매평" in cl or "서비스대행" in cl:
+                    cat = "해외구매평(서비스대행)"
+                elif "촬영" in cl:
+                    cat = "사진촬영"
+                elif "상품대금" in cl:
+                    cat = "상품대금"
+                else:
+                    cat = "기타"
+                product_dist[cat] = product_dist.get(cat, 0) + rev
+            pb = str(row[payback_idx]).strip() if payback_idx < len(row) else "0"
+            try:
+                pb_val = int(float(pb.replace(",", "").replace("₩", "").replace(" ", "")))
+            except (ValueError, TypeError):
+                pb_val = 0
+            if pb_val > 0:
+                daily_payback[day_key] = daily_payback.get(day_key, 0) + pb_val
     return {
         "monthly_revenue": [{"month": k, "revenue": v} for k, v in sorted(monthly_rev.items())[-12:]],
         "monthly_trend": monthly[-12:],
+        "daily_revenue": [{"date": k, "revenue": v} for k, v in sorted(daily_rev.items())[-90:]],
+        "daily_contracts": [{"date": k, "new": daily_new.get(k, 0), "renew": daily_renew.get(k, 0)} for k in sorted(set(list(daily_new.keys()) + list(daily_renew.keys())))[-90:]],
+        "product_distribution": [{"category": k, "revenue": v} for k, v in sorted(product_dist.items(), key=lambda x: -x[1])],
+        "daily_payback": [{"date": k, "amount": v} for k, v in sorted(daily_payback.items())[-90:]],
     }
 
 
@@ -1911,6 +1986,48 @@ B2C 인스타(@08l_korea) 콘텐츠 주제 3개 + 캡션 초안 + 해시태그 3
         return {"status": "error", "message": str(e)}
 
 
+# ===== 인플루언서 수동 입력 =====
+INF_MANUAL_FILE = DATA_DIR / "influencer_manual.json"
+
+@app.post("/api/influencer-add")
+async def api_influencer_add(request: Request):
+    """인플루언서 수동 추가."""
+    body = await request.json()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    existing = json.loads(INF_MANUAL_FILE.read_text(encoding="utf-8")) if INF_MANUAL_FILE.exists() else []
+    entry = {
+        "name": body.get("name", ""),
+        "platform": body.get("platform", ""),
+        "followers": body.get("followers", ""),
+        "country": body.get("country", ""),
+        "contact": body.get("contact", ""),
+        "email": body.get("email", ""),
+        "added_at": datetime.now(KST).isoformat(),
+    }
+    existing.append(entry)
+    INF_MANUAL_FILE.write_text(json.dumps(existing[-500:], ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status": "ok", "entry": entry}
+
+# ===== 회원현황 수동 입력 =====
+MEMBERS_FILE = DATA_DIR / "members_manual.json"
+
+@app.post("/api/members-manual")
+async def api_members_manual(request: Request):
+    body = await request.json()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    existing = json.loads(MEMBERS_FILE.read_text(encoding="utf-8")) if MEMBERS_FILE.exists() else []
+    entry = {"date": datetime.now(KST).strftime("%Y-%m-%d"), "countries": body.get("countries", {}), "saved_at": datetime.now(KST).isoformat()}
+    existing.append(entry)
+    MEMBERS_FILE.write_text(json.dumps(existing[-100:], ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status": "ok", "entry": entry}
+
+@app.get("/api/members-manual")
+async def api_members_manual_get():
+    if MEMBERS_FILE.exists():
+        return json.loads(MEMBERS_FILE.read_text(encoding="utf-8"))
+    return []
+
+
 @app.get("/api/cache-clear")
 async def api_cache_clear():
     """캐시 초기화"""
@@ -1949,5 +2066,5 @@ async def api_debug_env():
 
 if __name__ == "__main__":
     import uvicorn
-    print("Jacob AI Command Center -> http://localhost:8000")
+    print("08L_AI Command Center -> http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
