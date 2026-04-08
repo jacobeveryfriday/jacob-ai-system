@@ -857,6 +857,39 @@ async def api_influencer_db(
             stats["by_status"][s] = stats["by_status"].get(s, 0) + 1
             cat = item["category"]
             stats["by_category"][cat] = stats["by_category"].get(cat, 0) + 1
+        # 팔로워 구간별 통계
+        fw_tiers = {"~1K": 0, "1K-10K": 0, "10K-100K": 0, "100K-500K": 0, "500K-1M": 0, "1M+": 0}
+        mega_count = 0
+        mid_count = 0
+        for it in items:
+            fw = it.get("followers_num", 0)
+            if fw < 1000: fw_tiers["~1K"] += 1
+            elif fw < 10000: fw_tiers["1K-10K"] += 1
+            elif fw < 100000: fw_tiers["10K-100K"] += 1
+            elif fw < 500000: fw_tiers["100K-500K"] += 1; mid_count += 1
+            elif fw < 1000000: fw_tiers["500K-1M"] += 1; mid_count += 1
+            else: fw_tiers["1M+"] += 1; mega_count += 1
+        stats["by_followers"] = fw_tiers
+        stats["mega_count"] = mega_count
+        stats["mid_plus_count"] = mid_count + mega_count
+        # 일별 등록 추이 (A열 날짜 기준)
+        daily_reg = {}
+        now = datetime.now(KST)
+        for it in items:
+            d = str(it.get("date", "")).strip()
+            if not d:
+                continue
+            # 날짜 정규화
+            if re.match(r'^\d{4}-\d{2}-\d{2}', d):
+                dk = d[:10]
+            elif re.match(r'^\d{1,2}/\d{1,2}', d) and now.year:
+                dk = f"{now.year}-{d.replace('/','-')}"
+            else:
+                dk = d[:10]
+            daily_reg[dk] = daily_reg.get(dk, 0) + 1
+        stats["daily_registrations"] = [{"date": k, "count": v} for k, v in sorted(daily_reg.items())[-90:]]
+        this_month_prefix = now.strftime("%Y-%m")
+        stats["this_month_new"] = sum(v for k, v in daily_reg.items() if k.startswith(this_month_prefix))
         return {"source": "live", "total": len(items), "items": items[:200], "stats": stats}
     except Exception as e:
         print(f"influencer-db error: {e}")
@@ -1018,10 +1051,9 @@ AGENT_PERSONAS = {
     "influencer": {
         "name": "피치", "email_key": "피치",
         "system": _AGENT_COMMON + """
-당신은 인플루언서 매칭 에이전트 피치입니다. 수백만 인플루언서 데이터 큐레이터.
-카카오 B2C 채널(@08liter_korea) 인플루언서 문의를 수신하고 인바운드 시트에 자동 기록합니다.
+""" + (Path(__file__).parent / "agents/pitch/system-prompt.txt").read_text(encoding="utf-8") + """
 현재 KPI: 풀 {풀수}명(목표155만) / 국가별: {국가별현황} / 플랫폼별: {플랫폼별현황}
-부족한 카테고리/국가 진단 + 확보 전략 제안."""
+카카오 B2C 채널(@08liter_korea) 문의 수신 + 인바운드 시트 기록."""
     },
     "ads": {
         "name": "맥스", "email_key": "맥스",
@@ -1544,7 +1576,7 @@ async def _agent_auto_cycle():
         brand = await api_brand_pipeline()
         m = brand.get("month", {})
         t = brand.get("today", {})
-        threshold = goals.get("alert_threshold", 0.3)
+        threshold = goals.get("alert_threshold", 0.2)  # 80% 미만 = 달성률 0.8 미만
 
         # 2. 카일 — KPI 목표 대비 분석
         checks = [
@@ -1554,7 +1586,7 @@ async def _agent_auto_cycle():
             ("유효DB", m.get("valid", 0), goals.get("valid_db", 150), "루나"),
         ]
         for label, val, target, agent in checks:
-            if target > 0 and val / target < threshold:
+            if target > 0 and val / target < 0.8:  # 80% 미만만 알림
                 alerts_posted.append({
                     "id": _id(), "agent": agent, "severity": "critical",
                     "summary": f"⚠️ {label} AT RISK: {val:,} / 목표 {target:,} ({val/target*100:.0f}%)",

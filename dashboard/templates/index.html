@@ -171,14 +171,31 @@
   </div>
   <div id="inf-tab-members-content" style="margin-bottom:20px">
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px;margin-bottom:16px">
-      <p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:12px">국가별 회원수 입력</p>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="members-form"></div>
-      <button onclick="saveMembers()" style="margin-top:10px;padding:8px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
-      <span id="members-msg" style="margin-left:10px;font-size:10px;color:#22C55E"></span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <p style="font-size:13px;font-weight:700;color:#E8EBF2">국가별 신규/누적 인플루언서 등록 추이</p>
+        <div style="display:flex;gap:4px" id="inf-country-filters"></div>
+      </div>
+      <div style="position:relative;height:250px"><canvas id="chart-inf-trend"></canvas></div>
+      <p style="font-size:9px;color:#4A5568;margin-top:6px">출처: 구글시트 '현황시트(수동매칭)' A열(컨택날짜) / 계산: 해당 날짜 행 COUNT / 누적: 해당일까지 전체 행 COUNT</p>
     </div>
-    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px;text-align:center;color:#4A5568;font-size:12px">추후 플랫폼 연동 예정 — 신규/누적 그래프는 데이터 축적 후 자동 표시</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">채널별 인플루언서</p><div style="position:relative;height:180px"><canvas id="chart-inf-platform"></canvas></div><p style="font-size:9px;color:#4A5568;margin-top:4px">출처: E열(플랫폼) COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">카테고리별 인플루언서</p><div style="position:relative;height:180px"><canvas id="chart-inf-category"></canvas></div><p style="font-size:9px;color:#4A5568;margin-top:4px">출처: D열(카테고리) COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">팔로워 구간별</p><div style="position:relative;height:180px"><canvas id="chart-inf-followers"></canvas></div><p style="font-size:9px;color:#4A5568;margin-top:4px">출처: H열 팔로워 K/k 변환 구간 분류</p></div>
+    </div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px">
+      <p style="font-size:11px;color:#8B95A6;margin-bottom:8px">진행상태별 현황</p>
+      <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:6px;font-size:10px;color:#4A5568">진행상태</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">건수</th><th style="text-align:right;padding:6px;font-size:10px;color:#4A5568">비율</th></tr></thead><tbody id="inf-status-table"></tbody></table>
+      <p style="font-size:9px;color:#4A5568;margin-top:4px">출처: K열(진행상태) COUNT 집계</p>
+    </div>
   </div>
   <div id="inf-tab-list-content" style="display:none">
+    <div id="inf-kpi-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #F97316;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">총 등록</p><p id="inf-kpi-total" style="font-family:monospace;font-size:22px;font-weight:700;color:#E8EBF2">-</p><p style="font-size:8px;color:#4A5568">전체 행 수</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #22C55E;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">이번달 신규</p><p id="inf-kpi-new" style="font-family:monospace;font-size:22px;font-weight:700;color:#22C55E">-</p><p style="font-size:8px;color:#4A5568">A열 이번달 COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #0EA5E9;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">10만+ 인플루언서</p><p id="inf-kpi-mid" style="font-family:monospace;font-size:22px;font-weight:700;color:#0EA5E9">-</p><p style="font-size:8px;color:#4A5568">H열 100K+ COUNT</p></div>
+      <div style="background:#0F1520;border:1px solid #1E2433;border-top:2px solid #7C3AED;border-radius:8px;padding:14px"><p style="font-size:10px;color:#8B95A6">100만+ 메가</p><p id="inf-kpi-mega" style="font-family:monospace;font-size:22px;font-weight:700;color:#7C3AED">-</p><p style="font-size:8px;color:#4A5568">H열 1M+ COUNT</p></div>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <p style="font-size:13px;font-weight:700;color:#E8EBF2">맞춤 키인플루언서 리스트</p>
       <button onclick="showInfAddForm()" style="padding:6px 16px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;font-weight:600">+ 인플루언서 추가</button>
@@ -853,7 +870,7 @@ var _infData=[],_infFiltered=[];
 function loadInfluencerData(){
 fetch('/api/influencer-db').then(function(r){return r.json()}).then(function(data){
 _infData=data.items||[];_infFiltered=[].concat(_infData);
-renderCountryCards(data.stats||{});renderInfluencerTable(_infData);
+renderCountryCards(data.stats||{});renderInfluencerTable(_infData);renderInfChartData(data.stats||{},data.total||0);
 var s=document.getElementById('inf-data-source');if(s)s.textContent=data.source==='live'?'실시간':'샘플';
 var tc=document.getElementById('target-count');if(tc)tc.textContent=_infData.length+'명';
 }).catch(function(e){console.error('Influencer load:',e)})}
@@ -949,7 +966,46 @@ if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A556
 else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
 
 // ===== showPage hook =====
-// ===== 인플루언서 3탭 =====
+// ===== 인플루언서 차트 + KPI =====
+var _infCharts={};
+function renderInfChartData(stats,total){
+// KPI 카드
+var e1=document.getElementById('inf-kpi-total');if(e1)e1.textContent=total.toLocaleString();
+var e2=document.getElementById('inf-kpi-new');if(e2)e2.textContent=(stats.this_month_new||0).toLocaleString();
+var e3=document.getElementById('inf-kpi-mid');if(e3)e3.textContent=(stats.mid_plus_count||0).toLocaleString();
+var e4=document.getElementById('inf-kpi-mega');if(e4)e4.textContent=(stats.mega_count||0).toLocaleString();
+// 플랫폼 도넛
+var bp=stats.by_platform||{};
+if(_infCharts.platform)_infCharts.platform.destroy();
+var cp=document.getElementById('chart-inf-platform');
+if(cp)_infCharts.platform=new Chart(cp,{type:'doughnut',data:{labels:Object.keys(bp),datasets:[{data:Object.values(bp),backgroundColor:['#E1306C','#4A4A4A','#FF0000','#03C75A','#1DA1F2','#8B95A6']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:9}}}}}});
+// 카테고리 도넛
+var bc2=stats.by_category||{};
+if(_infCharts.category)_infCharts.category.destroy();
+var cc=document.getElementById('chart-inf-category');
+if(cc)_infCharts.category=new Chart(cc,{type:'doughnut',data:{labels:Object.keys(bc2),datasets:[{data:Object.values(bc2),backgroundColor:['#F97316','#0EA5E9','#22C55E','#7C3AED','#EF4444','#F59E0B']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:9}}}}}});
+// 팔로워 도넛
+var bf=stats.by_followers||{};
+if(_infCharts.followers)_infCharts.followers.destroy();
+var cf=document.getElementById('chart-inf-followers');
+if(cf)_infCharts.followers=new Chart(cf,{type:'doughnut',data:{labels:Object.keys(bf),datasets:[{data:Object.values(bf),backgroundColor:['#4A5568','#8B95A6','#F97316','#0EA5E9','#22C55E','#7C3AED']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:9}}}}}});
+// 진행상태 테이블
+var bs=stats.by_status||{};var stb=document.getElementById('inf-status-table');
+if(stb){while(stb.firstChild)stb.removeChild(stb.firstChild);var stotal=0;for(var k in bs)stotal+=bs[k];
+Object.entries(bs).sort(function(a,b){return b[1]-a[1]}).forEach(function(e){
+var tr=document.createElement('tr');tr.style.borderBottom='1px solid #1E2433';
+var colors={'제안발송':'#0EA5E9','단순리스트업':'#8B95A6','사례활용가능':'#22C55E','거절':'#EF4444'};
+var td1=document.createElement('td');td1.style.cssText='padding:6px;font-size:11px;color:'+(colors[e[0]]||'#E8EBF2');td1.textContent=e[0];tr.appendChild(td1);
+var td2=document.createElement('td');td2.style.cssText='padding:6px;text-align:right;font-family:monospace;font-size:11px;color:#E8EBF2';td2.textContent=e[1].toLocaleString();tr.appendChild(td2);
+var td3=document.createElement('td');td3.style.cssText='padding:6px;text-align:right;font-size:11px;color:#8B95A6';td3.textContent=stotal>0?(e[1]/stotal*100).toFixed(1)+'%':'0%';tr.appendChild(td3);
+stb.appendChild(tr)})};
+// 일별 등록 추이
+var dr=stats.daily_registrations||[];
+if(_infCharts.trend)_infCharts.trend.destroy();
+var ct=document.getElementById('chart-inf-trend');
+if(ct&&dr.length)_infCharts.trend=new Chart(ct,{type:'bar',data:{labels:dr.map(function(r){return r.date.slice(5)}),datasets:[{type:'bar',label:'신규',data:dr.map(function(r){return r.count}),backgroundColor:'rgba(249,115,22,0.6)',yAxisID:'y'},{type:'line',label:'누적',data:dr.reduce(function(a,r){a.push((a.length?a[a.length-1]:0)+r.count);return a},[]),borderColor:'#fff',tension:0.3,pointRadius:1,borderWidth:1.5,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{y:{position:'left',ticks:{color:'#F97316'},grid:{color:'rgba(255,255,255,0.05)'}},y1:{position:'right',ticks:{color:'#fff'},grid:{display:false}},x:{ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true,maxTicksLimit:15},grid:{display:false}}}}})}
+
+// ===== 인플루언서 탭 =====
 function setInfMainTab(tab){
 ['members','list','pitch'].forEach(function(t){
 var el=document.getElementById('inf-tab-'+t+'-content');if(el)el.style.display=t===tab?'':'none';
