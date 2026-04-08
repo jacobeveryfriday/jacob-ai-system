@@ -47,7 +47,8 @@ async def health_check():
             "slack": _chk("SLACK_WEBHOOK_URL"),
             "resend_email": _chk("RESEND_API_KEY"),
             "meta_ads": _chk("META_ACCESS_TOKEN"),
-            "kakao": _chk("KAKAO_API_KEY"),
+            "kakao_b2b": _chk("KAKAO_B2B_API_KEY"),
+            "kakao_b2c": _chk("KAKAO_B2C_API_KEY"),
             "naver_works_smtp": _chk("NAVER_WORKS_SMTP_PASSWORD"),
         },
         "cache_entries": len(_cache),
@@ -1034,9 +1035,11 @@ AGENT_PERSONAS = {
     "cs": {
         "name": "하나", "email_key": "하나",
         "system": _AGENT_COMMON + """
-당신은 CS 에이전트 하나입니다. 클라이언트 만족 최우선, 따뜻하고 신속한 전문가.
-현재: 미응답 CS {미응답건}건 / 재계약률 {재계약률}%
-미처리 CS 우선순위 + 응대 스크립트 제공."""
+당신은 CS 에이전트 하나입니다. 카카오 B2B 채널(@08liter_b2b) CS를 담당합니다.
+미응답 메시지를 감지하고 즉시 응대 스크립트를 생성합니다.
+매일 09:00 미응답 현황 브리핑을 생성합니다.
+현재 미응답 {미응답건}건 / 재계약률 {재계약률}%
+"미응답 처리해줘" → 미응답 리스트 + 건별 1차 응대 스크립트 자동 생성."""
     },
 }
 
@@ -1617,17 +1620,39 @@ async def api_meta_ads():
         return {"status": "error", "message": str(e)}
 
 
-# ===== 카카오 채널 API =====
+# ===== 카카오 채널 API (B2B/B2C 분리) =====
 @app.get("/api/kakao-channel")
 async def api_kakao_channel():
-    """카카오 채널 상태 (KAKAO_API_KEY 필요)."""
-    api_key = os.getenv("KAKAO_API_KEY", "")
+    """카카오 채널 상태."""
+    b2b_key = os.getenv("KAKAO_B2B_API_KEY", "")
+    b2c_key = os.getenv("KAKAO_B2C_API_KEY", "")
     b2b = os.getenv("KAKAO_B2B_CHANNEL", "08liter_b2b")
     b2c = os.getenv("KAKAO_B2C_CHANNEL", "08liter_korea")
+    return {
+        "b2b": {"channel": b2b, "status": "connected" if b2b_key else "not_configured",
+                "agent": "하나", "desc": "B2B CS 메시지 자동 수신/응대"},
+        "b2c": {"channel": b2c, "status": "connected" if b2c_key else "not_configured",
+                "agent": "맥스", "desc": "B2C 인플루언서 문의 수신 → 인바운드 기록"},
+    }
+
+@app.get("/api/kakao-b2b/messages")
+async def api_kakao_b2b_messages():
+    """하나: 카카오 B2B 채널 미응답 메시지 조회."""
+    api_key = os.getenv("KAKAO_B2B_API_KEY", "")
     if not api_key:
-        return {"status": "not_configured", "channels": {"b2b": b2b, "b2c": b2c},
-                "message": "KAKAO_API_KEY 미설정. 카카오 개발자센터에서 발급 필요."}
-    return {"status": "ready", "channels": {"b2b": b2b, "b2c": b2c}}
+        return {"status": "not_configured", "message": "KAKAO_B2B_API_KEY 미설정",
+                "mock_unresponded": 4, "note": "API 연동 전 더미 데이터"}
+    # 실제 카카오 API 연동 시 여기에 구현
+    return {"status": "ready", "message": "카카오 B2B API 연동 준비 완료"}
+
+@app.get("/api/kakao-b2c/inquiries")
+async def api_kakao_b2c_inquiries():
+    """맥스: 카카오 B2C 채널 인플루언서 문의 조회."""
+    api_key = os.getenv("KAKAO_B2C_API_KEY", "")
+    if not api_key:
+        return {"status": "not_configured", "message": "KAKAO_B2C_API_KEY 미설정",
+                "mock_inquiries": 2, "note": "API 연동 전 더미 데이터"}
+    return {"status": "ready", "message": "카카오 B2C API 연동 준비 완료"}
 
 
 @app.get("/api/cache-clear")
@@ -1647,7 +1672,7 @@ async def api_debug_env():
         "NAVER_WORKS_SMTP_PASSWORD", "SENDER_NAME",
         "SLACK_WEBHOOK_URL", "DASH_USER", "DASH_PASS",
         "META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID", "META_APP_ID",
-        "KAKAO_API_KEY", "KAKAO_B2B_CHANNEL", "KAKAO_B2C_CHANNEL",
+        "KAKAO_B2B_API_KEY", "KAKAO_B2C_API_KEY", "KAKAO_B2B_CHANNEL", "KAKAO_B2C_CHANNEL",
         "KYLE_EMAIL", "LUNA_EMAIL", "PITCH_EMAIL", "MAX_EMAIL",
         "SOPHIE_EMAIL", "RAY_EMAIL", "HANA_EMAIL",
     ]
