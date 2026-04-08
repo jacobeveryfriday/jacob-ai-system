@@ -36,23 +36,22 @@ def _make_token(user: str) -> str:
 
 @app.get("/health")
 async def health_check():
-    """향상된 헬스체크 — sheets/openai/slack 상태 포함"""
-    status = {"status": "ok", "timestamp": datetime.now().isoformat()}
-    # Sheets
-    status["sheets"] = "connected" if GSHEETS_API_KEY else "not_configured"
-    # OpenAI
-    openai_key = os.getenv("OPENAI_API_KEY", "")
-    status["openai"] = "connected" if openai_key else "not_configured"
-    # Slack
-    slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
-    status["slack"] = "connected" if slack_url else "not_configured"
-    # Resend Email
-    status["email"] = "connected" if os.getenv("RESEND_API_KEY") else "not_configured"
-    # Anthropic
-    status["anthropic"] = "connected" if os.getenv("ANTHROPIC_API_KEY", "") else "not_configured"
-    # Cache stats
-    status["cache_entries"] = len(_cache)
-    return status
+    """전체 API 연동 상태 — 7개 서비스"""
+    def _chk(key): return "connected" if os.getenv(key) else "not_configured"
+    return {
+        "status": "ok",
+        "timestamp": datetime.now(KST).isoformat(),
+        "services": {
+            "google_sheets": "connected" if GSHEETS_API_KEY else "not_configured",
+            "anthropic": _chk("ANTHROPIC_API_KEY"),
+            "slack": _chk("SLACK_WEBHOOK_URL"),
+            "resend_email": _chk("RESEND_API_KEY"),
+            "meta_ads": _chk("META_ACCESS_TOKEN"),
+            "kakao": _chk("KAKAO_API_KEY"),
+            "naver_works_smtp": _chk("NAVER_WORKS_SMTP_PASSWORD"),
+        },
+        "cache_entries": len(_cache),
+    }
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -119,6 +118,44 @@ def is_authenticated(request: Request) -> bool:
 DATA_DIR = Path(__file__).parent / "data"
 CHECKLIST_FILE = DATA_DIR / "checklist.json"
 KPI_FILE = DATA_DIR / "kpi_summary.json"
+GOALS_FILE = DATA_DIR / "goals.json"
+ALERTS_FILE = DATA_DIR / "alerts.json"
+
+# ===== 에이전트 이메일 계정 =====
+AGENT_EMAILS = {
+    "카일": os.getenv("KYLE_EMAIL", "kyle@08liter.com"),
+    "루나": os.getenv("LUNA_EMAIL", "luna@08liter.com"),
+    "피치": os.getenv("PITCH_EMAIL", "pitch@08liter.com"),
+    "맥스": os.getenv("MAX_EMAIL", "max@08liter.com"),
+    "소피": os.getenv("SOPHIE_EMAIL", "sophie@08liter.com"),
+    "레이": os.getenv("RAY_EMAIL", "ray@08liter.com"),
+    "하나": os.getenv("HANA_EMAIL", "hana@08liter.com"),
+}
+
+# ===== 월간 목표 (기본값, /api/goals로 수정 가능) =====
+DEFAULT_GOALS = {
+    "revenue": 160000000, "contracts": 38, "inbound_db": 500,
+    "valid_db": 150, "cpa": 50000, "influencer_pool": 1550000,
+    "alert_threshold": 0.3,  # 30% 이하 시 알림
+}
+
+def load_goals() -> dict:
+    if GOALS_FILE.exists():
+        return json.loads(GOALS_FILE.read_text(encoding="utf-8"))
+    return dict(DEFAULT_GOALS)
+
+def save_goals(data: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    GOALS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def load_alerts() -> list:
+    if ALERTS_FILE.exists():
+        return json.loads(ALERTS_FILE.read_text(encoding="utf-8"))
+    return []
+
+def save_alerts(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ALERTS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 # ===== Google Sheets Config =====
 GSHEETS_API_KEY = os.getenv("GOOGLE_SHEETS_API_KEY", "")
@@ -1345,11 +1382,13 @@ def _build_pitch_html(brand_name: str, body_text: str) -> str:
 </td></tr></table></body></html>"""
 
 
-def _send_email(to_email: str, subject: str, html: str) -> dict:
-    """Resend HTTP API로 이메일 1건 발송."""
+def _send_email(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
+    """Resend HTTP API로 이메일 1건 발송. agent_name으로 발신자 자동 매핑."""
     api_key = os.getenv("RESEND_API_KEY", "")
+    agent_email = AGENT_EMAILS.get(agent_name, "luna@08liter.com")
+    # Resend 도메인 인증 전에는 onboarding@resend.dev 사용
     from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-    sender_name = os.getenv("SENDER_NAME", "루나 | 공팔리터글로벌")
+    sender_name = f"{agent_name} | 공팔리터글로벌"
     if not api_key:
         in_env = "RESEND_API_KEY" in os.environ
         return {"status": "error", "message": f"RESEND_API_KEY 미설정. in_os_environ={in_env}. Railway Variables에 추가 필요."}
@@ -1446,6 +1485,154 @@ async def api_campaign_recontact(request: Request):
     return await _run_recontact_campaign(dry_run=body.get("dry_run", True), limit=body.get("limit", 10))
 
 
+# ===== 목표 설정 API =====
+@app.get("/api/goals")
+async def api_get_goals():
+    return load_goals()
+
+@app.post("/api/goals")
+async def api_set_goals(request: Request):
+    body = await request.json()
+    goals = load_goals()
+    goals.update(body)
+    save_goals(goals)
+    return {"status": "ok", "goals": goals}
+
+
+# ===== 알림센터 API (게시판 형태) =====
+@app.get("/api/alerts-board")
+async def api_alerts_board():
+    alerts = load_alerts()
+    # 미해결 상단 고정
+    alerts.sort(key=lambda a: (0 if a.get("resolved") else 1, a.get("timestamp", "")), reverse=True)
+    return {"alerts": alerts[:50]}
+
+@app.post("/api/alerts-board")
+async def api_post_alert(request: Request):
+    body = await request.json()
+    alerts = load_alerts()
+    alert = {
+        "id": len(alerts) + 1,
+        "agent": body.get("agent", "시스템"),
+        "severity": body.get("severity", "warning"),  # critical/warning/info
+        "summary": body.get("summary", ""),
+        "detail": body.get("detail", ""),
+        "timestamp": datetime.now(KST).isoformat(),
+        "resolved": False,
+    }
+    alerts.append(alert)
+    save_alerts(alerts)
+    return {"status": "ok", "alert": alert}
+
+@app.post("/api/alerts-board/resolve")
+async def api_resolve_alert(request: Request):
+    body = await request.json()
+    alert_id = body.get("id")
+    alerts = load_alerts()
+    for a in alerts:
+        if a.get("id") == alert_id:
+            a["resolved"] = True
+            a["resolved_at"] = datetime.now(KST).isoformat()
+    save_alerts(alerts)
+    return {"status": "ok"}
+
+
+# ===== 에이전트 자율실행 프레임워크 =====
+async def _agent_auto_cycle():
+    """매일 09:00 KST 자동 실행: KPI 점검 → 문제 감지 → 알림 게시 → 슬랙 공유."""
+    goals = load_goals()
+    alerts_posted = []
+    try:
+        brand = await api_brand_pipeline()
+        m = brand.get("month", {})
+        t = brand.get("today", {})
+        checks = [
+            ("매출", m.get("revenue", 0), goals.get("revenue", 160000000), "카일"),
+            ("계약건수", m.get("contract", 0), goals.get("contracts", 38), "카일"),
+            ("인입DB", m.get("inbound", 0), goals.get("inbound_db", 500), "카일"),
+            ("무대응건", t.get("unhandled", 0), 0, "카일"),
+        ]
+        threshold = goals.get("alert_threshold", 0.3)
+        for label, val, target, agent in checks:
+            if target > 0 and val / target < threshold:
+                alert = {
+                    "id": int(time.time() * 1000) % 1000000,
+                    "agent": agent, "severity": "critical",
+                    "summary": f"⚠️ {label} AT RISK: {val:,} / 목표 {target:,} ({val/target*100:.0f}%)",
+                    "detail": f"목표 대비 {threshold*100:.0f}% 미달",
+                    "timestamp": datetime.now(KST).isoformat(), "resolved": False,
+                }
+                alerts_posted.append(alert)
+            if label == "무대응건" and val > 0:
+                alert = {
+                    "id": int(time.time() * 1000) % 1000000 + 1,
+                    "agent": agent, "severity": "warning",
+                    "summary": f"무대응 {val}건 — 즉시 대응 필요",
+                    "detail": "담당자 미배정 또는 컨텍현황 미입력",
+                    "timestamp": datetime.now(KST).isoformat(), "resolved": False,
+                }
+                alerts_posted.append(alert)
+        if alerts_posted:
+            existing = load_alerts()
+            existing.extend(alerts_posted)
+            save_alerts(existing[-200:])  # 최대 200건 유지
+            # 슬랙 알림
+            slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
+            if slack_url:
+                text = f"🚨 *[카일] 자동 KPI 점검 — {len(alerts_posted)}건 경고*\n"
+                for a in alerts_posted[:5]:
+                    text += f"• {a['summary']}\n"
+                try:
+                    async with httpx.AsyncClient(timeout=10) as client:
+                        await client.post(slack_url, json={"text": text})
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"Auto cycle error: {e}")
+    return alerts_posted
+
+@app.get("/api/agent-cycle")
+async def api_agent_cycle():
+    """에이전트 자율실행 사이클 수동 트리거."""
+    alerts = await _agent_auto_cycle()
+    return {"status": "ok", "alerts_posted": len(alerts), "alerts": alerts}
+
+
+# ===== 메타 광고 API =====
+@app.get("/api/meta-ads")
+async def api_meta_ads():
+    """메타 광고 성과 조회 (META_ACCESS_TOKEN 필요)."""
+    token = os.getenv("META_ACCESS_TOKEN", "")
+    account_id = os.getenv("META_AD_ACCOUNT_ID", "230720044045370")
+    if not token:
+        return {"status": "not_configured", "message": "META_ACCESS_TOKEN 미설정. 메타 비즈니스 관리자에서 발급 필요."}
+    try:
+        url = f"https://graph.facebook.com/v19.0/act_{account_id}/insights"
+        resp = req_lib.get(url, params={
+            "access_token": token,
+            "fields": "spend,impressions,clicks,cpc,cpm,actions",
+            "date_preset": "this_month",
+        }, timeout=15)
+        if resp.status_code == 200:
+            return {"status": "ok", "data": resp.json().get("data", [])}
+        return {"status": "error", "message": resp.text[:200]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ===== 카카오 채널 API =====
+@app.get("/api/kakao-channel")
+async def api_kakao_channel():
+    """카카오 채널 상태 (KAKAO_API_KEY 필요)."""
+    api_key = os.getenv("KAKAO_API_KEY", "")
+    b2b = os.getenv("KAKAO_B2B_CHANNEL", "08liter_b2b")
+    b2c = os.getenv("KAKAO_B2C_CHANNEL", "08liter_korea")
+    if not api_key:
+        return {"status": "not_configured", "channels": {"b2b": b2b, "b2c": b2c},
+                "message": "KAKAO_API_KEY 미설정. 카카오 개발자센터에서 발급 필요."}
+    return {"status": "ready", "channels": {"b2b": b2b, "b2c": b2c}}
+
+
 @app.get("/api/cache-clear")
 async def api_cache_clear():
     """캐시 초기화"""
@@ -1462,6 +1649,10 @@ async def api_debug_env():
         "ANTHROPIC_API_KEY", "GOOGLE_SHEETS_API_KEY",
         "NAVER_WORKS_SMTP_PASSWORD", "SENDER_NAME",
         "SLACK_WEBHOOK_URL", "DASH_USER", "DASH_PASS",
+        "META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID", "META_APP_ID",
+        "KAKAO_API_KEY", "KAKAO_B2B_CHANNEL", "KAKAO_B2C_CHANNEL",
+        "KYLE_EMAIL", "LUNA_EMAIL", "PITCH_EMAIL", "MAX_EMAIL",
+        "SOPHIE_EMAIL", "RAY_EMAIL", "HANA_EMAIL",
     ]
     result = {}
     for k in keys:

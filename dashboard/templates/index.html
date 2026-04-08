@@ -60,7 +60,7 @@
 <a href="#" class="nav-item" data-page="cs"><i data-lucide="headphones"></i> CS</a>
 </div></div>
 </nav>
-<div class="sidebar-footer"><a href="#" class="nav-item"><i data-lucide="settings-2"></i> 설정</a><div class="nav-item"><i data-lucide="activity"></i> API 상태 <span class="api-status-dot" id="apiDot"></span></div></div>
+<div class="sidebar-footer"><a href="#" class="nav-item" data-page="settings"><i data-lucide="settings-2"></i> 설정</a><a href="#" class="nav-item" data-page="api-status"><i data-lucide="activity"></i> API 상태 <span class="api-status-dot" id="apiDot"></span></a></div>
 </aside>
 
 <main class="main-content">
@@ -81,8 +81,33 @@
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">광고 CPA</div></div><div class="kpi-value">3.2<span class="kpi-unit">만원</span></div><div class="kpi-detail">목표: <span class="v">5만원 이하</span></div><div class="mt-4"><span class="badge badge-on">ON TRACK</span></div></div>
 </div></div>
 
-<div id="page-alerts"><div class="card"><div class="card-title">알림 센터</div><div id="alertList"></div></div></div>
+<div id="page-alerts">
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 알림센터</div><div class="section-hdr-sub"><button onclick="runAgentCycle()" style="padding:4px 12px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">KPI 점검 실행</button></div></div>
+<div id="alertBoard" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
 <div id="page-kpi"></div>
+
+<div id="page-settings">
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 설정</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px">
+<p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:14px">월간 목표 설정</p>
+<div id="goals-form" style="display:flex;flex-direction:column;gap:10px"></div>
+<button onclick="saveGoals()" style="margin-top:12px;padding:8px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
+<p id="goals-msg" style="font-size:10px;color:#22C55E;margin-top:6px"></p>
+</div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px">
+<p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:14px">알림 기준</p>
+<p style="font-size:11px;color:#8B95A6;margin-bottom:8px">KPI 목표 대비 아래 비율 이하 시 전체 알림 발생</p>
+<div style="display:flex;align-items:center;gap:8px"><input id="goal-threshold" type="number" value="30" min="10" max="90" step="5" style="width:60px;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px"><span style="font-size:12px;color:#8B95A6">%</span></div>
+</div>
+</div>
+</div>
+
+<div id="page-api-status">
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> API 연동 상태</div></div>
+<div id="api-status-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>
+</div>
 
 <div id="page-brand">
   <div style="display:flex;gap:4px;background:#161B27;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
@@ -163,7 +188,7 @@
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
 <script>
-var TITLES={overview:'전체 현황',alerts:'알림 센터',kpi:'총괄 KPI',brand:'브랜드',influencer:'맞춤 인플루언서',ads:'광고센터 운영',sns:'공식 SNS 운영',management:'경영지원',cs:'CS'};
+var TITLES={overview:'전체 현황',alerts:'알림 센터',kpi:'총괄 KPI',brand:'브랜드',influencer:'맞춤 인플루언서',ads:'광고센터 운영',sns:'공식 SNS 운영',management:'경영지원',cs:'CS',settings:'설정','api-status':'API 상태'};
 var SL={on:'ON TRACK',watch:'WATCH',risk:'AT RISK'};
 var m8=['9월','10월','11월','12월','1월','2월','3월','4월'];
 var m6=['11월','12월','1월','2월','3월','4월'];
@@ -832,7 +857,60 @@ else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
 var _origShowPage=showPage;
 showPage=function(pageId){_origShowPage(pageId);
 if(pageId==='brand')loadBrandPipeline();
-if(pageId==='influencer')loadInfluencerData()};
+if(pageId==='influencer')loadInfluencerData();
+if(pageId==='alerts')loadAlertBoard();
+if(pageId==='settings')loadGoals();
+if(pageId==='api-status')loadApiStatus()};
+
+function loadAlertBoard(){
+fetch('/api/alerts-board').then(function(r){return r.json()}).then(function(d){
+var el=document.getElementById('alertBoard');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
+var alerts=d.alerts||[];if(!alerts.length){var p=document.createElement('p');p.style.cssText='color:#4A5568;font-size:12px;padding:20px';p.textContent='알림 없음. KPI 점검 실행 버튼을 눌러주세요.';el.appendChild(p);return}
+alerts.forEach(function(a){
+var card=document.createElement('div');card.style.cssText='background:#0F1520;border:1px solid '+(a.resolved?'#1E2433':'#EF4444')+';border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center';
+var left=document.createElement('div');
+var top=document.createElement('div');top.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:4px';
+var badge=document.createElement('span');badge.style.cssText='padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;color:#fff;background:'+(a.severity==='critical'?'#EF4444':a.severity==='warning'?'#F59E0B':'#3B82F6');badge.textContent=a.severity.toUpperCase();top.appendChild(badge);
+var agent=document.createElement('span');agent.style.cssText='font-size:11px;color:#F97316;font-weight:600';agent.textContent=a.agent;top.appendChild(agent);
+var ts=document.createElement('span');ts.style.cssText='font-size:10px;color:#4A5568';ts.textContent=(a.timestamp||'').slice(0,16);top.appendChild(ts);
+if(a.resolved){var rtag=document.createElement('span');rtag.style.cssText='padding:2px 6px;border-radius:4px;font-size:9px;background:#22C55E20;color:#22C55E';rtag.textContent='해결됨';top.appendChild(rtag)}
+left.appendChild(top);
+var summary=document.createElement('p');summary.style.cssText='font-size:12px;color:#E8EBF2;margin:0';summary.textContent=a.summary;left.appendChild(summary);
+card.appendChild(left);
+if(!a.resolved){var btn=document.createElement('button');btn.style.cssText='padding:4px 10px;background:#22C55E;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer;white-space:nowrap';btn.textContent='해결';btn.addEventListener('click',function(){fetch('/api/alerts-board/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})}).then(function(){loadAlertBoard()})});card.appendChild(btn)}
+el.appendChild(card)})}).catch(function(){})}
+
+function runAgentCycle(){fetch('/api/agent-cycle').then(function(r){return r.json()}).then(function(d){alert('KPI 점검 완료: '+d.alerts_posted+'건 경고');loadAlertBoard()}).catch(function(){alert('실행 실패')})}
+
+function loadGoals(){
+fetch('/api/goals').then(function(r){return r.json()}).then(function(g){
+var el=document.getElementById('goals-form');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
+var fields=[['revenue','매출 목표 (원)',g.revenue||160000000],['contracts','계약 건수',g.contracts||38],['inbound_db','인입DB 목표',g.inbound_db||500],['valid_db','유효DB 목표',g.valid_db||150],['cpa','CPA 목표 (원)',g.cpa||50000]];
+fields.forEach(function(f){
+var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center';
+var lbl=document.createElement('span');lbl.style.cssText='font-size:11px;color:#8B95A6';lbl.textContent=f[1];row.appendChild(lbl);
+var inp=document.createElement('input');inp.id='goal-'+f[0];inp.type='number';inp.value=f[2];inp.style.cssText='width:120px;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;text-align:right;font-family:monospace';row.appendChild(inp);
+el.appendChild(row)});
+var th=document.getElementById('goal-threshold');if(th)th.value=Math.round((g.alert_threshold||0.3)*100)
+}).catch(function(){})}
+
+function saveGoals(){
+var data={};['revenue','contracts','inbound_db','valid_db','cpa'].forEach(function(k){var el=document.getElementById('goal-'+k);if(el)data[k]=parseInt(el.value)||0});
+var th=document.getElementById('goal-threshold');if(th)data.alert_threshold=parseInt(th.value)/100;
+fetch('/api/goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){var m=document.getElementById('goals-msg');if(m)m.textContent='저장 완료!';setTimeout(function(){if(m)m.textContent=''},2000)}).catch(function(){})}
+
+function loadApiStatus(){
+fetch('/health').then(function(r){return r.json()}).then(function(d){
+var el=document.getElementById('api-status-grid');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
+var svc=d.services||{};
+var labels={google_sheets:'Google Sheets',anthropic:'Anthropic AI',slack:'Slack',resend_email:'Resend Email',meta_ads:'메타 광고 API',kakao:'카카오 API',naver_works_smtp:'네이버 웍스 SMTP'};
+Object.keys(labels).forEach(function(k){
+var st=svc[k]||'not_configured';var isOn=st==='connected';var isPending=k==='meta_ads'||k==='kakao';
+var card=document.createElement('div');card.style.cssText='background:#0F1520;border:1px solid #1E2433;border-top:2px solid '+(isOn?'#22C55E':isPending?'#4A5568':'#EF4444')+';border-radius:8px;padding:16px';
+var nm=document.createElement('p');nm.style.cssText='font-size:12px;font-weight:600;color:#E8EBF2;margin-bottom:8px';nm.textContent=labels[k];card.appendChild(nm);
+var dot=document.createElement('span');dot.style.cssText='display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:'+(isOn?'#22C55E':isPending?'#4A5568':'#EF4444');card.appendChild(dot);
+var stxt=document.createElement('span');stxt.style.cssText='font-size:11px;color:'+(isOn?'#22C55E':isPending?'#4A5568':'#EF4444');stxt.textContent=isOn?'연결됨':isPending&&!isOn?'준비중':'미연결';card.appendChild(stxt);
+el.appendChild(card)})}).catch(function(){})}
 </script>
 </body>
 </html>
