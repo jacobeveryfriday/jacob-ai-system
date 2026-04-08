@@ -50,6 +50,7 @@ async def health_check():
             "kakao_b2b": _chk("KAKAO_B2B_API_KEY"),
             "kakao_b2c": _chk("KAKAO_B2C_API_KEY"),
             "naver_works_smtp": _chk("NAVER_WORKS_SMTP_PASSWORD"),
+            "instagram": _chk("META_INSTAGRAM_TOKEN"),
         },
         "cache_entries": len(_cache),
     }
@@ -1617,7 +1618,13 @@ async def api_meta_ads(date_preset: str = Query("today")):
         }, timeout=15)
         data = resp.json()
         if resp.status_code == 200:
-            return {"status": "ok", "date_preset": date_preset, "data": data.get("data", [])}
+            rows = data.get("data", [])
+            # CPA 자동 계산
+            for r in rows:
+                spend = float(r.get("spend", 0))
+                clicks = int(r.get("clicks", 0))
+                r["cpa_calculated"] = round(spend / clicks, 0) if clicks > 0 else 0
+            return {"status": "ok", "date_preset": date_preset, "data": rows}
         return {"status": "error", "code": resp.status_code, "message": data.get("error", {}).get("message", resp.text[:200])}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -1640,22 +1647,50 @@ async def api_kakao_channel():
 
 @app.get("/api/kakao-b2b/messages")
 async def api_kakao_b2b_messages():
-    """하나: 카카오 B2B 채널 미응답 메시지 조회."""
+    """하나: 카카오 B2B 채널 프로필 및 미응답 메시지 조회."""
     api_key = os.getenv("KAKAO_B2B_API_KEY", "")
     if not api_key:
-        return {"status": "not_configured", "message": "KAKAO_B2B_API_KEY 미설정",
+        return {"status": "not_configured", "message": "KAKAO_B2B_API_KEY 미설정. Railway Variables에 추가 필요.",
                 "mock_unresponded": 4, "note": "API 연동 전 더미 데이터"}
-    # 실제 카카오 API 연동 시 여기에 구현
-    return {"status": "ready", "message": "카카오 B2B API 연동 준비 완료"}
+    try:
+        resp = req_lib.get("https://kapi.kakao.com/v1/api/talk/profile",
+                           headers={"Authorization": f"KakaoAK {api_key}"}, timeout=10)
+        if resp.status_code == 200:
+            return {"status": "connected", "profile": resp.json(), "agent": "하나"}
+        return {"status": "error", "code": resp.status_code, "message": resp.text[:200]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/api/kakao-b2c/inquiries")
 async def api_kakao_b2c_inquiries():
-    """피치: 카카오 B2C 채널 인플루언서 문의 조회 → 인바운드 시트 기록."""
+    """피치: 카카오 B2C 채널 프로필 조회."""
     api_key = os.getenv("KAKAO_B2C_API_KEY", "")
     if not api_key:
-        return {"status": "not_configured", "message": "KAKAO_B2C_API_KEY 미설정",
+        return {"status": "not_configured", "message": "KAKAO_B2C_API_KEY 미설정. Railway Variables에 추가 필요.",
                 "mock_inquiries": 2, "note": "API 연동 전 더미 데이터"}
-    return {"status": "ready", "message": "카카오 B2C API 연동 준비 완료"}
+    try:
+        resp = req_lib.get("https://kapi.kakao.com/v1/api/talk/profile",
+                           headers={"Authorization": f"KakaoAK {api_key}"}, timeout=10)
+        if resp.status_code == 200:
+            return {"status": "connected", "profile": resp.json(), "agent": "피치"}
+        return {"status": "error", "code": resp.status_code, "message": resp.text[:200]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ===== SNS 계정 설정 =====
+@app.get("/api/sns-accounts")
+async def api_sns_accounts():
+    """SNS 계정 현황. 인스타/유튜브/틱톡 B2B+B2C."""
+    ig_token = os.getenv("META_INSTAGRAM_TOKEN", "")
+    return {
+        "instagram_b2b": {"account": os.getenv("INSTAGRAM_B2B_ACCOUNT", "insight._.lab"), "status": "connected" if ig_token else "pending", "agent": "소피"},
+        "instagram_b2c": {"account": os.getenv("INSTAGRAM_B2C_ACCOUNT", "08l_korea"), "status": "connected" if ig_token else "pending", "agent": "소피"},
+        "youtube_b2b": {"account": os.getenv("YOUTUBE_B2B_CHANNEL", "08L_insight"), "status": "pending", "agent": "소피"},
+        "tiktok_b2b": {"account": os.getenv("TIKTOK_B2B_ACCOUNT", "08l_insight"), "status": "pending", "agent": "소피"},
+        "tiktok_b2c": {"account": os.getenv("TIKTOK_B2C_ACCOUNT", "08liter_korea"), "status": "pending", "agent": "소피"},
+        "meta_instagram_token": "SET" if ig_token else "NOT_SET",
+    }
 
 
 # ===== KPI 추이 데이터 (그래프용) =====
@@ -1718,6 +1753,7 @@ async def api_debug_env():
         "SLACK_WEBHOOK_URL", "DASH_USER", "DASH_PASS",
         "META_ACCESS_TOKEN", "META_AD_ACCOUNT_ID", "META_APP_ID",
         "KAKAO_B2B_API_KEY", "KAKAO_B2C_API_KEY", "KAKAO_B2B_CHANNEL", "KAKAO_B2C_CHANNEL",
+        "META_INSTAGRAM_TOKEN", "INSTAGRAM_B2B_ACCOUNT", "INSTAGRAM_B2C_ACCOUNT",
         "KYLE_EMAIL", "LUNA_EMAIL", "PITCH_EMAIL", "MAX_EMAIL",
         "SOPHIE_EMAIL", "RAY_EMAIL", "HANA_EMAIL",
     ]
