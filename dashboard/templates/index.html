@@ -174,7 +174,7 @@ var CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color
 var AGENTS={
 overview:{name:'카일 — 총괄 에이전트',color:'#7C3AED',ex:['오늘 이상 감지 항목 요약해줘','이번 달 목표 달성률 알려줘','가장 급한 처리 항목이 뭐야']},
 kpi:{name:'카일 — 총괄 KPI',color:'#F97316',ex:['계약 목표 달성률은?','단가 하락 원인 분석해줘','P1 목표 달성 가능?']},
-brand:{name:'루나 — 브랜드 영업',color:'#F97316',ex:['오늘 파이프라인 현황은?','계약 가능성 높은 브랜드는?','이번 달 매출 달성 가능해?']},
+brand:{name:'루나 — 브랜드 영업',color:'#F97316',ex:['재접촉 이메일 발송해줘','재접촉 메시지 작성해줘','이번 달 매출 달성 가능해?']},
 influencer:{name:'피치 — 인플루언서 매칭',color:'#F97316',ex:['뷰티 동남아 인플루언서 현황은?','팔로워 10만 이상 KR 몇 명?','오늘 신규 발굴 현황 알려줘']},
 ads:{name:'맥스 — 광고센터',color:'#F97316',ex:['오늘 채널별 광고 성과는?','CPA가 가장 높은 채널은?','리드 획득 효율 개선 방법은?']},
 sns:{name:'소피 — 공식 SNS',color:'#F97316',ex:['오늘 채널별 성과는?','팔로워 증가율 가장 높은 채널은?','이번 주 콘텐츠 추천해줘']},
@@ -221,7 +221,7 @@ tDay.addEventListener('click',function(){tDay.classList.add('active');tMon.class
 tMon.addEventListener('click',function(){tMon.classList.add('active');tDay.classList.remove('active');monDiv.style.display='';dayDiv.style.display='none'});
 // Day KPIs
 mkKpi(dayDiv,[
-['오늘 매출','480','만원','watch','누적 '+(m.revenue?(m.revenue/100000000).toFixed(2):1.22)+'억'],
+['오늘 매출',String(Math.round((t.revenue||0)/10000)),'만원','watch','누적 '+(m.revenue?(m.revenue/100000000).toFixed(2):'0')+'억'],
 ['오늘 인입 DB',String(t.inbound||3),'건','watch','누적 '+(m.total_db||43)+'건'],
 ['오늘 유효 DB',String(t.valid||12),'건','watch','전환율 29.5%'],
 ['광고 리드 CPA','55,800','원','watch','목표 50,000원'],
@@ -231,7 +231,7 @@ mkKpi(dayDiv,[
 el.appendChild(dayDiv);
 // Month KPIs
 mkKpi(monDiv,[
-['매출',(m.revenue?(m.revenue/100000000).toFixed(2):1.22),'억원','watch','목표 1.6억'],
+['매출',(m.revenue?(m.revenue/100000000).toFixed(2):'0'),'억원','watch','목표 1.6억'],
 ['계약건수',String(m.contract||6),'건','risk','목표 38건'],
 ['평균계약단가',((m.avg_price||3700000)/10000).toFixed(0),'만원','watch','목표 420만'],
 ['총 광고비',((m.total_spend||24000000)/10000).toFixed(0),'만원','watch',''],
@@ -249,7 +249,7 @@ var boxData=[
 {title:'맞춤 인플루언서',id:'influencer-summary',page:'influencer',content:'총 풀: 140만명\n오늘 신규 확보: 28명\n이번 달 캠페인: 6건'},
 {title:'광고센터 현황',id:'ads-summary',page:'ads',content:'이번 달 ROAS: '+(m.roas||9.41)+'x\n총 DB: '+(m.total_db||43)+'건 / 광고비: '+((m.total_spend||24000000)/10000).toFixed(0)+'만원'},
 {title:'공식 SNS 현황',id:'sns-summary',page:'sns',content:'B2B 합산: 24,430명 (+680명/월)\nIG 8,420 / TT 12,800 / LI 3,210\n오늘 신규: 60명'},
-{title:'현금흐름 (이번 달)',id:'cashflow-summary',page:'management',content:'매출: 1.22억원\n지출: 8,500만원\n영업이익: 3,700만원 (30.3%)\n미수금: 1,200만원'},
+{title:'현금흐름 (이번 달)',id:'cashflow-summary',page:'management',content:'매출: '+(m.revenue?(m.revenue/100000000).toFixed(2):'0')+'억원\n목표: 1.6억원\n달성률: '+Math.round((m.revenue||0)/160000000*100)+'%'},
 {title:'CS & 경영지원',id:'cs-summary',page:'cs',content:'브랜드 CS: 오늘 5건 / 대기 2건\n인플루언서 CS: 오늘 3건 / 대기 1건\n정부지원: 진행 2건 / 신청예정 1건'}
 ];
 boxData.forEach(function(bd){

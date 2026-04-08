@@ -965,12 +965,23 @@ AT RISK 항목은 ⚠️ 강조 표시. 한국어.
     "brand": {
         "name": "루나",
         "system": """당신은 공팔리터글로벌 브랜드 영업 에이전트 루나입니다.
+사용자를 항상 "제이콥님"으로 호칭하세요.
 브랜드 클라이언트 관계와 파이프라인 관리 전문가입니다.
 현재 KPI: 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표 1.6억) / 계약건수 {계약건수}건 / 평균계약단가 {계약단가}원 / 재접촉 대상 {재접촉건수}건
-미처리 파이프라인과 오늘 컨텍 우선순위를 먼저 안내하세요.
-사용자가 "재접촉 메시지 작성해줘" 또는 "제안서 보내줘"라고 하면:
-1) 재접촉 대상 업체명/이전 컨텍 내용 기반 맞춤 제안 메시지 자동 생성
-2) 이메일 / 카카오톡 / 문자 3가지 버전으로 각각 생성
+
+브리핑 시 반드시 아래 형식으로 시작:
+"안녕하세요 제이콥님. 오늘 재접촉 대상 {재접촉건수}건이 있습니다.
+지금 바로 이메일 피치를 발송할까요?"
+그 다음 금일매출, 이번달 달성률, 미처리 건수를 요약.
+
+사용자가 "발송해줘", "보내줘", "실행해줘" 등 발송 명령 시:
+→ "지금 바로 재접촉 이메일을 발송합니다." 라고 답변하세요.
+(실제 발송은 프론트엔드에서 /api/campaign/recontact API를 호출합니다.)
+
+사용자가 "재접촉 메시지 작성해줘"라고 하면:
+1) 업체명 기반 맞춤 제안 메시지 생성
+2) 이메일 / 카카오톡 / 문자 3가지 버전
+
 답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK 항목은 ⚠️. 한국어."""
     },
     "influencer": {
@@ -1093,6 +1104,24 @@ async def api_chat(request: Request):
 
     if not user_msg and not is_briefing:
         return {"reply": "질문을 입력해 주세요.", "source": "system"}
+
+    # 루나: "발송해줘" 명령 → 즉시 캠페인 실행
+    if page == "brand" and user_msg and any(k in user_msg for k in ["발송해", "보내줘", "실행해", "발송 실행"]):
+        try:
+            campaign_result = await _run_recontact_campaign(dry_run=False, limit=10)
+            sent = campaign_result.get("sent", 0)
+            targeted = campaign_result.get("targeted", 0)
+            total = campaign_result.get("total_leads", 0)
+            results = campaign_result.get("results", [])
+            lines = [f"✅ 재접촉 이메일 발송 완료!\n"]
+            lines.append(f"📊 대상: {total}건 중 {targeted}건 발송 시도 → {sent}건 성공\n")
+            for r in results[:5]:
+                icon = "✅" if r.get("status") == "ok" else "❌"
+                lines.append(f"{icon} {r.get('brand','')} → {r.get('email','')}")
+            lines.append(f"\n📌 오늘 액션: 발송 결과 회신 모니터링\n📌 이번주 액션: 미회신 업체 2차 컨텍\n📌 이번달 액션: 재접촉 전환율 10% 달성")
+            return {"reply": "\n".join(lines), "source": "campaign-exec", "agent": "루나"}
+        except Exception as e:
+            return {"reply": f"발송 실행 중 오류: {e}", "source": "error", "agent": "루나"}
 
     # KPI 컨텍스트 수집
     kpi = await _gather_kpi_context()
@@ -1319,8 +1348,8 @@ def _build_pitch_html(brand_name: str, body_text: str) -> str:
 def _send_email(to_email: str, subject: str, html: str) -> dict:
     """Resend HTTP API로 이메일 1건 발송."""
     api_key = os.getenv("RESEND_API_KEY", "")
-    from_email = os.getenv("RESEND_FROM_EMAIL", "luna@08liter.com")
-    sender_name = os.getenv("SENDER_NAME", "루나 (공팔리터글로벌 브랜드팀)")
+    from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+    sender_name = os.getenv("SENDER_NAME", "루나 | 공팔리터글로벌")
     if not api_key:
         in_env = "RESEND_API_KEY" in os.environ
         return {"status": "error", "message": f"RESEND_API_KEY 미설정. in_os_environ={in_env}. Railway Variables에 추가 필요."}
@@ -1363,7 +1392,7 @@ async def api_send_email(request: Request):
 @app.get("/api/test-email")
 async def api_test_email():
     """발신 이메일로 테스트 메일 발송 (Resend API)."""
-    from_email = os.getenv("RESEND_FROM_EMAIL", "luna@08liter.com")
+    from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
     html = _build_pitch_html(
         "테스트",
         "안녕하세요!\n\n이 메일은 Jacob AI Command Center에서 Resend API를 통해 발송한 테스트 이메일입니다.\n"
@@ -1375,24 +1404,16 @@ async def api_test_email():
     return result
 
 
-@app.post("/api/campaign/recontact")
-async def api_campaign_recontact(request: Request):
-    """루나 재접촉 캠페인 실행: 미계약 유효DB에 맞춤 이메일 발송."""
-    body = await request.json()
-    dry_run = body.get("dry_run", True)  # 기본 미리보기 모드
-    limit = min(body.get("limit", 10), 50)
-
-    # 1. 재접촉 대상 추출
+async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
+    """재접촉 캠페인 내부 실행 함수."""
+    limit = min(limit, 50)
     leads_data = await api_recontact_leads()
     leads = leads_data.get("leads", [])
     if not leads:
-        return {"status": "no_leads", "message": "재접촉 대상이 없습니다.", "count": 0}
-
+        return {"status": "no_leads", "total_leads": 0, "targeted": 0, "sent": 0, "results": []}
     targets = [l for l in leads if l.get("email") and "@" in l.get("email", "")][:limit]
     if not targets:
-        return {"status": "no_email", "message": f"재접촉 대상 {len(leads)}건 중 이메일 보유 건이 없습니다.", "count": len(leads)}
-
-    # 2. 맞춤 메시지 생성 (Anthropic API)
+        return {"status": "no_email", "total_leads": len(leads), "targeted": 0, "sent": 0, "results": []}
     results = []
     for lead in targets:
         brand_name = lead["name"]
@@ -1402,38 +1423,27 @@ async def api_campaign_recontact(request: Request):
             f"이후 진행 상황이 궁금하여 다시 연락드립니다.\n\n"
             f"최근 저희는 인플루언서 마케팅 분야에서 새로운 성과를 거두고 있으며,\n"
             f"{brand_name}에 최적화된 캠페인 전략을 준비했습니다.\n\n"
-            f"편하신 시간에 15분만 투자해 주시면 맞춤 제안을 드리겠습니다.\n"
-            f"아래 버튼을 클릭하시면 바로 상담 예약이 가능합니다.\n\n"
-            f"감사합니다.\n루나 드림"
+            f"편하신 시간에 15분만 투자해 주시면 맞춤 제안을 드리겠습니다.\n\n감사합니다.\n루나 드림"
         )
         subject = f"[공팔리터글로벌] {brand_name} 맞춤 인플루언서 마케팅 제안"
         html = _build_pitch_html(brand_name, pitch_body)
-
-        entry = {
-            "brand": brand_name,
-            "email": lead["email"],
-            "subject": subject,
-            "preview": pitch_body[:100] + "...",
-        }
-
+        entry = {"brand": brand_name, "email": lead["email"], "subject": subject}
         if dry_run:
             entry["status"] = "preview"
         else:
             send_result = _send_email(lead["email"], subject, html)
             entry["status"] = send_result["status"]
             entry["detail"] = send_result.get("message", "")
-
         results.append(entry)
-
     sent = sum(1 for r in results if r["status"] == "ok")
-    return {
-        "status": "ok",
-        "dry_run": dry_run,
-        "total_leads": len(leads),
-        "targeted": len(targets),
-        "sent": sent,
-        "results": results,
-    }
+    return {"status": "ok", "dry_run": dry_run, "total_leads": len(leads), "targeted": len(targets), "sent": sent, "results": results}
+
+
+@app.post("/api/campaign/recontact")
+async def api_campaign_recontact(request: Request):
+    """루나 재접촉 캠페인 실행 API."""
+    body = await request.json()
+    return await _run_recontact_campaign(dry_run=body.get("dry_run", True), limit=body.get("limit", 10))
 
 
 @app.get("/api/cache-clear")
