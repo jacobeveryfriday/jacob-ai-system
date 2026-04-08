@@ -1602,22 +1602,23 @@ async def api_agent_cycle():
 
 # ===== 메타 광고 API =====
 @app.get("/api/meta-ads")
-async def api_meta_ads():
-    """메타 광고 성과 조회 (META_ACCESS_TOKEN 필요)."""
+async def api_meta_ads(date_preset: str = Query("today")):
+    """메타 광고 성과 조회. date_preset: today/this_month/last_7d."""
     token = os.getenv("META_ACCESS_TOKEN", "")
     account_id = os.getenv("META_AD_ACCOUNT_ID", "230720044045370")
     if not token:
         return {"status": "not_configured", "message": "META_ACCESS_TOKEN 미설정. 메타 비즈니스 관리자에서 발급 필요."}
     try:
-        url = f"https://graph.facebook.com/v19.0/act_{account_id}/insights"
+        url = f"https://graph.facebook.com/v18.0/act_{account_id}/insights"
         resp = req_lib.get(url, params={
             "access_token": token,
-            "fields": "spend,impressions,clicks,cpc,cpm,actions",
-            "date_preset": "this_month",
+            "fields": "impressions,clicks,spend,cpc",
+            "date_preset": date_preset,
         }, timeout=15)
+        data = resp.json()
         if resp.status_code == 200:
-            return {"status": "ok", "data": resp.json().get("data", [])}
-        return {"status": "error", "message": resp.text[:200]}
+            return {"status": "ok", "date_preset": date_preset, "data": data.get("data", [])}
+        return {"status": "error", "code": resp.status_code, "message": data.get("error", {}).get("message", resp.text[:200])}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -1655,6 +1656,48 @@ async def api_kakao_b2c_inquiries():
         return {"status": "not_configured", "message": "KAKAO_B2C_API_KEY 미설정",
                 "mock_inquiries": 2, "note": "API 연동 전 더미 데이터"}
     return {"status": "ready", "message": "카카오 B2C API 연동 준비 완료"}
+
+
+# ===== KPI 추이 데이터 (그래프용) =====
+@app.get("/api/kpi-trend")
+async def api_kpi_trend():
+    """최근 12개월 월별 + 최근 90일 일별 KPI 추이. 구글시트 실데이터."""
+    monthly = []
+    try:
+        ads = await api_ads_performance()
+        monthly = ads.get("monthly_trend", [])
+    except Exception:
+        pass
+    # 계산서에서 월별 매출 집계
+    ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+    monthly_rev = {}
+    if ct_rows:
+        hdr = _find_header_row(ct_rows, "작성일자", "공급가액", "공급받는자")
+        headers = [str(h).replace("\n", " ").strip() for h in ct_rows[hdr]]
+        date_idx = _find_col(headers, "작성일자", "등록기준일") or 1
+        amount_idx = _find_col(headers, "공급가액") or 19
+        month_col = _find_col(headers, "작성월") or 3
+        for row in ct_rows[hdr + 1:]:
+            if len(row) < 3:
+                continue
+            mv = str(row[month_col]).strip() if month_col < len(row) else ""
+            rv = str(row[amount_idx]).strip() if amount_idx < len(row) else "0"
+            if not mv or "20" not in mv:
+                dr = str(row[date_idx]).strip() if date_idx < len(row) else ""
+                dc = dr.replace("-", "").replace(".", "").replace("/", "")
+                if len(dc) >= 6 and dc[:4].isdigit():
+                    mv = dc[:4] + "." + dc[4:6]
+            if mv and "20" in mv:
+                try:
+                    rev = int(float(rv.replace(",", "").replace("₩", "").replace(" ", "")))
+                except (ValueError, TypeError):
+                    rev = 0
+                if rev > 0:
+                    monthly_rev[mv] = monthly_rev.get(mv, 0) + rev
+    return {
+        "monthly_revenue": [{"month": k, "revenue": v} for k, v in sorted(monthly_rev.items())[-12:]],
+        "monthly_trend": monthly[-12:],
+    }
 
 
 @app.get("/api/cache-clear")

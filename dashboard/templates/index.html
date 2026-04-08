@@ -295,6 +295,16 @@ new Chart(c,{type:'line',data:{labels:trend.map(function(t){return t.month}),dat
 }}]);
 el.appendChild(chartWrap);
 }
+// 월별 매출 추이 (구글시트 실데이터)
+fetch('/api/kpi-trend').then(function(tr){return tr.json()}).then(function(td){
+var mr=td.monthly_revenue||[];
+if(mr.length>1){
+var trendWrap=document.createElement('div');trendWrap.style.marginTop='20px';
+mkChart(trendWrap,[{title:'월별 매출 추이 (구글시트 실데이터)',fn:function(c){
+new Chart(c,{type:'bar',data:{labels:mr.map(function(r){return r.month}),datasets:[{label:'매출(원)',data:mr.map(function(r){return r.revenue}),backgroundColor:'rgba(249,115,22,0.6)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8B95A6',callback:function(v){return(v/100000000).toFixed(1)+'억'}},grid:{color:'rgba(255,255,255,0.05)'}}}}})
+}}]);
+el.appendChild(trendWrap)}
+}).catch(function(){});
 // API 상태 표시
 var apiNote=document.createElement('div');apiNote.style.cssText='display:flex;align-items:center;gap:8px;margin-top:16px;font-size:10px;color:#4A5568';
 var dot=document.createElement('span');dot.style.cssText='width:6px;height:6px;border-radius:50%;display:inline-block;background:'+(data.source==='live'?'#22C55E':'#4A5568');apiNote.appendChild(dot);
