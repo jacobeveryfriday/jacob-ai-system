@@ -38,6 +38,15 @@ def _make_token(user: str) -> str:
 async def health_check():
     """전체 API 연동 상태 — 7개 서비스"""
     def _chk(key): return "connected" if os.getenv(key) else "not_configured"
+    # 메타: 토큰 있어도 호출 실패 시 warning
+    meta_status = "not_configured"
+    if os.getenv("META_ACCESS_TOKEN"):
+        try:
+            r = req_lib.get(f"https://graph.facebook.com/v18.0/act_{os.getenv('META_AD_ACCOUNT_ID','230720044045370')}/insights",
+                params={"access_token": os.getenv("META_ACCESS_TOKEN"), "fields": "spend", "date_preset": "today"}, timeout=5)
+            meta_status = "connected" if r.status_code == 200 else "warning"
+        except Exception:
+            meta_status = "warning"
     return {
         "status": "ok",
         "timestamp": datetime.now(KST).isoformat(),
@@ -46,7 +55,8 @@ async def health_check():
             "anthropic": _chk("ANTHROPIC_API_KEY"),
             "slack": _chk("SLACK_WEBHOOK_URL"),
             "resend_email": _chk("RESEND_API_KEY"),
-            "meta_ads": _chk("META_ACCESS_TOKEN"),
+            "meta_ads": meta_status,
+            "meta_ads_note": "토큰 갱신 필요" if meta_status == "warning" else "",
             "kakao_b2b": _chk("KAKAO_B2B_API_KEY"),
             "kakao_b2c": _chk("KAKAO_B2C_API_KEY"),
             "naver_works_smtp": _chk("NAVER_WORKS_SMTP_PASSWORD"),
@@ -1733,6 +1743,97 @@ async def api_kpi_trend():
         "monthly_revenue": [{"month": k, "revenue": v} for k, v in sorted(monthly_rev.items())[-12:]],
         "monthly_trend": monthly[-12:],
     }
+
+
+# ===== 광고 수동입력 =====
+ADS_MANUAL_FILE = DATA_DIR / "ads_manual.json"
+
+@app.post("/api/ads-manual")
+async def api_ads_manual_save(request: Request):
+    """광고센터 수동 입력 데이터 저장."""
+    body = await request.json()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    existing = json.loads(ADS_MANUAL_FILE.read_text(encoding="utf-8")) if ADS_MANUAL_FILE.exists() else []
+    entry = {
+        "date": datetime.now(KST).strftime("%Y-%m-%d"),
+        "spend": body.get("spend", 0),
+        "impressions": body.get("impressions", 0),
+        "clicks": body.get("clicks", 0),
+        "cpa": body.get("cpa", 0),
+        "channel": body.get("channel", "manual"),
+        "saved_at": datetime.now(KST).isoformat(),
+    }
+    existing.append(entry)
+    ADS_MANUAL_FILE.write_text(json.dumps(existing[-100:], ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status": "ok", "entry": entry}
+
+@app.get("/api/ads-manual")
+async def api_ads_manual_get():
+    """광고센터 수동 입력 데이터 조회."""
+    if ADS_MANUAL_FILE.exists():
+        return json.loads(ADS_MANUAL_FILE.read_text(encoding="utf-8"))
+    return []
+
+
+# ===== SNS 수동입력 =====
+SNS_MANUAL_FILE = DATA_DIR / "sns_manual.json"
+
+@app.post("/api/sns-manual")
+async def api_sns_manual_save(request: Request):
+    """SNS 수동 입력 데이터 저장."""
+    body = await request.json()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    existing = json.loads(SNS_MANUAL_FILE.read_text(encoding="utf-8")) if SNS_MANUAL_FILE.exists() else []
+    entry = {
+        "date": datetime.now(KST).strftime("%Y-%m-%d"),
+        "channel": body.get("channel", ""),
+        "followers": body.get("followers", 0),
+        "engagement_rate": body.get("engagement_rate", 0),
+        "subscribers": body.get("subscribers", 0),
+        "views": body.get("views", 0),
+        "saved_at": datetime.now(KST).isoformat(),
+    }
+    existing.append(entry)
+    SNS_MANUAL_FILE.write_text(json.dumps(existing[-200:], ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status": "ok", "entry": entry}
+
+@app.get("/api/sns-manual")
+async def api_sns_manual_get():
+    if SNS_MANUAL_FILE.exists():
+        return json.loads(SNS_MANUAL_FILE.read_text(encoding="utf-8"))
+    return []
+
+
+# ===== 소피: SNS 콘텐츠 자동 생성 =====
+@app.get("/api/sophie-content")
+async def api_sophie_content():
+    """소피: Anthropic API로 B2B/B2C SNS 콘텐츠 주제 + 캡션 생성."""
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return {"status": "error", "message": "ANTHROPIC_API_KEY 미설정"}
+    prompt = """공팔리터글로벌 SNS 콘텐츠 전략가 소피입니다.
+
+B2B 인스타(@insight._.lab) 콘텐츠 주제 3개 + 캡션 초안:
+- 인플루언서 마케팅 트렌드, 성공 사례, 인사이트 중심
+- 전문적이고 신뢰감 있는 톤
+
+B2C 인스타(@08l_korea) 콘텐츠 주제 3개 + 캡션 초안 + 해시태그 30개:
+- 뷰티/라이프스타일/트렌드 중심
+- 친근하고 트렌디한 톤
+
+이번 주 추천 콘텐츠를 JSON 형식 없이 깔끔하게 작성해주세요."""
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post("https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={"model": "claude-sonnet-4-20250514", "max_tokens": 1500,
+                      "messages": [{"role": "user", "content": prompt}]})
+            if resp.status_code == 200:
+                text = resp.json()["content"][0]["text"]
+                return {"status": "ok", "content": text, "agent": "소피"}
+            return {"status": "error", "message": resp.text[:200]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.get("/api/cache-clear")

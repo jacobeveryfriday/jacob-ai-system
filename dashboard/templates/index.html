@@ -173,7 +173,44 @@
   <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;overflow:hidden"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="background:#161B27"><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568;text-transform:uppercase">컨택날짜</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">국가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">플랫폼</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">계정명</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">팔로워</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">카테고리</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">진행상태</th><th style="padding:10px 8px;text-align:right;font-size:9px;color:#4A5568">협업단가</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">이메일</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">연락처</th><th style="padding:10px 8px;text-align:left;font-size:9px;color:#4A5568">담당자</th></tr></thead><tbody id="inf-table-body"><tr><td colspan="11" style="text-align:center;padding:20px;color:#4A5568;font-size:12px">로딩중...</td></tr></tbody></table></div><div style="padding:8px 16px;border-top:1px solid #1E2433;display:flex;justify-content:space-between"><p id="inf-filter-count" style="font-size:10px;color:#4A5568">-</p><button onclick="exportTargetCSV()" style="padding:4px 14px;background:#22C55E;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer">CSV 내보내기</button></div></div>
 </div>
 
-<div id="page-ads"></div><div id="page-sns"></div><div id="page-management"></div><div id="page-cs"></div>
+<div id="page-ads">
+<div id="ads-manual-form" style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px;margin-bottom:20px">
+<p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:12px">광고 수동 입력 (메타 토큰 갱신 전 임시)</p>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+<div><label style="font-size:10px;color:#8B95A6">오늘 광고비(원)</label><input id="ads-spend" type="number" value="0" style="width:100%;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;font-family:monospace"></div>
+<div><label style="font-size:10px;color:#8B95A6">노출수</label><input id="ads-impressions" type="number" value="0" style="width:100%;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;font-family:monospace"></div>
+<div><label style="font-size:10px;color:#8B95A6">클릭수</label><input id="ads-clicks" type="number" value="0" style="width:100%;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;font-family:monospace"></div>
+<div><label style="font-size:10px;color:#8B95A6">CPA(원)</label><input id="ads-cpa" type="number" value="0" style="width:100%;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;font-family:monospace"></div>
+</div>
+<button onclick="saveAdsManual()" style="margin-top:10px;padding:8px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
+<span id="ads-manual-msg" style="margin-left:10px;font-size:10px;color:#22C55E"></span>
+</div>
+</div>
+
+<div id="page-sns">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px">
+<p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:12px">SNS 수동 입력</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+<select id="sns-channel" style="padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:11px"><option value="instagram_b2b">B2B 인스타 @insight._.lab</option><option value="instagram_b2c">B2C 인스타 @08l_korea</option><option value="youtube_b2b">유튜브 @08L_insight</option><option value="tiktok_b2b">B2B 틱톡 @08l_insight</option><option value="tiktok_b2c">B2C 틱톡 @08liter_korea</option></select>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div><label style="font-size:10px;color:#8B95A6">팔로워/구독자</label><input id="sns-followers" type="number" value="0" style="width:100%;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;font-family:monospace"></div>
+<div><label style="font-size:10px;color:#8B95A6">인게이지먼트(%)</label><input id="sns-engagement" type="number" step="0.1" value="0" style="width:100%;padding:6px;background:#161B27;border:1px solid #1E2433;border-radius:6px;color:#E8EBF2;font-size:12px;font-family:monospace"></div>
+</div>
+<button onclick="saveSnsManual()" style="padding:8px 20px;background:#F97316;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
+<span id="sns-manual-msg" style="font-size:10px;color:#22C55E"></span>
+</div>
+</div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:20px">
+<p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:12px">소피 콘텐츠 생성</p>
+<p style="font-size:11px;color:#8B95A6;margin-bottom:10px">B2B/B2C 이번 주 콘텐츠 주제 + 캡션 + 해시태그 자동 생성</p>
+<button onclick="generateSophieContent()" style="padding:8px 20px;background:#7C3AED;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">콘텐츠 생성하기</button>
+<div id="sophie-content-result" style="margin-top:12px;font-size:12px;color:#8B95A6;white-space:pre-line;max-height:400px;overflow-y:auto"></div>
+</div>
+</div>
+</div>
+
+<div id="page-management"></div><div id="page-cs"></div>
 </div></main>
 
 <aside class="chat-panel">
@@ -864,6 +901,18 @@ if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A556
 else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
 
 // ===== showPage hook =====
+function saveAdsManual(){
+var d={spend:parseInt(document.getElementById('ads-spend').value)||0,impressions:parseInt(document.getElementById('ads-impressions').value)||0,clicks:parseInt(document.getElementById('ads-clicks').value)||0,cpa:parseInt(document.getElementById('ads-cpa').value)||0};
+fetch('/api/ads-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){var m=document.getElementById('ads-manual-msg');if(m){m.textContent='저장 완료!';setTimeout(function(){m.textContent=''},2000)}}).catch(function(){})}
+
+function saveSnsManual(){
+var d={channel:document.getElementById('sns-channel').value,followers:parseInt(document.getElementById('sns-followers').value)||0,engagement_rate:parseFloat(document.getElementById('sns-engagement').value)||0};
+fetch('/api/sns-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){var m=document.getElementById('sns-manual-msg');if(m){m.textContent='저장 완료!';setTimeout(function(){m.textContent=''},2000)}}).catch(function(){})}
+
+function generateSophieContent(){
+var el=document.getElementById('sophie-content-result');if(el)el.textContent='소피가 콘텐츠를 생성 중...';
+fetch('/api/sophie-content').then(function(r){return r.json()}).then(function(d){if(el)el.textContent=d.content||d.message||'생성 실패'}).catch(function(){if(el)el.textContent='오류 발생'})}
+
 var _origShowPage=showPage;
 showPage=function(pageId){_origShowPage(pageId);
 if(pageId==='brand')loadBrandPipeline();
@@ -915,11 +964,12 @@ var el=document.getElementById('api-status-grid');if(!el)return;while(el.firstCh
 var svc=d.services||{};
 var labels={google_sheets:'Google Sheets',anthropic:'Anthropic AI',slack:'Slack',resend_email:'Resend Email',meta_ads:'메타 광고 API',kakao:'카카오 API',naver_works_smtp:'네이버 웍스 SMTP'};
 Object.keys(labels).forEach(function(k){
-var st=svc[k]||'not_configured';var isOn=st==='connected';var isPending=k==='meta_ads'||k==='kakao';
-var card=document.createElement('div');card.style.cssText='background:#0F1520;border:1px solid #1E2433;border-top:2px solid '+(isOn?'#22C55E':isPending?'#4A5568':'#EF4444')+';border-radius:8px;padding:16px';
+if(k==='meta_ads_note')return;var st=svc[k]||'not_configured';var isOn=st==='connected';var isWarn=st==='warning';var isPending=!isOn&&!isWarn&&(k.indexOf('kakao')>=0||k.indexOf('meta')>=0||k==='instagram');
+var card=document.createElement('div');card.style.cssText='background:#0F1520;border:1px solid #1E2433;border-top:2px solid '+(isOn?'#22C55E':isWarn?'#F59E0B':isPending?'#4A5568':'#EF4444')+';border-radius:8px;padding:16px';
 var nm=document.createElement('p');nm.style.cssText='font-size:12px;font-weight:600;color:#E8EBF2;margin-bottom:8px';nm.textContent=labels[k];card.appendChild(nm);
-var dot=document.createElement('span');dot.style.cssText='display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:'+(isOn?'#22C55E':isPending?'#4A5568':'#EF4444');card.appendChild(dot);
-var stxt=document.createElement('span');stxt.style.cssText='font-size:11px;color:'+(isOn?'#22C55E':isPending?'#4A5568':'#EF4444');stxt.textContent=isOn?'연결됨':isPending&&!isOn?'준비중':'미연결';card.appendChild(stxt);
+var dot=document.createElement('span');dot.style.cssText='display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:'+(isOn?'#22C55E':isWarn?'#F59E0B':isPending?'#4A5568':'#EF4444');card.appendChild(dot);
+var stxt=document.createElement('span');stxt.style.cssText='font-size:11px;color:'+(isOn?'#22C55E':isWarn?'#F59E0B':isPending?'#4A5568':'#EF4444');stxt.textContent=isOn?'연결됨':isWarn?'토큰 갱신 필요':isPending?'준비중':'미연결';card.appendChild(stxt);
+if(isWarn&&svc.meta_ads_note){var nt=document.createElement('p');nt.style.cssText='font-size:9px;color:#F59E0B;margin-top:4px';nt.textContent=svc.meta_ads_note;card.appendChild(nt)}
 el.appendChild(card)})}).catch(function(){})}
 </script>
 </body>
