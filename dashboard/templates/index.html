@@ -222,24 +222,22 @@ tMon.addEventListener('click',function(){tMon.classList.add('active');tDay.class
 // Day KPIs
 mkKpi(dayDiv,[
 ['오늘 매출',String(Math.round((t.revenue||0)/10000)),'만원','watch','누적 '+(m.revenue?(m.revenue/100000000).toFixed(2):'0')+'억'],
-['오늘 인입 DB',String(t.inbound||3),'건','watch','누적 '+(m.total_db||43)+'건'],
-['오늘 유효 DB',String(t.valid||12),'건','watch','전환율 29.5%'],
-['광고 리드 CPA','55,800','원','watch','목표 50,000원'],
-['인플루언서 발굴','28','명','watch','이번 달 확정 N명'],
-['오늘 CS 접수','8','건','on','브랜드 5건 / 인플루언서 3건']
+['오늘 인입 DB',String(t.inbound_db||0),'건','watch','유효 '+String(t.valid_db||0)+' / 무대응 '+String(t.unhandled_db||0)],
+['오늘 유효 DB',String(t.valid_db||0),'건',t.valid_db>0?'on':'risk','전환율 '+(t.inbound_db>0?Math.round(t.valid_db/t.inbound_db*100):0)+'%'],
+['광고 CPA',String(m.roas||0),'x','watch','목표 5만원 이하'],
+['인플루언서 풀',String(Math.round((m.influencer_pool||0)/10000)),'만명','watch','목표 155만'],
+['오늘 CS 접수','-','건','on','실데이터 연동 예정']
 ],3);
 el.appendChild(dayDiv);
 // Month KPIs
 mkKpi(monDiv,[
 ['매출',(m.revenue?(m.revenue/100000000).toFixed(2):'0'),'억원','watch','목표 1.6억'],
-['계약건수',String(m.contract||6),'건','risk','목표 38건'],
-['평균계약단가',((m.avg_price||3700000)/10000).toFixed(0),'만원','watch','목표 420만'],
-['총 광고비',((m.total_spend||24000000)/10000).toFixed(0),'만원','watch',''],
-['총 리드 DB',String(m.total_db||43),'건','on',''],
-['광고 ROAS',String(m.roas||9.41),'x','on',''],
-['인플루언서 풀','140','만명','watch','목표 155만'],
-['SNS 팔로워','24,430','명','watch',''],
-['정부지원 수혜','2','건','on','']
+['계약건수',String(m.contract||0),'건',m.contract>=20?'on':m.contract>=10?'watch':'risk','목표 38건 / '+Math.round((m.contract||0)/38*100)+'%'],
+['평균계약단가',((m.avg_price||0)/10000).toFixed(0),'만원',(m.avg_price||0)>=4200000?'on':'watch','목표 420만'],
+['인입 DB',String(m.inbound_db||0),'건','on','유효 '+String(m.valid_db||0)+'건'],
+['광고 ROAS',String(m.roas||0),'x',m.roas>=5?'on':'watch',''],
+['인플루언서 풀',String(Math.round((m.influencer_pool||0)/10000)),'만명','watch','목표 155만'],
+['계약 달성률',Math.round((m.contract||0)/38*100),'%',(m.contract||0)>=20?'on':'risk','']
 ],3);
 el.appendChild(monDiv);
 // 섹션별 요약 6박스
@@ -248,7 +246,7 @@ var boxData=[
 {title:'브랜드 파이프라인',id:'pipeline-summary',page:'brand',content:'인입DB '+(m.total_db||43)+'건 -> 유효DB '+(m.valid||127)+'건 -> 미팅 '+(pm.meeting||28)+'건 -> 계약 '+(m.contract||6)+'건\n오늘 신규 인입: '+(t.inbound||3)+'건'},
 {title:'맞춤 인플루언서',id:'influencer-summary',page:'influencer',content:'총 풀: 140만명\n오늘 신규 확보: 28명\n이번 달 캠페인: 6건'},
 {title:'광고센터 현황',id:'ads-summary',page:'ads',content:'이번 달 ROAS: '+(m.roas||9.41)+'x\n총 DB: '+(m.total_db||43)+'건 / 광고비: '+((m.total_spend||24000000)/10000).toFixed(0)+'만원'},
-{title:'공식 SNS 현황',id:'sns-summary',page:'sns',content:'B2B 합산: 24,430명 (+680명/월)\nIG 8,420 / TT 12,800 / LI 3,210\n오늘 신규: 60명'},
+{title:'공식 SNS 현황',id:'sns-summary',page:'sns',content:'SNS 실데이터 연동 예정\nInstagram / TikTok / YouTube'},
 {title:'현금흐름 (이번 달)',id:'cashflow-summary',page:'management',content:'매출: '+(m.revenue?(m.revenue/100000000).toFixed(2):'0')+'억원\n목표: 1.6억원\n달성률: '+Math.round((m.revenue||0)/160000000*100)+'%'},
 {title:'CS & 경영지원',id:'cs-summary',page:'cs',content:'브랜드 CS: 오늘 5건 / 대기 2건\n인플루언서 CS: 오늘 3건 / 대기 1건\n정부지원: 진행 2건 / 신청예정 1건'}
 ];
@@ -521,7 +519,14 @@ var msgs=document.getElementById('chatMessages');while(msgs.firstChild)msgs.remo
 // 자동 브리핑 요청
 var loading=document.createElement('div');loading.className='chat-msg agent';loading.style.cssText='color:#4A5568;font-style:italic';loading.textContent=a.name.split(' — ')[0]+' 에이전트 접속 중...';msgs.appendChild(loading);
 fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page:pid,briefing:true})}).then(function(r){return r.json()}).then(function(data){
-msgs.removeChild(loading);var g=document.createElement('div');g.className='chat-msg agent';g.style.whiteSpace='pre-line';g.textContent=data.reply||'브리핑을 준비 중입니다.';var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent=(data.source||'system')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});g.appendChild(ts);msgs.appendChild(g);msgs.scrollTop=msgs.scrollHeight
+msgs.removeChild(loading);var g=document.createElement('div');g.className='chat-msg agent';g.style.whiteSpace='pre-line';g.textContent=data.reply||'브리핑을 준비 중입니다.';var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent=(data.agent||'AI')+' · '+(data.source||'system')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});g.appendChild(ts);
+// 브리핑 후 액션 버튼
+var ab=document.createElement('div');ab.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:10px';
+if(pid==='brand'){var sb=document.createElement('button');sb.style.cssText='padding:8px 18px;background:#FF6B00;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';sb.textContent='발송하기';sb.addEventListener('click',function(){document.getElementById('chatInput').value='발송해줘';sendChat()});ab.appendChild(sb)}
+var lb=document.createElement('button');lb.className='chat-ex-btn';lb.textContent='리스트 보기';lb.addEventListener('click',function(){document.getElementById('chatInput').value=pid==='brand'?'재접촉 리스트 보여줘':'무대응 리스트 보여줘';sendChat()});ab.appendChild(lb);
+var nb=document.createElement('button');nb.className='chat-ex-btn';nb.textContent='다음 액션 3가지';nb.addEventListener('click',function(){document.getElementById('chatInput').value='오늘/이번주/이번달 액션 각 1가지 알려줘';sendChat()});ab.appendChild(nb);
+g.appendChild(ab);
+msgs.appendChild(g);msgs.scrollTop=msgs.scrollHeight
 }).catch(function(){msgs.removeChild(loading);var g=document.createElement('div');g.className='chat-msg agent';g.textContent=a.name+' 에이전트입니다. 무엇을 도와드릴까요?';var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent='System';g.appendChild(ts);msgs.appendChild(g)})}
 
 document.getElementById('chatSendBtn').addEventListener('click',sendChat);
