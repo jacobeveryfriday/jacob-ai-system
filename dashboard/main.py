@@ -1584,16 +1584,91 @@ async def _agent_auto_cycle():
                     "detail": f"{svc} API 키 미설정 또는 만료. Railway Variables 확인 필요.",
                     "timestamp": now_ts, "resolved": False})
 
-        # 5. 결과 저장 + 슬랙 공유
+        # 5. 소피 — SNS 콘텐츠 생성 + 슬랙 + 이메일
+        try:
+            sophie_result = await api_sophie_content()
+            if sophie_result.get("status") == "ok":
+                content = sophie_result.get("content", "")
+                alerts_posted.append({"id": _id(), "agent": "소피", "severity": "info",
+                    "summary": "📱 이번 주 SNS 콘텐츠 전략 생성 완료", "detail": content[:200],
+                    "timestamp": now_ts, "resolved": False})
+                _send_email(AGENT_EMAILS["소피"], "[소피] 이번 주 SNS 콘텐츠 전략", _build_pitch_html("SNS 콘텐츠", content), "소피")
+        except Exception as e:
+            print(f"Sophie content error: {e}")
+
+        # 6. 피치 — 인플루언서 풀 분석 + 이메일
+        try:
+            inf = await api_influencer_db()
+            stats = inf.get("stats", {})
+            bc = stats.get("by_country", {})
+            total = inf.get("total", 0)
+            pitch_summary = f"인플루언서 풀: {total:,}명\n국가별: {', '.join(f'{k}:{v}' for k,v in sorted(bc.items(), key=lambda x:-x[1])[:5])}"
+            alerts_posted.append({"id": _id(), "agent": "피치", "severity": "info",
+                "summary": f"🔍 인플루언서 풀 현황: {total:,}명", "detail": pitch_summary,
+                "timestamp": now_ts, "resolved": False})
+            _send_email(AGENT_EMAILS["피치"], "[피치] 인플루언서 풀 일일 보고서", _build_pitch_html("인플루언서", pitch_summary), "피치")
+        except Exception as e:
+            print(f"Pitch analysis error: {e}")
+
+        # 7. 하나 — CS 미응답 현황 + 이메일
+        try:
+            unhandled_count = t.get("unhandled", 0)
+            hana_summary = f"금일 미응답 CS: {unhandled_count}건\n즉시 응대 필요 건: {unhandled_count}건"
+            if unhandled_count > 0:
+                alerts_posted.append({"id": _id(), "agent": "하나", "severity": "warning",
+                    "summary": f"📞 미응답 CS {unhandled_count}건 — 응대 필요", "detail": hana_summary,
+                    "timestamp": now_ts, "resolved": False})
+            _send_email(AGENT_EMAILS["하나"], "[하나] CS 미응답 현황", _build_pitch_html("CS", hana_summary), "하나")
+        except Exception as e:
+            print(f"Hana CS error: {e}")
+
+        # 8. 레이 — 세금계산서 체크리스트 + 이메일
+        try:
+            ct_count = m.get("contract", 0)
+            ray_summary = f"이번달 세금계산서: {ct_count}건\n매출: {m.get('revenue',0):,}원\n체크: 미처리 계산서, 입금 확인, 정부지원 마감"
+            alerts_posted.append({"id": _id(), "agent": "레이", "severity": "info",
+                "summary": f"📋 경영지원 일일 체크리스트", "detail": ray_summary,
+                "timestamp": now_ts, "resolved": False})
+            _send_email(AGENT_EMAILS["레이"], "[레이] 경영지원 일일 체크리스트", _build_pitch_html("경영지원", ray_summary), "레이")
+        except Exception as e:
+            print(f"Ray management error: {e}")
+
+        # 9. 루나 — 재접촉 캠페인 자동 실행
+        try:
+            recontact = await _run_recontact_campaign(dry_run=False, limit=5)
+            sent = recontact.get("sent", 0)
+            total_leads = recontact.get("total_leads", 0)
+            if total_leads > 0:
+                alerts_posted.append({"id": _id(), "agent": "루나", "severity": "info",
+                    "summary": f"✉️ 재접촉 캠페인: {total_leads}건 대상, {sent}건 발송", "detail": "",
+                    "timestamp": now_ts, "resolved": False})
+        except Exception as e:
+            print(f"Luna recontact error: {e}")
+
+        # 10. 카일 — 전체 브리핑 이메일 발송
+        try:
+            briefing = (
+                f"📊 전체 KPI 브리핑 — {datetime.now(KST).strftime('%Y-%m-%d')}\n\n"
+                f"매출: {m.get('revenue',0):,}원 / 목표 1.6억\n"
+                f"계약: {m.get('contract',0)}건 / 목표 38건\n"
+                f"인입DB: {t.get('inbound',0)}건 / 유효: {t.get('valid',0)}건\n"
+                f"무대응: {t.get('unhandled',0)}건\n\n"
+                f"경고 {len(alerts_posted)}건 발생"
+            )
+            _send_email(AGENT_EMAILS["카일"], "[카일] 전체 에이전트 일일 브리핑", _build_pitch_html("KPI 브리핑", briefing), "카일")
+        except Exception as e:
+            print(f"Kyle briefing error: {e}")
+
+        # 11. 결과 저장 + 슬랙 공유
         if alerts_posted:
             existing = load_alerts()
             existing.extend(alerts_posted)
             save_alerts(existing[-200:])
             slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
             if slack_url:
-                text = f"🚨 *[카일] 자동 KPI 점검 — {len(alerts_posted)}건 경고*\n"
-                for a in alerts_posted[:5]:
-                    text += f"• {a['summary']}\n"
+                text = f"🚨 *[카일] 09:00 전체 에이전트 자율실행 — {len(alerts_posted)}건*\n"
+                for a in alerts_posted[:8]:
+                    text += f"• [{a['agent']}] {a['summary']}\n"
                 text += "\n상세: https://dashboard-production-b2bd.up.railway.app/ → 알림 센터"
                 try:
                     async with httpx.AsyncClient(timeout=10) as client:
