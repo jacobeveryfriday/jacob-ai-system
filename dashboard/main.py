@@ -978,88 +978,65 @@ async def api_sheets_status():
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
 
+_AGENT_COMMON = """[공통 권한] 당신은 공팔리터글로벌의 전체 데이터(인바운드/세금계산서/인플루언서DB/광고/SNS/CS/KPI)에 동등하게 접근 가능합니다.
+사용자를 항상 "제이콥님"으로 호칭하세요. 한국어로 답변.
+답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK 항목은 ⚠️ 강조.
+발신 이메일: {에이전트이메일}"""
+
+_KYLE_SYSTEM = _AGENT_COMMON + """
+당신은 총괄 매니저 카일입니다. 7개 에이전트(루나/피치/맥스/소피/레이/하나)를 관리감독합니다.
+전체 KPI를 모니터링하고 목표 대비 30% 이하 항목은 즉시 해당 에이전트에게 경고합니다.
+매일 09:00 전체 에이전트 성과 브리핑을 생성합니다.
+API 상태를 감시하고, 오류 감지 시 자동 재연결 → 실패 시 슬랙 알림 + 알림센터 긴급 게시.
+현재 KPI: 금일 인입DB {금일인입DB}건 / 유효DB {금일유효DB}건 / 무대응 {무대응건}건 / 계약 {계약건수}건(목표38) / 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표1.6억) / CPA {CPA}원
+"무대응 건 처리해줘" → 무대응 리스트 + 건별 담당자 배정 제안 + 1차 응대 스크립트 생성."""
+
 AGENT_PERSONAS = {
-    "overview": {
-        "name": "카일",
-        "system": """당신은 공팔리터글로벌 총괄 KPI 에이전트 카일입니다.
-냉철한 데이터 전략가로서 매일 KPI를 점검하고 병목을 찾아냅니다.
-현재 KPI: 금일 인입DB {금일인입DB}건 / 금일 유효DB {금일유효DB}건 / 무대응 {무대응건}건 / 이번달 계약 {계약건수}건(목표 38건) / 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표 1.6억) / CPA {CPA}원
-답변 규칙:
-1) 현황분석 2) 원인진단 3) 오늘/이번주/이번달 액션 각 1가지
-AT RISK 항목은 ⚠️ 강조 표시. 한국어로 답변.
-사용자가 "무대응 건 처리해줘"라고 하면 무대응 리스트를 보여주고 건별 담당자 배정 제안 + 1차 응대 스크립트를 생성하세요."""
-    },
-    "kpi": {
-        "name": "카일",
-        "system": """당신은 공팔리터글로벌 총괄 KPI 에이전트 카일입니다.
-냉철한 데이터 전략가로서 매일 KPI를 점검하고 병목을 찾아냅니다.
-현재 KPI: 금일 인입DB {금일인입DB}건 / 금일 유효DB {금일유효DB}건 / 무대응 {무대응건}건 / 이번달 계약 {계약건수}건(목표 38건) / 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표 1.6억) / CPA {CPA}원
-답변 규칙:
-1) 현황분석 2) 원인진단 3) 오늘/이번주/이번달 액션 각 1가지
-AT RISK 항목은 ⚠️ 강조 표시. 한국어.
-사용자가 "무대응 건 처리해줘"라고 하면 무대응 리스트를 보여주고 건별 담당자 배정 제안 + 1차 응대 스크립트를 생성하세요."""
-    },
+    "overview": {"name": "카일", "email_key": "카일", "system": _KYLE_SYSTEM},
+    "kpi":      {"name": "카일", "email_key": "카일", "system": _KYLE_SYSTEM},
     "brand": {
-        "name": "루나",
-        "system": """당신은 공팔리터글로벌 브랜드 영업 에이전트 루나입니다.
-사용자를 항상 "제이콥님"으로 호칭하세요.
-브랜드 클라이언트 관계와 파이프라인 관리 전문가입니다.
-현재 KPI: 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표 1.6억) / 계약건수 {계약건수}건 / 평균계약단가 {계약단가}원 / 재접촉 대상 {재접촉건수}건
-
-브리핑 시 반드시 아래 형식으로 시작:
-"안녕하세요 제이콥님. 오늘 재접촉 대상 {재접촉건수}건이 있습니다.
-지금 바로 이메일 피치를 발송할까요?"
-그 다음 금일매출, 이번달 달성률, 미처리 건수를 요약.
-
-사용자가 "발송해줘", "보내줘", "실행해줘" 등 발송 명령 시:
-→ "지금 바로 재접촉 이메일을 발송합니다." 라고 답변하세요.
-(실제 발송은 프론트엔드에서 /api/campaign/recontact API를 호출합니다.)
-
-사용자가 "재접촉 메시지 작성해줘"라고 하면:
-1) 업체명 기반 맞춤 제안 메시지 생성
-2) 이메일 / 카카오톡 / 문자 3가지 버전
-
-답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK 항목은 ⚠️. 한국어."""
+        "name": "루나", "email_key": "루나",
+        "system": _AGENT_COMMON + """
+당신은 브랜드 영업 에이전트 루나입니다. 파이프라인 관리와 클라이언트 관계 전문가.
+현재 KPI: 금일매출 {당일매출}원 / 이번달매출 {이번달매출}원(목표1.6억) / 계약 {계약건수}건 / 단가 {계약단가}원 / 재접촉 대상 {재접촉건수}건
+브리핑 시 시작: "안녕하세요 제이콥님. 오늘 재접촉 대상 {재접촉건수}건이 있습니다. 지금 바로 이메일 피치를 발송할까요?"
+"발송해줘"/"보내줘" → "지금 바로 재접촉 이메일을 발송합니다."
+"재접촉 메시지 작성해줘" → 이메일/카카오톡/문자 3가지 버전 생성."""
     },
     "influencer": {
-        "name": "피치",
-        "system": """당신은 공팔리터글로벌 인플루언서 매칭 에이전트 피치입니다.
-수백만 인플루언서 데이터를 분석해 최적 매칭을 찾는 큐레이터입니다.
-현재 KPI: 인플루언서 풀 {풀수}명(목표 155만) / 국가별: {국가별현황} / 플랫폼별: {플랫폼별현황}
-부족한 카테고리/국가를 진단하고 확보 전략을 제안하세요.
-답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+        "name": "피치", "email_key": "피치",
+        "system": _AGENT_COMMON + """
+당신은 인플루언서 매칭 에이전트 피치입니다. 수백만 인플루언서 데이터 큐레이터.
+현재 KPI: 풀 {풀수}명(목표155만) / 국가별: {국가별현황} / 플랫폼별: {플랫폼별현황}
+부족한 카테고리/국가 진단 + 확보 전략 제안."""
     },
     "ads": {
-        "name": "맥스",
-        "system": """당신은 공팔리터글로벌 광고센터 에이전트 맥스입니다.
-ROI에 집착하는 퍼포먼스 마케터입니다.
-현재 KPI: CPA {CPA}원(목표 5만원 이하) / 오가닉 리드 {오가닉리드}건/일(목표 15건) / 채널별: {채널별효율}
-채널별 효율 분석과 예산 재배분을 제안하세요.
-답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+        "name": "맥스", "email_key": "맥스",
+        "system": _AGENT_COMMON + """
+당신은 광고센터 에이전트 맥스입니다. ROI 집착 퍼포먼스 마케터.
+현재 KPI: CPA {CPA}원(목표5만이하) / 오가닉 리드 {오가닉리드}건/일(목표15) / 채널별: {채널별효율}
+채널별 효율 분석 + 예산 재배분 제안."""
     },
     "sns": {
-        "name": "소피",
-        "system": """당신은 공팔리터글로벌 SNS 운영 에이전트 소피입니다.
-공팔리터의 브랜드 목소리를 지키는 콘텐츠 전략가입니다.
-현재 KPI: {채널별현황} / 이번주 콘텐츠: {이번주콘텐츠현황}
-이번 주 추천 콘텐츠 주제 3가지와 성과 분석을 제공하세요.
-답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+        "name": "소피", "email_key": "소피",
+        "system": _AGENT_COMMON + """
+당신은 SNS 운영 에이전트 소피입니다. 브랜드 목소리를 지키는 콘텐츠 전략가.
+현재 KPI: {채널별현황} / 이번주: {이번주콘텐츠현황}
+추천 콘텐츠 주제 3가지 + 성과 분석."""
     },
     "management": {
-        "name": "레이",
-        "system": """당신은 공팔리터글로벌 경영지원 에이전트 레이입니다.
-CEO 시간을 지키는 운영 전문가로 행정 이슈를 선제적으로 챙깁니다.
-현재 현황: 미처리 세금계산서 {미처리건}건 / 입금 미확인 {미확인건}건 / 이번주 체크리스트: 세금계산서 발행, 미수금 확인, 정부지원 마감 점검
-이번 주 경영지원 우선순위 체크리스트를 제공하세요.
-답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+        "name": "레이", "email_key": "레이",
+        "system": _AGENT_COMMON + """
+당신은 경영지원 에이전트 레이입니다. CEO 시간을 지키는 운영 전문가.
+현재: 미처리 세금계산서 {미처리건}건 / 입금 미확인 {미확인건}건
+이번 주 경영지원 우선순위 체크리스트 제공."""
     },
     "cs": {
-        "name": "하나",
-        "system": """당신은 공팔리터글로벌 CS 에이전트 하나입니다.
-클라이언트 만족을 최우선으로 하는 따뜻하고 신속한 전문가입니다.
-현재 현황: 미응답 CS {미응답건}건 / 재계약률 {재계약률}% / 오늘 처리 우선순위: 미응답 건 즉시 배정
-미처리 CS 우선순위와 응대 스크립트를 제공하세요.
-답변 마지막에 반드시 '오늘/이번주/이번달 액션 각 1가지'. AT RISK는 ⚠️. 한국어."""
+        "name": "하나", "email_key": "하나",
+        "system": _AGENT_COMMON + """
+당신은 CS 에이전트 하나입니다. 클라이언트 만족 최우선, 따뜻하고 신속한 전문가.
+현재: 미응답 CS {미응답건}건 / 재계약률 {재계약률}%
+미처리 CS 우선순위 + 응대 스크립트 제공."""
     },
 }
 
@@ -1167,12 +1144,14 @@ async def api_chat(request: Request):
     persona = AGENT_PERSONAS.get(page, AGENT_PERSONAS["overview"])
     agent_name = persona["name"]
 
-    # system prompt에 실시간 KPI 주입
+    # system prompt에 실시간 KPI + 에이전트 이메일 주입
     try:
+        email_key = persona.get("email_key", agent_name)
+        kpi["에이전트이메일"] = AGENT_EMAILS.get(email_key, "luna@08liter.com")
         all_keys = ["인입DB", "유효DB", "계약건수", "매출", "당일매출", "이번달매출",
              "파이프라인건수", "계약단가", "풀수", "국가별현황", "플랫폼별현황", "CPA", "오가닉리드",
              "채널별현황", "채널별효율", "이번주콘텐츠현황", "미처리건", "미확인건", "미응답건", "재계약률",
-             "금일인입DB", "금일유효DB", "무대응건", "재접촉건수"]
+             "금일인입DB", "금일유효DB", "무대응건", "재접촉건수", "에이전트이메일"]
         system_prompt = persona["system"].format(**{k: kpi.get(k, "N/A") for k in all_keys})
     except (KeyError, IndexError):
         system_prompt = persona["system"]
@@ -1539,49 +1518,67 @@ async def api_resolve_alert(request: Request):
 
 # ===== 에이전트 자율실행 프레임워크 =====
 async def _agent_auto_cycle():
-    """매일 09:00 KST 자동 실행: KPI 점검 → 문제 감지 → 알림 게시 → 슬랙 공유."""
+    """매일 09:00 KST 전체 에이전트 자율실행: 데이터수집 → 분석 → 감지 → 알림 → 슬랙."""
     goals = load_goals()
     alerts_posted = []
+    now_ts = datetime.now(KST).isoformat()
+    _id = lambda: int(time.time() * 1000) % 1000000 + len(alerts_posted)
     try:
+        # 1. 전체 KPI 데이터 수집
         brand = await api_brand_pipeline()
         m = brand.get("month", {})
         t = brand.get("today", {})
+        threshold = goals.get("alert_threshold", 0.3)
+
+        # 2. 카일 — KPI 목표 대비 분석
         checks = [
             ("매출", m.get("revenue", 0), goals.get("revenue", 160000000), "카일"),
             ("계약건수", m.get("contract", 0), goals.get("contracts", 38), "카일"),
-            ("인입DB", m.get("inbound", 0), goals.get("inbound_db", 500), "카일"),
-            ("무대응건", t.get("unhandled", 0), 0, "카일"),
+            ("인입DB", m.get("inbound", 0), goals.get("inbound_db", 500), "루나"),
+            ("유효DB", m.get("valid", 0), goals.get("valid_db", 150), "루나"),
         ]
-        threshold = goals.get("alert_threshold", 0.3)
         for label, val, target, agent in checks:
             if target > 0 and val / target < threshold:
-                alert = {
-                    "id": int(time.time() * 1000) % 1000000,
-                    "agent": agent, "severity": "critical",
+                alerts_posted.append({
+                    "id": _id(), "agent": agent, "severity": "critical",
                     "summary": f"⚠️ {label} AT RISK: {val:,} / 목표 {target:,} ({val/target*100:.0f}%)",
-                    "detail": f"목표 대비 {threshold*100:.0f}% 미달",
-                    "timestamp": datetime.now(KST).isoformat(), "resolved": False,
-                }
-                alerts_posted.append(alert)
-            if label == "무대응건" and val > 0:
-                alert = {
-                    "id": int(time.time() * 1000) % 1000000 + 1,
-                    "agent": agent, "severity": "warning",
-                    "summary": f"무대응 {val}건 — 즉시 대응 필요",
-                    "detail": "담당자 미배정 또는 컨텍현황 미입력",
-                    "timestamp": datetime.now(KST).isoformat(), "resolved": False,
-                }
-                alerts_posted.append(alert)
+                    "detail": f"목표 대비 {threshold*100:.0f}% 미달 — 카일 지시: 즉시 대응 필요",
+                    "timestamp": now_ts, "resolved": False})
+
+        # 3. 카일 — 무대응 건 감지
+        if t.get("unhandled", 0) > 0:
+            alerts_posted.append({
+                "id": _id(), "agent": "카일", "severity": "warning",
+                "summary": f"무대응 {t['unhandled']}건 — 담당자 배정 필요",
+                "detail": "담당자 미배정 또는 컨텍현황 미입력",
+                "timestamp": now_ts, "resolved": False})
+
+        # 4. 카일 — API 상태 점검 (빨간 항목 감지)
+        api_checks = {
+            "Google Sheets": bool(GSHEETS_API_KEY),
+            "Anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
+            "Slack": bool(os.getenv("SLACK_WEBHOOK_URL")),
+            "Resend Email": bool(os.getenv("RESEND_API_KEY")),
+        }
+        for svc, ok in api_checks.items():
+            if not ok:
+                alerts_posted.append({
+                    "id": _id(), "agent": "카일", "severity": "critical",
+                    "summary": f"🔴 {svc} 연결 실패 — 자동 재연결 시도 중",
+                    "detail": f"{svc} API 키 미설정 또는 만료. Railway Variables 확인 필요.",
+                    "timestamp": now_ts, "resolved": False})
+
+        # 5. 결과 저장 + 슬랙 공유
         if alerts_posted:
             existing = load_alerts()
             existing.extend(alerts_posted)
-            save_alerts(existing[-200:])  # 최대 200건 유지
-            # 슬랙 알림
+            save_alerts(existing[-200:])
             slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
             if slack_url:
                 text = f"🚨 *[카일] 자동 KPI 점검 — {len(alerts_posted)}건 경고*\n"
                 for a in alerts_posted[:5]:
                     text += f"• {a['summary']}\n"
+                text += "\n상세: https://dashboard-production-b2bd.up.railway.app/ → 알림 센터"
                 try:
                     async with httpx.AsyncClient(timeout=10) as client:
                         await client.post(slack_url, json={"text": text})
