@@ -62,8 +62,8 @@ async def health_check():
             "resend_email": _chk("RESEND_API_KEY"),
             "meta_ads": meta_status,
             "meta_ads_note": meta_note,
-            "kakao_b2b": _chk("KAKAO_B2B_API_KEY"),
-            "kakao_b2c": _chk("KAKAO_B2C_API_KEY"),
+            "kakao_b2b": "connected" if os.getenv("KAKAO_B2B_API_KEY") or os.getenv("KAKAO_REST_API_KEY") else "not_configured",
+            "kakao_b2c": "connected" if os.getenv("KAKAO_B2C_API_KEY") or os.getenv("KAKAO_REST_API_KEY") else "not_configured",
             "naver_works_smtp": _chk("NAVER_WORKS_SMTP_PASSWORD"),
             "instagram": _chk("META_INSTAGRAM_TOKEN"),
         },
@@ -2235,8 +2235,8 @@ async def api_meta_ads(date_preset: str = Query("today")):
 @app.get("/api/kakao-channel")
 async def api_kakao_channel():
     """카카오 채널 상태."""
-    b2b_key = os.getenv("KAKAO_B2B_API_KEY", "")
-    b2c_key = os.getenv("KAKAO_B2C_API_KEY", "")
+    b2b_key = os.getenv("KAKAO_B2B_API_KEY", "") or os.getenv("KAKAO_REST_API_KEY", "")
+    b2c_key = os.getenv("KAKAO_B2C_API_KEY", "") or os.getenv("KAKAO_REST_API_KEY", "")
     b2b = os.getenv("KAKAO_B2B_CHANNEL", "08liter_b2b")
     b2c = os.getenv("KAKAO_B2C_CHANNEL", "08liter_korea")
     return {
@@ -2939,6 +2939,39 @@ async def api_pitch_outbound():
         "note": "피치에이전트 발송로그 기반 — 실시간 연동 후 실데이터 전환"
     }
 
+
+import asyncio
+import threading
+
+def _cache_warm():
+    """서버 시작 시 구글시트 데이터를 미리 로드."""
+    if not GSHEETS_API_KEY:
+        return
+    try:
+        fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+        fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+        fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
+        print("[CACHE] 구글시트 데이터 사전 로드 완료")
+    except Exception as e:
+        print(f"[CACHE] 사전 로드 오류: {e}")
+
+def _cache_refresh_loop():
+    """10분마다 백그라운드에서 캐시 갱신."""
+    import time as _time
+    while True:
+        _time.sleep(600)
+        try:
+            _cache.clear()
+            _cache_time.clear()
+            _cache_warm()
+            print("[CACHE] 백그라운드 갱신 완료")
+        except Exception:
+            pass
+
+# 서버 시작 시 캐시 워밍 + 백그라운드 갱신 스레드
+_cache_warm()
+_bg_thread = threading.Thread(target=_cache_refresh_loop, daemon=True)
+_bg_thread.start()
 
 if __name__ == "__main__":
     import uvicorn

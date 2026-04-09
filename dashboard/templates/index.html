@@ -11,7 +11,7 @@
 /* ===== Legacy Dashboard Layout (3-column) on McKinsey base ===== */
 :root {
   --sidebar-width: 200px;
-  --chat-width: 360px;
+  --chat-width: 320px;
   --header-height: 0px;
   --bg-primary: #F8F7F5;
   --bg-secondary: #FFFFFF;
@@ -87,7 +87,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 .btn-primary { background:var(--accent-orange); color:#fff; }
 .btn-secondary { background:transparent; border:0.5px solid var(--border); color:var(--text-secondary); }
 .btn-sm { padding:6px 12px; font-size:11px; }
-.chat-panel { background:var(--bg-secondary); border-left:0.5px solid var(--border); display:flex; flex-direction:column; height:100vh; }
+.chat-panel { background:var(--bg-secondary); border-left:0.5px solid var(--border); display:flex !important; flex-direction:column; height:100vh; min-width:280px; max-width:var(--chat-width); }
 .chat-messages { flex:1; overflow-y:auto; padding:16px; }
 .chat-msg { padding:10px 14px; border-radius:8px; margin-bottom:8px; font-size:12px; line-height:1.6; max-width:90%; }
 .chat-msg.agent { background:var(--bg-tertiary); color:var(--text-primary); align-self:flex-start; }
@@ -99,7 +99,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 .chat-send-btn { background:var(--accent-orange); color:#fff; border:none; border-radius:8px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
 .sidebar-backdrop { display:none; }
 @media(max-width:1199px){.app-layout{grid-template-columns:var(--sidebar-width) 1fr var(--chat-width)!important}.chat-panel{display:flex!important}}
-@media(max-width:767px){.app-layout{grid-template-columns:1fr!important}.chat-panel{display:none!important}.sidebar{display:none}.mobile-header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border)}}
+@media(max-width:767px){.app-layout{grid-template-columns:1fr!important}.chat-panel{display:none!important;position:fixed;top:0;right:0;bottom:0;width:85vw;max-width:360px;z-index:300;box-shadow:-4px 0 20px rgba(0,0,0,0.1)}.chat-panel.open{display:flex!important}.sidebar{display:none}.mobile-header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border)}}
 [id^="page-"]{display:none}[id^="page-"].active{display:block}
 .kpi-detail{font-size:11px;color:var(--text-secondary);margin-top:2px}.kpi-detail .v{color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-weight:600}.kpi-detail .up{color:var(--status-on);font-family:'JetBrains Mono',monospace;font-weight:600}
 .kpi-progress{margin-top:8px}.kpi-progress-bar{height:3px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden}.kpi-progress-fill{height:100%;border-radius:2px}.kpi-progress-fill.on{background:var(--status-on)}.kpi-progress-fill.watch{background:var(--status-watch)}.kpi-progress-fill.risk{background:var(--status-risk)}
@@ -236,12 +236,24 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-brand">
-  <!-- 루나 에이전트 KPI -->
-  <div class="agent-kpi-grid">
-    <div class="agent-kpi-item" style="border-top-color:#C4332B"><div class="label">아웃바운드 발송</div><div class="value" id="brand-agent-sent">—</div><div class="note">이메일 피치</div></div>
-    <div class="agent-kpi-item" style="border-top-color:#B8860B"><div class="label">미팅 유도</div><div class="value" id="brand-agent-meetings">—</div><div class="note">답변 → 미팅 전환</div></div>
-    <div class="agent-kpi-item" style="border-top-color:#1A7A4C"><div class="label">계약 전환</div><div class="value" id="brand-agent-contracts">—</div><div class="note">이번달 기준</div></div>
-    <div class="agent-kpi-item" style="border-top-color:#1B2A4A"><div class="label">에이전트 상태</div><div class="value" style="font-size:16px;color:#1A7A4C">정상 운영</div></div>
+  <!-- 피치 에이전트 — 인바운드 + 아웃바운드 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">인바운드 성과</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">금일 문의</p><p id="pitch-ib-today" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">이번달 누적</p><p id="pitch-ib-month" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅 전환</p><p id="pitch-ib-meetings" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
+      </div>
+    </div>
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">아웃바운드 성과</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">이메일 발송</p><p id="brand-agent-sent" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅 유도</p><p id="brand-agent-meetings" style="font-family:monospace;font-size:20px;font-weight:700;color:#B8860B">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">계약 전환</p><p id="brand-agent-contracts" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
+      </div>
+    </div>
   </div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">일간</button>
@@ -308,12 +320,31 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-influencer">
-  <!-- 피치 에이전트 KPI -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">아웃바운드 발송</p><p id="pitch-agent-sent" style="font-family:monospace;font-size:22px;font-weight:700;color:#1B2A4A">—</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">피치 에이전트 이메일 발송</p></div>
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">답변 수신</p><p id="pitch-agent-replied" style="font-family:monospace;font-size:22px;font-weight:700;color:#1A7A4C">—</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">답변율 기반</p></div>
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">매칭 완료</p><p id="pitch-agent-matched" style="font-family:monospace;font-size:22px;font-weight:700;color:#2D4A7A">—</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">캠페인 연결</p></div>
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">에이전트 상태</p><p id="pitch-agent-status" style="font-family:monospace;font-size:22px;font-weight:700;color:#B8860B">정상</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">실시간 모니터링</p></div>
+  <!-- 루나 에이전트 — 당일+누적+인바운드 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">당일 아웃바운드</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">발송</p><p id="pitch-agent-sent" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">답변</p><p id="pitch-agent-replied" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">매칭</p><p id="pitch-agent-matched" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">—</p></div>
+      </div>
+    </div>
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">이번달 누적</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">총 발송</p><p id="luna-month-sent" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">총 답변</p><p id="luna-month-replied" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">총 매칭</p><p id="luna-month-matched" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">—</p></div>
+      </div>
+    </div>
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">인바운드 (신규 지원)</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">신규 지원</p><p id="luna-ib-new" style="font-family:monospace;font-size:20px;font-weight:700;color:#B8860B">—</p></div>
+        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">캠페인 배정</p><p id="luna-ib-assigned" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
+      </div>
+    </div>
   </div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
     <button onclick="setInfMainTab('members')" id="inf-main-tab-members" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">플랫폼 회원현황</button>
@@ -1232,8 +1263,7 @@ document.getElementById('inf-tab-monthly').style.color=tab==='monthly'?'#fff':'#
 function toggleTask(el){var span=el.parentElement.querySelector('span');
 if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A5568'}
 else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
-function toggleMobileChat(){var cp=document.querySelector('.chat-panel');if(!cp)return;
-if(cp.style.display==='flex'){cp.style.display='none'}else{cp.style.display='flex';cp.style.position='fixed';cp.style.top='0';cp.style.right='0';cp.style.bottom='0';cp.style.width='85vw';cp.style.maxWidth='360px';cp.style.zIndex='300'}}
+function toggleMobileChat(){var cp=document.querySelector('.chat-panel');if(!cp)return;cp.classList.toggle('open')}
 
 // ===== showPage hook =====
 // ===== 인플루언서 차트 + KPI =====
@@ -1364,19 +1394,31 @@ fetch('/api/sophie-content').then(function(r){return r.json()}).then(function(d)
 
 // 에이전트 성과 데이터 로드
 function loadAgentPerf(){
-fetch('/api/agent-performance').then(function(r){return r.json()}).then(function(d){
+Promise.all([
+  fetch('/api/agent-performance').then(function(r){return r.json()}),
+  fetch('/api/kpi-summary').then(function(r){return r.json()})
+]).then(function(res){
+var d=res[0],kpi=res[1];
 var t=d.today||{};
-// 피치 (브랜드)
+// 피치 (브랜드) — 아웃바운드
 var pitch=t['피치']||{};
 var el1=document.getElementById('brand-agent-sent');if(el1)el1.textContent=(pitch.email_sent||0)+(pitch.crm_newsletter||0);
 var el2=document.getElementById('brand-agent-meetings');if(el2)el2.textContent=pitch.meeting_invite||0;
 var el3=document.getElementById('brand-agent-contracts');if(el3)el3.textContent=pitch.inbound_processed||0;
 var ps=document.getElementById('pitch-sent');if(ps)ps.textContent=(pitch.email_sent||0);
-// 루나 (인플루언서)
+// 피치 — 인바운드 (구글시트 기반)
+var tm=kpi.today||{},mm=kpi.month||{};
+var ib1=document.getElementById('pitch-ib-today');if(ib1)ib1.textContent=tm.inbound_db||0;
+var ib2=document.getElementById('pitch-ib-month');if(ib2)ib2.textContent=mm.inbound_db||0;
+var ib3=document.getElementById('pitch-ib-meetings');if(ib3)ib3.textContent=pitch.meeting_invite||0;
+// 루나 (인플루언서) — 당일
 var luna=t['루나']||{};
 var la1=document.getElementById('pitch-agent-sent');if(la1)la1.textContent=(luna.email_sent||0)+(luna.outbound_sent||0);
 var la2=document.getElementById('pitch-agent-replied');if(la2)la2.textContent=luna.reply_received||0;
 var la3=document.getElementById('pitch-agent-matched');if(la3)la3.textContent=luna.match_completed||0;
+// 루나 — 인바운드
+var inf=kpi.month||{};
+var lbn=document.getElementById('luna-ib-new');if(lbn)lbn.textContent=luna.welcome_sent||0;
 }).catch(function(){})}
 loadAgentPerf();
 
