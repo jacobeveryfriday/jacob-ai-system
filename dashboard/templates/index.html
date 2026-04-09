@@ -1339,7 +1339,7 @@ fetch('/api/alerts-board').then(function(r){return r.json()}).then(function(d){
 var el=document.getElementById('alertBoard');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
 var alerts=d.alerts||[];
 if(agentFilter)alerts=alerts.filter(function(a){return a.agent===agentFilter});
-if(!alerts.length){var p=document.createElement('p');p.style.cssText='color:#9B9B9B;font-size:12px;padding:20px';p.textContent='알림 없음. KPI 점검 실행 버튼을 눌러주세요.';el.appendChild(p);return}
+if(!alerts.length){fetch('/api/agent-cycle').then(function(r){return r.json()}).then(function(){loadAlertBoard()}).catch(function(){var p=document.createElement('p');p.style.cssText='color:#9B9B9B;font-size:12px;padding:20px';p.textContent='알림 데이터를 불러오는 중...';el.appendChild(p)});return}
 var agentColors={'카일':'#1B2A4A','루나':'#2D4A7A','피치':'#3D6A9A','맥스':'#C4332B','소피':'#7A5C3A','레이':'#1A7A4C','하나':'#B8860B'};
 alerts.forEach(function(a){
 var card=document.createElement('div');card.style.cssText='background:#FFFFFF;border:0.5px solid '+(a.resolved?'#E8E6E1':'rgba(196,51,43,0.2)')+';border-radius:8px;padding:16px 20px;border-left:3px solid '+(agentColors[a.agent]||'#1B2A4A');

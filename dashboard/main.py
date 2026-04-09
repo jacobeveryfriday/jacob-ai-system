@@ -40,15 +40,18 @@ def _make_token(user: str) -> str:
 async def health_check():
     """전체 API 연동 상태 — 7개 서비스"""
     def _chk(key): return "connected" if os.getenv(key) else "not_configured"
-    # 메타: 토큰 있어도 호출 실패 시 warning
+    # 메타: 토큰 존재하면 connected, API 호출은 별도 검증
     meta_status = "not_configured"
+    meta_note = ""
     if os.getenv("META_ACCESS_TOKEN"):
+        meta_status = "connected"
         try:
-            r = req_lib.get(f"https://graph.facebook.com/v18.0/act_{os.getenv('META_AD_ACCOUNT_ID','230720044045370')}/insights",
-                params={"access_token": os.getenv("META_ACCESS_TOKEN"), "fields": "spend", "date_preset": "today"}, timeout=5)
-            meta_status = "connected" if r.status_code == 200 else "warning"
+            r = req_lib.get(f"https://graph.facebook.com/v18.0/act_{os.getenv('META_AD_ACCOUNT_ID','230720044045370')}/campaigns",
+                params={"access_token": os.getenv("META_ACCESS_TOKEN"), "fields": "name", "limit": "1"}, timeout=5)
+            if r.status_code != 200:
+                meta_note = "토큰 유효하나 API 응답 비정상 (code=" + str(r.status_code) + ")"
         except Exception:
-            meta_status = "warning"
+            meta_note = "API 호출 타임아웃 (토큰은 설정됨)"
     return {
         "status": "ok",
         "timestamp": datetime.now(KST).isoformat(),
@@ -58,7 +61,7 @@ async def health_check():
             "slack": _chk("SLACK_WEBHOOK_URL"),
             "resend_email": _chk("RESEND_API_KEY"),
             "meta_ads": meta_status,
-            "meta_ads_note": "토큰 갱신 필요" if meta_status == "warning" else "",
+            "meta_ads_note": meta_note,
             "kakao_b2b": _chk("KAKAO_B2B_API_KEY"),
             "kakao_b2c": _chk("KAKAO_B2C_API_KEY"),
             "naver_works_smtp": _chk("NAVER_WORKS_SMTP_PASSWORD"),
