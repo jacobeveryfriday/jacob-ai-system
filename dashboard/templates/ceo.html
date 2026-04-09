@@ -97,7 +97,45 @@
   <div class="agent-grid" id="agentGrid"></div>
 </section>
 
-<!-- ===== SECTION 3: 실행 로그 타임라인 ===== -->
+<!-- ===== SECTION 3: 이번 주 에이전트 성과 ===== -->
+<section class="section" id="section-performance" style="padding-bottom:0">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div class="section-label" style="margin-bottom:0">이번 주 에이전트 성과</div>
+    <button class="btn btn-secondary btn-sm" onclick="sendSlackBrief()">Slack 브리핑 발송</button>
+  </div>
+  <div class="kpi-row" id="perfKpiRow">
+    <div class="kpi-card">
+      <div class="kpi-label">제안 총건수</div>
+      <div class="kpi-value" id="perf-total">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">승인율</div>
+      <div class="kpi-value" id="perf-approval">—<span class="kpi-unit">%</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">실행 완료</div>
+      <div class="kpi-value" id="perf-completed">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">성공율</div>
+      <div class="kpi-value" id="perf-success">—<span class="kpi-unit">%</span></div>
+    </div>
+  </div>
+  <div class="grid-2 mt-6">
+    <div class="chart-card">
+      <div class="chart-title">에이전트별 제안/승인/완료</div>
+      <div style="position:relative;height:180px"><canvas id="chart-agent-perf"></canvas></div>
+      <div class="kpi-basis">출처: proposals.json / 기준: 이번 주 (월~일) / 계산: 에이전트별 상태 COUNT</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">일별 제안 추이 (최근 7일)</div>
+      <div style="position:relative;height:180px"><canvas id="chart-daily-perf"></canvas></div>
+      <div class="kpi-basis">출처: proposals.json / 기준: 최근 7일 일별 COUNT</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 4: 실행 로그 타임라인 ===== -->
 <section class="section" id="section-timeline">
   <div class="section-label">최근 24시간 실행 로그</div>
   <div class="timeline" id="timelineList">
@@ -553,8 +591,72 @@ function runAgentCycle() {
   }).catch(function(){ alert('실행 실패'); });
 }
 
+/* ===== Performance Tracking ===== */
+var _perfCharts = {};
+function loadPerformance() {
+  fetch('/api/performance-summary').then(function(r){return r.json()}).then(function(d) {
+    var w = d.week||{};
+    setKpiText('perf-total', w.total||0, '건');
+    setKpiText('perf-approval', w.approval_rate||0, '%');
+    setKpiText('perf-completed', w.completed||0, '건');
+    setKpiText('perf-success', w.success_rate||0, '%');
+
+    // Agent bar chart
+    var agents = d.by_agent||{};
+    var names = Object.keys(agents);
+    if (_perfCharts.agent) _perfCharts.agent.destroy();
+    var c1 = document.getElementById('chart-agent-perf');
+    if (c1 && names.length) {
+      _perfCharts.agent = new Chart(c1, {
+        type:'bar',
+        data:{
+          labels: names,
+          datasets:[
+            {label:'제안', data:names.map(function(n){return agents[n].total}), backgroundColor:'rgba(27,42,74,0.2)'},
+            {label:'승인', data:names.map(function(n){return agents[n].approved}), backgroundColor:'rgba(27,42,74,0.5)'},
+            {label:'완료', data:names.map(function(n){return agents[n].completed}), backgroundColor:'#1B2A4A'},
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:'#6B6B6B',font:{size:11}}}},
+          scales:{x:{ticks:{color:'#9B9B9B'},grid:{display:false}},y:{ticks:{color:'#9B9B9B'},grid:{color:'#EDEBE7',lineWidth:0.5}}}}
+      });
+    }
+
+    // Daily line chart
+    var daily = d.daily||[];
+    if (_perfCharts.daily) _perfCharts.daily.destroy();
+    var c2 = document.getElementById('chart-daily-perf');
+    if (c2 && daily.length) {
+      _perfCharts.daily = new Chart(c2, {
+        type:'line',
+        data:{
+          labels: daily.map(function(d2){return d2.date.substring(5)}),
+          datasets:[
+            {label:'제안', data:daily.map(function(d2){return d2.proposed}), borderColor:'rgba(27,42,74,0.4)', tension:0.3, pointRadius:3, borderWidth:2},
+            {label:'승인', data:daily.map(function(d2){return d2.approved}), borderColor:'#1B2A4A', tension:0.3, pointRadius:3, borderWidth:2},
+            {label:'완료', data:daily.map(function(d2){return d2.completed}), borderColor:'var(--green)', tension:0.3, pointRadius:3, borderWidth:2},
+          ]
+        },
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{color:'#6B6B6B',font:{size:11}}}},
+          scales:{x:{ticks:{color:'#9B9B9B'},grid:{display:false}},y:{ticks:{color:'#9B9B9B',stepSize:1},grid:{color:'#EDEBE7',lineWidth:0.5}}}}
+      });
+    }
+  }).catch(function(e){console.error('Perf load error:',e)});
+}
+
+function sendSlackBrief() {
+  fetch('/api/slack/daily-brief').then(function(r){return r.json()}).then(function(d) {
+    if (d.status === 'ok') alert('Slack CEO 브리핑 발송 완료');
+    else alert('발송 실패: ' + (d.message||''));
+  }).catch(function(){ alert('네트워크 오류'); });
+}
+
 loadAll();
+loadPerformance();
 setInterval(loadAll, 300000);
+setInterval(loadPerformance, 300000);
 </script>
 </body>
 </html>

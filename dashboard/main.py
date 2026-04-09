@@ -1368,6 +1368,94 @@ async def slack_kpi_report():
         return {"status": "error", "message": str(e)}
 
 
+@app.get("/api/slack/daily-brief")
+async def slack_daily_brief():
+    """매일 아침 9시 Slack CEO 브리핑 — KPI + 에이전트 제안 + 실행결과."""
+    if not SLACK_WEBHOOK_URL:
+        return {"status": "error", "message": "SLACK_WEBHOOK_URL 미설정"}
+    try:
+        brand = await api_brand_pipeline()
+        t = brand.get("today", {})
+        m = brand.get("month", {})
+        proposals = load_proposals()
+        pending = [p for p in proposals if p.get("status") == "pending_approval"]
+        completed_today = [p for p in proposals
+                          if p.get("status") == "completed"
+                          and p.get("executed_at", "").startswith(datetime.now(KST).strftime("%Y-%m-%d"))]
+        rev_pct = round(m.get("revenue", 0) / max(160000000, 1) * 100)
+        delta_str = f"+{rev_pct}%" if rev_pct > 0 else f"{rev_pct}%"
+
+        lines = [
+            f"*[08liter Daily Brief — {datetime.now(KST).strftime('%m/%d')}]*",
+            f"📊 이번달 매출: {m.get('revenue',0):,}원 ({delta_str} of 1.6억)",
+            f"📝 계약: 신규 {m.get('new',0)}건 + 재계약 {m.get('renewal',0)}건 = {m.get('contract',0)}건",
+            f"🤖 에이전트 제안: {len(pending)}건 승인대기",
+        ]
+        if completed_today:
+            lines.append(f"✅ 오늘 실행완료: {len(completed_today)}건")
+            for c in completed_today[:3]:
+                lines.append(f"   • [{c.get('agent','')}] {c.get('result','')[:40]}")
+        if t.get("unhandled", 0) > 0:
+            lines.append(f"⚠️ CEO 확인 필요: 무대응 {t['unhandled']}건")
+        lines.append(f"→ 대시보드: https://dashboard-production-b2bd.up.railway.app/")
+
+        text = "\n".join(lines)
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(SLACK_WEBHOOK_URL, json={"text": text})
+            return {"status": "ok" if resp.status_code == 200 else "error", "code": resp.status_code, "message": text}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/performance-summary")
+async def api_performance_summary():
+    """이번 주 에이전트 성과 요약 — 제안/승인/실행/성공 통계."""
+    proposals = load_proposals()
+    now = datetime.now(KST)
+    week_start = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
+
+    # 이번 주 필터
+    week_proposals = [p for p in proposals if (p.get("created_at") or "") >= week_start]
+    total = len(week_proposals)
+    approved = len([p for p in week_proposals if p.get("status") in ("approved", "executed", "completed")])
+    executed = len([p for p in week_proposals if p.get("status") in ("executed", "completed")])
+    completed = len([p for p in week_proposals if p.get("status") == "completed"])
+    rejected = len([p for p in week_proposals if p.get("status") == "rejected"])
+    pending = len([p for p in week_proposals if p.get("status") == "pending_approval"])
+
+    # 에이전트별 통계
+    agent_stats = {}
+    for p in week_proposals:
+        ag = p.get("agent", "시스템")
+        if ag not in agent_stats:
+            agent_stats[ag] = {"total": 0, "approved": 0, "completed": 0}
+        agent_stats[ag]["total"] += 1
+        if p.get("status") in ("approved", "executed", "completed"):
+            agent_stats[ag]["approved"] += 1
+        if p.get("status") == "completed":
+            agent_stats[ag]["completed"] += 1
+
+    # 일별 추이 (최근 7일)
+    daily = {}
+    for i in range(7):
+        d = (now - timedelta(days=6 - i)).strftime("%Y-%m-%d")
+        day_proposals = [p for p in proposals if (p.get("created_at") or "")[:10] == d]
+        daily[d] = {
+            "proposed": len(day_proposals),
+            "approved": len([p for p in day_proposals if p.get("approved_at")]),
+            "completed": len([p for p in day_proposals if p.get("status") == "completed"]),
+        }
+
+    return {
+        "week": {"total": total, "approved": approved, "executed": executed,
+                 "completed": completed, "rejected": rejected, "pending": pending,
+                 "approval_rate": round(approved / max(total, 1) * 100),
+                 "success_rate": round(completed / max(approved, 1) * 100)},
+        "by_agent": agent_stats,
+        "daily": [{"date": k, **v} for k, v in sorted(daily.items())],
+    }
+
+
 # ===== SNS Performance =====
 @app.get("/api/sns-performance")
 async def api_sns_performance():
