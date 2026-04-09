@@ -30,7 +30,8 @@
 
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.04);
-  --gap: 24px;
+  --gap: 20px;
+  --sidebar-w: 200px;
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -143,8 +144,8 @@ body {
 }
 .kpi-value {
   font-family: var(--mono);
-  font-size: 36px;
-  font-weight: 700;
+  font-size: 40px;
+  font-weight: 800;
   color: var(--text);
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -422,4 +423,62 @@ textarea.input-field:focus {
 @media (max-width: 640px) {
   .timeline-item { grid-template-columns: 60px 1fr; }
   .timeline-agent, .timeline-result { display: none; }
+}
+
+/* ===== Skeleton Loading ===== */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--bg-hover) 50%, var(--bg-muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius);
+}
+.skeleton-card { height: 120px; }
+.skeleton-chart { height: 300px; }
+.skeleton-text { height: 14px; width: 60%; margin-bottom: 8px; border-radius: 4px; }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ===== Agent KPI Card (inline sections) ===== */
+.agent-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.agent-kpi-item {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  border-top: 2px solid var(--accent);
+}
+.agent-kpi-item .label { font-size: 10px; color: var(--text-secondary); margin-bottom: 4px; }
+.agent-kpi-item .value { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--text); }
+.agent-kpi-item .note { font-size: 9px; color: var(--text-muted); margin-top: 4px; }
+.agent-kpi-item.inactive { opacity: 0.5; border-top-color: var(--border); }
+.agent-kpi-item.inactive .value { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+
+/* ===== Mobile floating chat ===== */
+.chat-float-btn {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  font-size: 20px;
+  line-height: 1;
+}
+@media (max-width: 768px) {
+  .agent-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .chat-float-btn { display: flex; align-items: center; justify-content: center; }
 }

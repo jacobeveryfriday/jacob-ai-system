@@ -67,12 +67,12 @@
   <div class="grid-2 mt-6">
     <div class="chart-card">
       <div class="chart-title">월별 매출 추이 (신규 + 재계약)</div>
-      <div style="position:relative;height:200px"><canvas id="chart-revenue"></canvas></div>
+      <div style="position:relative;height:300px"><canvas id="chart-revenue"></canvas></div>
       <div class="kpi-basis">신규매출=연한색 / 재계약=진한색 / 출처: 구글시트 월별 GROUP BY SUM</div>
     </div>
     <div class="chart-card">
       <div class="chart-title">월별 계약건수</div>
-      <div style="position:relative;height:200px"><canvas id="chart-contracts"></canvas></div>
+      <div style="position:relative;height:300px"><canvas id="chart-contracts"></canvas></div>
       <div class="kpi-basis">신규계약=연한색 / 재계약=진한색 / 출처: 구글시트 월별 COUNT</div>
     </div>
   </div>
@@ -189,16 +189,31 @@ var INACTIVE_AGENTS = [
 
 document.getElementById('topDate').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
 
+/* ===== Stale-While-Revalidate Cache ===== */
+var _dataCache = {};
+function cachedFetch(url) {
+  return fetch(url).then(function(r){return r.json()}).then(function(d){_dataCache[url]=d;return d});
+}
+function getCached(url) { return _dataCache[url] || null; }
+
 /* ===== Main data loader ===== */
+var _firstLoad = true;
 async function loadAll() {
+  // Show skeleton on first load
+  if (_firstLoad) {
+    var kpiRow = document.getElementById('kpiRow');
+    if (kpiRow && !kpiRow.dataset.loaded) {
+      kpiRow.querySelectorAll('.kpi-value').forEach(function(el){el.style.opacity='0.3'});
+    }
+  }
   try {
     var results = await Promise.all([
-      fetch('/api/kpi-summary').then(function(r){return r.json()}),
-      fetch('/api/influencer-db').then(function(r){return r.json()}),
-      fetch('/api/kpi-trend').then(function(r){return r.json()}),
-      fetch('/api/alerts-board').then(function(r){return r.json()}),
-      fetch('/api/kyle-suggestions').then(function(r){return r.json()}),
-      fetch('/api/proposals?status=pending_approval').then(function(r){return r.json()}),
+      cachedFetch('/api/kpi-summary'),
+      cachedFetch('/api/influencer-db'),
+      cachedFetch('/api/kpi-trend'),
+      cachedFetch('/api/alerts-board'),
+      cachedFetch('/api/kyle-suggestions'),
+      cachedFetch('/api/proposals?status=pending_approval'),
     ]);
     var kpiData=results[0], infData=results[1], trendData=results[2], alertsData=results[3], suggestData=results[4], proposalData=results[5];
 
@@ -215,6 +230,10 @@ async function loadAll() {
       document.getElementById('actionCount').textContent = pendingCount;
     } else {
       badge.style.display = 'none';
+    }
+    if (_firstLoad) {
+      document.getElementById('kpiRow').dataset.loaded = '1';
+      _firstLoad = false;
     }
   } catch(e) { console.error('Load error:', e); }
 }

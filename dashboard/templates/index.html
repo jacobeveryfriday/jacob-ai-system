@@ -10,7 +10,7 @@
 <style>
 /* ===== Legacy Dashboard Layout (3-column) on McKinsey base ===== */
 :root {
-  --sidebar-width: 240px;
+  --sidebar-width: 200px;
   --chat-width: 360px;
   --header-height: 0px;
   --bg-primary: #F8F7F5;
@@ -173,10 +173,10 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <div style="margin-top:20px"><p style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:12px">전체현황 그래프 (구글시트 실데이터)</p>
 <div style="display:flex;gap:4px;margin-bottom:12px"><button onclick="loadOverviewCharts('daily')" id="ov-chart-daily" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#1B2A4A;color:#fff">일간</button><button onclick="loadOverviewCharts('monthly')" id="ov-chart-monthly" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;color:#9B9B9B">월간</button></div>
 <div id="ov-charts" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">매출 현황 (신규+재계약 스택)</p><div style="position:relative;height:200px"><canvas id="chart-ov-rev"></canvas></div><p id="ov-rev-basis" style="font-size:11px;color:#9B9B9B;margin-top:4px">신규매출=브랜드명 첫등장 행 계약금액SUM / 재계약매출=동일브랜드 2회이상 SUM / 총매출=신규+재계약 / 출처: 구글시트 / 기준: KST</p></div>
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">계약건수 현황 (신규+재계약)</p><div style="position:relative;height:200px"><canvas id="chart-ov-contracts"></canvas></div><p style="font-size:11px;color:#9B9B9B;margin-top:4px">신규계약수=브랜드명 첫등장 COUNT / 재계약수=동일브랜드 2회이상 COUNT / 출처: 구글시트 / 기준: KST</p></div>
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">계약상품별 분포</p><div style="position:relative;height:200px"><canvas id="chart-ov-products"></canvas></div></div>
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">충전금 vs 보상 비교</p><div style="position:relative;height:200px"><canvas id="chart-ov-payback"></canvas></div><p style="font-size:11px;color:#9B9B9B;margin-top:4px">충전금: 세금계산서발행시트 S열 월별SUM / 보상비율 = 보상÷충전금×100</p></div>
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">매출 현황 (신규+재계약 스택)</p><div style="position:relative;height:300px"><canvas id="chart-ov-rev"></canvas></div><p id="ov-rev-basis" style="font-size:11px;color:#9B9B9B;margin-top:4px">신규매출=브랜드명 첫등장 행 계약금액SUM / 재계약매출=동일브랜드 2회이상 SUM / 총매출=신규+재계약 / 출처: 구글시트 / 기준: KST</p></div>
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">계약건수 현황 (신규+재계약)</p><div style="position:relative;height:300px"><canvas id="chart-ov-contracts"></canvas></div><p style="font-size:11px;color:#9B9B9B;margin-top:4px">신규계약수=브랜드명 첫등장 COUNT / 재계약수=동일브랜드 2회이상 COUNT / 출처: 구글시트 / 기준: KST</p></div>
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">계약상품별 분포</p><div style="position:relative;height:300px"><canvas id="chart-ov-products"></canvas></div></div>
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">충전금 vs 보상 비교</p><div style="position:relative;height:300px"><canvas id="chart-ov-payback"></canvas></div><p style="font-size:11px;color:#9B9B9B;margin-top:4px">충전금: 세금계산서발행시트 S열 월별SUM / 보상비율 = 보상÷충전금×100</p></div>
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;grid-column:1/3">
 <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">충전금/보상 요약</p>
 <div id="payback-summary-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
@@ -236,6 +236,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-brand">
+  <!-- 루나 에이전트 KPI -->
+  <div class="agent-kpi-grid">
+    <div class="agent-kpi-item" style="border-top-color:#C4332B"><div class="label">아웃바운드 발송</div><div class="value" id="brand-agent-sent">—</div><div class="note">이메일 피치</div></div>
+    <div class="agent-kpi-item" style="border-top-color:#B8860B"><div class="label">미팅 유도</div><div class="value" id="brand-agent-meetings">—</div><div class="note">답변 → 미팅 전환</div></div>
+    <div class="agent-kpi-item" style="border-top-color:#1A7A4C"><div class="label">계약 전환</div><div class="value" id="brand-agent-contracts">—</div><div class="note">이번달 기준</div></div>
+    <div class="agent-kpi-item" style="border-top-color:#1B2A4A"><div class="label">에이전트 상태</div><div class="value" style="font-size:16px;color:#1A7A4C">정상 운영</div></div>
+  </div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">일간</button>
     <button id="brand-tab-monthly" onclick="setBrandTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">누적</button>
@@ -290,8 +297,8 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
   <!-- 월별 추세 그래프 (누적 탭) -->
   <div id="brand-monthly-trend" style="display:none;margin-bottom:20px">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">월별 매출 추이</p><div style="position:relative;height:200px"><canvas id="chart-brand-rev-trend"></canvas></div></div>
-      <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">월별 계약건수 추이</p><div style="position:relative;height:200px"><canvas id="chart-brand-cnt-trend"></canvas></div></div>
+      <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">월별 매출 추이</p><div style="position:relative;height:300px"><canvas id="chart-brand-rev-trend"></canvas></div></div>
+      <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">월별 계약건수 추이</p><div style="position:relative;height:300px"><canvas id="chart-brand-cnt-trend"></canvas></div></div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
@@ -379,6 +386,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-ads">
+<!-- 맥스 에이전트 KPI -->
+<div class="agent-kpi-grid">
+  <div class="agent-kpi-item inactive"><div class="label">광고비 소진액</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">ROAS</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">CPA</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">에이전트 상태</div><div class="value">Meta API 연동 대기</div></div>
+</div>
 <div id="ads-manual-form" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px;margin-bottom:20px">
 <p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:12px">광고 수동 입력 (메타 토큰 갱신 전 임시)</p>
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
@@ -393,6 +407,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-sns">
+<!-- 소피 에이전트 KPI -->
+<div class="agent-kpi-grid">
+  <div class="agent-kpi-item inactive"><div class="label">콘텐츠 생성</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">브랜드 리드 확보</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">인플루언서 리드 확보</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">에이전트 상태</div><div class="value">SNS API 연동 대기</div></div>
+</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
 <p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:12px">SNS 수동 입력</p>
@@ -415,8 +436,24 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 </div>
 
-<div id="page-management"></div>
+<div id="page-management">
+<!-- 레이 에이전트 KPI -->
+<div class="agent-kpi-grid">
+  <div class="agent-kpi-item inactive"><div class="label">세금계산서 발행</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">현금흐름 요약</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">미수금 현황</div><div class="value">데이터 연동 후 활성화</div></div>
+  <div class="agent-kpi-item inactive"><div class="label">에이전트 상태</div><div class="value">실데이터 연동 대기</div></div>
+</div>
+<p style="text-align:center;padding:40px 0;color:#9B9B9B;font-size:13px">실데이터 연동 후 자동 활성화됩니다</p>
+</div>
 <div id="page-cs">
+<!-- 하나 에이전트 KPI -->
+<div class="agent-kpi-grid">
+  <div class="agent-kpi-item" style="border-top-color:#B8860B"><div class="label">오늘 문의 접수</div><div class="value">14</div><div class="note">브랜드+인플루언서</div></div>
+  <div class="agent-kpi-item" style="border-top-color:#1A7A4C"><div class="label">해결 건수</div><div class="value">8</div><div class="note">오늘 기준</div></div>
+  <div class="agent-kpi-item" style="border-top-color:#2D4A7A"><div class="label">평균 응답시간</div><div class="value">10분</div><div class="note">목표 15분 이내</div></div>
+  <div class="agent-kpi-item" style="border-top-color:#1B2A4A"><div class="label">에이전트 상태</div><div class="value" style="font-size:16px;color:#B8860B">카카오 연동 대기</div></div>
+</div>
 <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
 <button onclick="setCsTab('brand')" id="cs-tab-brand" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">브랜드</button>
 <button onclick="setCsTab('influencer')" id="cs-tab-influencer" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">인플루언서</button>
@@ -508,6 +545,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </aside>
 </div>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<button class="chat-float-btn" id="chatFloatBtn" onclick="toggleMobileChat()">💬</button>
 
 <script>
 var TITLES={overview:'전체 현황',alerts:'알림 센터',kpi:'총괄 KPI',brand:'브랜드',influencer:'맞춤 인플루언서',ads:'광고센터 운영',sns:'공식 SNS 운영',management:'경영지원',cs:'CS',settings:'설정','api-status':'API 상태'};
@@ -545,7 +583,7 @@ status.forEach(function(s){var r=document.createElement('div');r.className='stat
 var tp=document.createElement('div');tp.className='status-panel';var th=document.createElement('div');th.className='panel-hdr';var tt=document.createElement('div');tt.className='panel-title';tt.textContent='오늘 업무 현황';th.appendChild(tt);tp.appendChild(th);
 tasks.forEach(function(tk){var it=document.createElement('div');it.className='task-item'+(tk[1]?' done':'');var cb=document.createElement('input');cb.type='checkbox';cb.checked=tk[1];cb.addEventListener('change',function(){it.className='task-item'+(cb.checked?' done':'')});var lb=document.createElement('label');lb.textContent=tk[0];lb.addEventListener('click',function(){cb.checked=!cb.checked;it.className='task-item'+(cb.checked?' done':'')});it.appendChild(cb);it.appendChild(lb);tp.appendChild(it)});pr.appendChild(tp);el.appendChild(pr)}
 
-function mkChart(el,cfgs){var row=document.createElement('div');row.className='chart-row';cfgs.forEach(function(cfg){var box=document.createElement('div');box.className='chart-box';var h4=document.createElement('h4');h4.textContent=cfg.title;box.appendChild(h4);var w=document.createElement('div');w.style.cssText='position:relative;height:200px;width:100%';var cv=document.createElement('canvas');w.appendChild(cv);box.appendChild(w);row.appendChild(box);setTimeout(function(){cfg.fn(cv)},50)});el.appendChild(row)}
+function mkChart(el,cfgs){var row=document.createElement('div');row.className='chart-row';cfgs.forEach(function(cfg){var box=document.createElement('div');box.className='chart-box';var h4=document.createElement('h4');h4.textContent=cfg.title;box.appendChild(h4);var w=document.createElement('div');w.style.cssText='position:relative;height:300px;width:100%';var cv=document.createElement('canvas');w.appendChild(cv);box.appendChild(w);row.appendChild(box);setTimeout(function(){cfg.fn(cv)},50)});el.appendChild(row)}
 
 function mkTable(el,headers,rows,statusCol){
 var wrap=document.createElement('div');wrap.style.cssText='overflow-x:auto;border:0.5px solid #E8E6E1;border-radius:8px;margin-top:16px';
@@ -1194,6 +1232,8 @@ document.getElementById('inf-tab-monthly').style.color=tab==='monthly'?'#fff':'#
 function toggleTask(el){var span=el.parentElement.querySelector('span');
 if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A5568'}
 else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
+function toggleMobileChat(){var cp=document.querySelector('.chat-panel');if(!cp)return;
+if(cp.style.display==='flex'){cp.style.display='none'}else{cp.style.display='flex';cp.style.position='fixed';cp.style.top='0';cp.style.right='0';cp.style.bottom='0';cp.style.width='85vw';cp.style.maxWidth='360px';cp.style.zIndex='300'}}
 
 // ===== showPage hook =====
 // ===== 인플루언서 차트 + KPI =====
