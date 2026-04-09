@@ -2034,21 +2034,28 @@ async def api_kpi_trend():
                     rev = 0
                 if rev > 0:
                     monthly_rev[mv] = monthly_rev.get(mv, 0) + rev
-    # 일별 매출 + 계약수 + 상품별 + 충전금 (최근 90일)
+    # 일별 매출 + 계약수 + 상품별 + 충전금
     daily_rev = {}
     daily_new = {}
     daily_renew = {}
+    daily_new_rev = {}
+    daily_renew_rev = {}
     product_dist = {}
     daily_payback = {}
-    brand_history = set()  # 이번달 이전 계약 브랜드
+    # 월별 집계 (전체 기간 — 차트 12개월용)
+    monthly_new_rev = {}
+    monthly_renew_rev = {}
+    monthly_new_cnt = {}
+    monthly_renew_cnt = {}
     if ct_rows:
         cat_idx = _find_col(headers, "품목 재분류", "재분류") or 24
         payback_idx = _find_col(headers, "페이백비", "충전금") or 18
         brand_idx = _find_col(headers, "공급받는자 상호") or 8
         type_idx = _find_col(headers, "신규/", "재계약") or 6
         now = datetime.now(KST)
-        cutoff = (now - timedelta(days=90)).strftime("%Y%m%d")
-        this_ym = f"{now.year}{now.month:02d}"
+        cutoff_90 = (now - timedelta(days=90)).strftime("%Y%m%d")
+        # 브랜드 첫 등장 추적 (G열 없을 때 폴백)
+        brand_first_seen = {}
         for row in ct_rows[hdr + 1:]:
             if len(row) < 3:
                 continue
@@ -2056,17 +2063,8 @@ async def api_kpi_trend():
             dc = dr.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
             if len(dc) < 8 or not dc[:8].isdigit():
                 continue
-            brand = str(row[brand_idx]).strip() if brand_idx < len(row) else ""
-            if dc[:6] < this_ym and brand:
-                brand_history.add(brand.lower())
-        for row in ct_rows[hdr + 1:]:
-            if len(row) < 3:
-                continue
-            dr = str(row[date_idx]).strip() if date_idx < len(row) else ""
-            dc = dr.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
-            if len(dc) < 8 or not dc[:8].isdigit() or dc[:8] < cutoff:
-                continue
             day_key = dc[:8]
+            mk = dc[:4] + "." + dc[4:6]
             rv = str(row[amount_idx]).strip() if amount_idx < len(row) else "0"
             try:
                 rev = int(float(rv.replace(",", "").replace("₩", "").replace(" ", "")))
@@ -2074,24 +2072,39 @@ async def api_kpi_trend():
                 rev = 0
             if rev <= 0:
                 continue
-            daily_rev[day_key] = daily_rev.get(day_key, 0) + rev
             brand = str(row[brand_idx]).strip() if brand_idx < len(row) else ""
-            is_renew = brand and brand.lower() in brand_history
-            if is_renew:
-                daily_renew[day_key] = daily_renew.get(day_key, 0) + 1
-                # 재계약 매출
-                if "daily_renew_rev" not in locals():
-                    daily_renew_rev = {}
-                daily_renew_rev[day_key] = daily_renew_rev.get(day_key, 0) + rev
+            ctype = str(row[type_idx]).strip() if type_idx is not None and type_idx < len(row) else ""
+            # G열 기반 신규/재계약 분류 (_parse_contracts와 동일 로직)
+            if ctype and ctype != "-" and "확인필요" not in ctype:
+                is_renew = "신규" not in ctype
             else:
-                daily_new[day_key] = daily_new.get(day_key, 0) + 1
-                # 신규 매출
-                if "daily_new_rev" not in locals():
-                    daily_new_rev = {}
-                daily_new_rev[day_key] = daily_new_rev.get(day_key, 0) + rev
+                brand_lower = brand.lower() if brand else ""
+                if brand_lower:
+                    if brand_lower not in brand_first_seen:
+                        brand_first_seen[brand_lower] = day_key
+                        is_renew = False
+                    else:
+                        is_renew = True
+                else:
+                    is_renew = False
+            # 월별 집계 (전체 기간)
+            if is_renew:
+                monthly_renew_rev[mk] = monthly_renew_rev.get(mk, 0) + rev
+                monthly_renew_cnt[mk] = monthly_renew_cnt.get(mk, 0) + 1
+            else:
+                monthly_new_rev[mk] = monthly_new_rev.get(mk, 0) + rev
+                monthly_new_cnt[mk] = monthly_new_cnt.get(mk, 0) + 1
+            # 일별 집계 (최근 90일만)
+            if day_key >= cutoff_90:
+                daily_rev[day_key] = daily_rev.get(day_key, 0) + rev
+                if is_renew:
+                    daily_renew[day_key] = daily_renew.get(day_key, 0) + 1
+                    daily_renew_rev[day_key] = daily_renew_rev.get(day_key, 0) + rev
+                else:
+                    daily_new[day_key] = daily_new.get(day_key, 0) + 1
+                    daily_new_rev[day_key] = daily_new_rev.get(day_key, 0) + rev
             cat = str(row[cat_idx]).strip() if cat_idx < len(row) else ""
             if cat:
-                # 그룹핑
                 cl = cat.lower()
                 if "시딩" in cl or "체험단" in cl:
                     cat = "국내체험단(시딩)"
@@ -2117,30 +2130,6 @@ async def api_kpi_trend():
     monthly_payback = {}
     ct2 = _parse_contracts(ct_rows) if ct_rows else {}
     monthly_payback = ct2.get("monthly_payback", {})
-
-    # 신규/재계약 매출 로컬 변수 초기화 보정
-    if "daily_new_rev" not in locals():
-        daily_new_rev = {}
-    if "daily_renew_rev" not in locals():
-        daily_renew_rev = {}
-    # 월별 신규/재계약 매출 집계
-    monthly_new_rev = {}
-    monthly_renew_rev = {}
-    for dk, rv in daily_new_rev.items():
-        mk = dk[:4] + "." + dk[4:6]
-        monthly_new_rev[mk] = monthly_new_rev.get(mk, 0) + rv
-    for dk, rv in daily_renew_rev.items():
-        mk = dk[:4] + "." + dk[4:6]
-        monthly_renew_rev[mk] = monthly_renew_rev.get(mk, 0) + rv
-    # 월별 신규/재계약 건수
-    monthly_new_cnt = {}
-    monthly_renew_cnt = {}
-    for dk, cnt in daily_new.items():
-        mk = dk[:4] + "." + dk[4:6]
-        monthly_new_cnt[mk] = monthly_new_cnt.get(mk, 0) + cnt
-    for dk, cnt in daily_renew.items():
-        mk = dk[:4] + "." + dk[4:6]
-        monthly_renew_cnt[mk] = monthly_renew_cnt.get(mk, 0) + cnt
     # 총 충전금 합계
     total_payback = sum(monthly_payback.values())
 
