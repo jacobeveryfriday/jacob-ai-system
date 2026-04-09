@@ -33,7 +33,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--border-hover); border-radius:2px; }
-.app-layout { display:grid; grid-template-columns:var(--sidebar-width) 1fr var(--chat-width); height:100vh; overflow:hidden; }
+.app-layout { display:grid; grid-template-columns:var(--sidebar-width) 1fr; height:100vh; overflow:hidden; }
 .app-layout.no-chat { grid-template-columns:var(--sidebar-width) 1fr; }
 .sidebar { background:var(--bg-secondary); border-right:0.5px solid var(--border); display:flex; flex-direction:column; height:100vh; overflow:hidden; }
 .sidebar-header { padding:20px 20px 16px; border-bottom:0.5px solid var(--border); flex-shrink:0; }
@@ -59,7 +59,21 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 .header-btn { background:none; border:none; color:var(--text-secondary); cursor:pointer; padding:6px; border-radius:6px; transition:all 0.15s; display:flex; align-items:center; }
 .header-btn:hover { background:var(--bg-tertiary); color:var(--text-primary); }
 .header-btn svg { width:16px; height:16px; }
-.main-body { padding:24px 32px; }
+.main-body { padding:24px 32px; display:flex; gap:20px; }
+.main-body .content-area { flex:7; min-width:0; }
+.main-body .inline-chat { flex:3; min-width:280px; max-width:340px; background:var(--bg-secondary); border:0.5px solid var(--border); border-radius:8px; display:flex; flex-direction:column; height:calc(100vh - 80px); position:sticky; top:60px; }
+.main-body .inline-chat .ic-header { padding:12px 14px; border-bottom:0.5px solid var(--border); font-size:13px; font-weight:700; color:var(--text-primary); display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+.main-body .inline-chat .ic-messages { flex:1; overflow-y:auto; padding:12px; font-size:12px; }
+.main-body .inline-chat .ic-msg { padding:8px 12px; border-radius:8px; margin-bottom:6px; line-height:1.5; max-width:95%; white-space:pre-line; }
+.main-body .inline-chat .ic-msg.agent { background:var(--bg-tertiary); color:var(--text-primary); }
+.main-body .inline-chat .ic-msg.user { background:var(--accent-orange); color:#fff; margin-left:auto; }
+.main-body .inline-chat .ic-msg-time { font-size:9px; color:var(--text-muted); margin-top:2px; }
+.main-body .inline-chat .ic-input { padding:10px 14px; border-top:0.5px solid var(--border); flex-shrink:0; display:flex; gap:6px; }
+.main-body .inline-chat .ic-input textarea { flex:1; resize:none; background:var(--bg-tertiary); border:0.5px solid var(--border); border-radius:6px; padding:8px 10px; font-size:12px; font-family:inherit; color:var(--text-primary); }
+.main-body .inline-chat .ic-input button { background:var(--accent-orange); color:#fff; border:none; border-radius:6px; width:32px; height:32px; cursor:pointer; font-size:14px; flex-shrink:0; }
+.main-body .inline-chat .ic-examples { padding:6px 12px; display:flex; flex-wrap:wrap; gap:4px; }
+.main-body .inline-chat .ic-ex-btn { padding:4px 8px; font-size:10px; background:rgba(27,42,74,0.04); border:0.5px solid var(--border); border-radius:4px; cursor:pointer; color:var(--text-secondary); }
+@media(max-width:1024px){ .main-body .inline-chat { display:none; } }
 .mobile-header { display:none; }
 .hamburger-btn { background:none; border:none; color:var(--text-primary); cursor:pointer; padding:6px; }
 .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-bottom:24px; }
@@ -92,13 +106,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 .chat-msg { padding:10px 14px; border-radius:8px; margin-bottom:8px; font-size:12px; line-height:1.6; max-width:90%; }
 .chat-msg.agent { background:var(--bg-tertiary); color:var(--text-primary); align-self:flex-start; }
 .chat-msg.user { background:var(--accent-orange); color:#fff; align-self:flex-end; margin-left:auto; }
-.chat-msg-time { font-size:9px; color:var(--text-muted); margin-top:4px; }
+.ic-msg-time { font-size:9px; color:var(--text-muted); margin-top:4px; }
 .chat-input-area { padding:12px 16px; border-top:0.5px solid var(--border); flex-shrink:0; }
 .chat-input-wrapper { display:flex; gap:8px; align-items:flex-end; }
 .chat-input { flex:1; resize:none; background:var(--bg-tertiary); border:0.5px solid var(--border); border-radius:8px; padding:10px 14px; color:var(--text-primary); font-size:12px; font-family:inherit; }
 .chat-send-btn { background:var(--accent-orange); color:#fff; border:none; border-radius:8px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
 .sidebar-backdrop { display:none; }
-@media(max-width:1199px){.app-layout{grid-template-columns:var(--sidebar-width) 1fr var(--chat-width)!important}.chat-panel{display:flex!important}}
+@media(max-width:1199px){.app-layout{grid-template-columns:var(--sidebar-width) 1fr!important}}
 @media(max-width:767px){.app-layout{grid-template-columns:1fr!important}.chat-panel{display:none!important;position:fixed;top:0;right:0;bottom:0;width:85vw;max-width:360px;z-index:300;box-shadow:-4px 0 20px rgba(0,0,0,0.1)}.chat-panel.open{display:flex!important}.sidebar{display:none}.mobile-header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:0.5px solid var(--border)}}
 [id^="page-"]{display:none}[id^="page-"].active{display:block}
 .kpi-detail{font-size:11px;color:var(--text-secondary);margin-top:2px}.kpi-detail .v{color:var(--text-primary);font-family:'JetBrains Mono',monospace;font-weight:600}.kpi-detail .up{color:var(--status-on);font-family:'JetBrains Mono',monospace;font-weight:600}
@@ -113,7 +127,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 .panel-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.panel-title{font-size:13px;font-weight:600;color:#1B2A4A}
 .status-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}.status-row-label{font-size:12px;color:#6B6B6B}.status-badge{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(27,42,74,0.06);color:#1B2A4A}
 .task-item{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px}.task-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--status-on);cursor:pointer}.task-item.done label{color:#9B9B9B;text-decoration:line-through}.task-item label{cursor:pointer;color:#6B6B6B}
-.chat-ex-btn{background:rgba(27,42,74,0.04);border:0.5px solid #E8E6E1;font-size:11px;color:#1B2A4A;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}.chat-ex-btn:hover{background:rgba(27,42,74,0.06)}.chat-examples{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0}
+.ic-ex-btn{background:rgba(27,42,74,0.04);border:0.5px solid #E8E6E1;font-size:11px;color:#1B2A4A;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}.ic-ex-btn:hover{background:rgba(27,42,74,0.06)}.chat-examples{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0}
 .pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px;min-height:200px}.pipeline-col{min-width:0}
 .pipeline-hdr{background:rgba(27,42,74,0.04);padding:10px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text-primary)}.pipeline-hdr .cnt{background:rgba(27,42,74,0.08);color:#1B2A4A;padding:1px 8px;border-radius:10px;font-size:10px;font-family:'JetBrains Mono',monospace}
 .pipeline-body{display:flex;flex-direction:column;gap:8px;padding:8px 0}
@@ -157,6 +171,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <div class="mobile-header"><button class="hamburger-btn" id="hamburgerBtn"><i data-lucide="menu"></i></button><span style="font-weight:700;font-size:15px">08L_AI</span></div>
 <div class="main-header"><h1 id="pageTitle">전체 현황</h1><div class="header-actions"><span class="header-date" id="headerDate"></span><button class="header-btn" onclick="location.reload()"><i data-lucide="refresh-cw"></i></button></div></div>
 <div class="main-body">
+<div class="content-area">
 <div class="alert-banner" id="alertBanner"><i data-lucide="alert-triangle"></i><span id="alertText"></span></div>
 
 <!-- OVERVIEW -->
@@ -255,6 +270,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
       </div>
     </div>
   </div>
+  <div id="pitch-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">일간</button>
     <button id="brand-tab-monthly" onclick="setBrandTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">누적</button>
@@ -320,6 +336,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-influencer">
+  <div id="luna-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
   <!-- 루나 에이전트 — 당일+누적+인바운드 -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
     <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
@@ -438,6 +455,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-sns">
+<div id="sophie-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
 <!-- 소피 에이전트 KPI -->
 <div class="agent-kpi-grid">
   <div class="agent-kpi-item inactive"><div class="label">콘텐츠 생성</div><div class="value">데이터 연동 후 활성화</div></div>
@@ -564,16 +582,14 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <p style="font-size:11px;color:#9B9B9B">출처: 하나 에이전트 자동분석 / 기준: 문의유형 패턴 + 반복률 / 갱신: 매일 09시</p>
 </div>
 </div>
+</div><!-- /content-area -->
+<div class="inline-chat" id="inlineChat">
+  <div class="ic-header"><span id="chatAgentName">총괄 에이전트</span><span style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#1A7A4C"></span><span style="font-size:10px;color:#9B9B9B">온라인</span></span></div>
+  <div class="ic-messages" id="chatMessages"><div class="ic-msg agent">에이전트에게 질문하세요.<div class="ic-msg-time">System</div></div></div>
+  <div class="ic-examples" id="chatExamples"></div>
+  <div class="ic-input"><textarea id="chatInput" rows="1" placeholder="메시지 입력..."></textarea><button id="chatSendBtn">&#9654;</button></div>
+</div>
 </div></main>
-
-<aside class="chat-panel">
-<div id="chatHdr" style="padding:12px 16px;border-bottom:1px solid var(--border);border-left:3px solid #1B2A4A;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-<div id="chatAgentName" style="font-size:13px;font-weight:700;color:var(--text-primary)">전체 총괄 에이전트</div>
-<div style="display:flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:var(--status-on)"></span><span style="font-size:10px;color:var(--text-muted)">온라인</span></div></div>
-<div class="chat-messages" id="chatMessages"><div class="chat-msg agent">08L_AI 수석 보좌입니다.<div class="chat-msg-time">System</div></div></div>
-<div class="chat-examples" id="chatExamples"></div>
-<div class="chat-input-area"><div class="chat-input-wrapper"><textarea class="chat-input" id="chatInput" rows="1" placeholder="08L_AI에게 질문하세요..."></textarea><button class="chat-send-btn" id="chatSendBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div></div>
-</aside>
 </div>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 <button class="chat-float-btn" id="chatFloatBtn" onclick="toggleMobileChat()">💬</button>
@@ -918,40 +934,40 @@ document.getElementById('sidebar').classList.remove('open');document.getElementB
 function switchAgent(pid){
 var a=AGENTS[pid]||AGENTS.overview;currentAgentId=pid;
 document.getElementById('chatAgentName').textContent=a.name;
-document.getElementById('chatHdr').style.borderLeftColor=a.color;
+var hdr=document.getElementById('chatHdr');if(hdr)hdr.style.borderLeftColor=a.color;
 var ex=document.getElementById('chatExamples');while(ex.firstChild)ex.removeChild(ex.firstChild);
-a.ex.forEach(function(q){var btn=document.createElement('button');btn.className='chat-ex-btn';btn.textContent=q;btn.addEventListener('click',function(){document.getElementById('chatInput').value=q;sendChat()});ex.appendChild(btn)});
+a.ex.forEach(function(q){var btn=document.createElement('button');btn.className='ic-ex-btn';btn.textContent=q;btn.addEventListener('click',function(){document.getElementById('chatInput').value=q;sendChat()});ex.appendChild(btn)});
 // 히스토리 초기화
 var msgs=document.getElementById('chatMessages');while(msgs.firstChild)msgs.removeChild(msgs.firstChild);
 // 자동 브리핑 요청
-var loading=document.createElement('div');loading.className='chat-msg agent';loading.style.cssText='color:#9B9B9B;font-style:italic';loading.textContent=a.name.split(' — ')[0]+' 에이전트 접속 중...';msgs.appendChild(loading);
+var loading=document.createElement('div');loading.className='ic-msg agent';loading.style.cssText='color:#9B9B9B;font-style:italic';loading.textContent=a.name.split(' — ')[0]+' 에이전트 접속 중...';msgs.appendChild(loading);
 fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page:pid,briefing:true})}).then(function(r){return r.json()}).then(function(data){
-msgs.removeChild(loading);var g=document.createElement('div');g.className='chat-msg agent';g.style.whiteSpace='pre-line';g.textContent=data.reply||'브리핑을 준비 중입니다.';var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent=(data.agent||'AI')+' · '+(data.source||'system')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});g.appendChild(ts);
+msgs.removeChild(loading);var g=document.createElement('div');g.className='ic-msg agent';g.style.whiteSpace='pre-line';g.textContent=data.reply||'브리핑을 준비 중입니다.';var ts=document.createElement('div');ts.className='ic-msg-time';ts.textContent=(data.agent||'AI')+' · '+(data.source||'system')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});g.appendChild(ts);
 // 브리핑 후 액션 버튼
 var ab=document.createElement('div');ab.style.cssText='display:flex;gap:6px;flex-wrap:wrap;margin-top:10px';
 if(pid==='brand'){var sb=document.createElement('button');sb.style.cssText='padding:8px 18px;background:#FF6B00;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';sb.textContent='발송하기';sb.addEventListener('click',function(){document.getElementById('chatInput').value='발송해줘';sendChat()});ab.appendChild(sb)}
-var lb=document.createElement('button');lb.className='chat-ex-btn';lb.textContent='리스트 보기';lb.addEventListener('click',function(){document.getElementById('chatInput').value=pid==='brand'?'재접촉 리스트 보여줘':'무대응 리스트 보여줘';sendChat()});ab.appendChild(lb);
-var nb=document.createElement('button');nb.className='chat-ex-btn';nb.textContent='다음 액션 3가지';nb.addEventListener('click',function(){document.getElementById('chatInput').value='오늘/이번주/이번달 액션 각 1가지 알려줘';sendChat()});ab.appendChild(nb);
+var lb=document.createElement('button');lb.className='ic-ex-btn';lb.textContent='리스트 보기';lb.addEventListener('click',function(){document.getElementById('chatInput').value=pid==='brand'?'재접촉 리스트 보여줘':'무대응 리스트 보여줘';sendChat()});ab.appendChild(lb);
+var nb=document.createElement('button');nb.className='ic-ex-btn';nb.textContent='다음 액션 3가지';nb.addEventListener('click',function(){document.getElementById('chatInput').value='오늘/이번주/이번달 액션 각 1가지 알려줘';sendChat()});ab.appendChild(nb);
 g.appendChild(ab);
 msgs.appendChild(g);msgs.scrollTop=msgs.scrollHeight
-}).catch(function(){msgs.removeChild(loading);var g=document.createElement('div');g.className='chat-msg agent';g.textContent=a.name+' 에이전트입니다. 무엇을 도와드릴까요?';var ts=document.createElement('div');ts.className='chat-msg-time';ts.textContent='System';g.appendChild(ts);msgs.appendChild(g)})}
+}).catch(function(){msgs.removeChild(loading);var g=document.createElement('div');g.className='ic-msg agent';g.textContent=a.name+' 에이전트입니다. 무엇을 도와드릴까요?';var ts=document.createElement('div');ts.className='ic-msg-time';ts.textContent='System';g.appendChild(ts);msgs.appendChild(g)})}
 
 document.getElementById('chatSendBtn').addEventListener('click',sendChat);
 document.getElementById('chatInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}});
-function sendChat(){var input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;var msgs=document.getElementById('chatMessages');var u=document.createElement('div');u.className='chat-msg user';u.textContent=text;var t=document.createElement('div');t.className='chat-msg-time';t.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});u.appendChild(t);msgs.appendChild(u);input.value='';msgs.scrollTop=msgs.scrollHeight;
+function sendChat(){var input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;var msgs=document.getElementById('chatMessages');var u=document.createElement('div');u.className='ic-msg user';u.textContent=text;var t=document.createElement('div');t.className='ic-msg-time';t.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});u.appendChild(t);msgs.appendChild(u);input.value='';msgs.scrollTop=msgs.scrollHeight;
 // AI API call with fallback
-var typing=document.createElement('div');typing.className='chat-msg agent';typing.style.cssText='color:#9B9B9B;font-style:italic';typing.textContent='분석 중...';msgs.appendChild(typing);
+var typing=document.createElement('div');typing.className='ic-msg agent';typing.style.cssText='color:#9B9B9B;font-style:italic';typing.textContent='분석 중...';msgs.appendChild(typing);
 fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,page:currentAgentId})}).then(function(r){return r.json()}).then(function(data){
-msgs.removeChild(typing);var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent=data.reply||'응답 오류';
-var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=(data.agent||'AI')+' · '+(data.source||'ai')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);
+msgs.removeChild(typing);var r=document.createElement('div');r.className='ic-msg agent';r.style.whiteSpace='pre-line';r.textContent=data.reply||'응답 오류';
+var t2=document.createElement('div');t2.className='ic-msg-time';t2.textContent=(data.agent||'AI')+' · '+(data.source||'ai')+' · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);
 // 실행 버튼 추가
 var btns=document.createElement('div');btns.style.cssText='display:flex;gap:4px;flex-wrap:wrap;margin-top:8px';
 [{label:'리스트 보기',icon:'list',action:function(){var q=currentAgentId==='brand'?'재접촉 대상 리스트 보여줘':'무대응 리스트 보여줘';document.getElementById('chatInput').value=q;sendChat()}},
 {label:'메시지 초안',icon:'edit',action:function(){document.getElementById('chatInput').value='맞춤 제안 메시지 이메일/카톡/문자 3가지 버전으로 작성해줘';sendChat()}},
 {label:'다음 액션 3가지',icon:'zap',action:function(){document.getElementById('chatInput').value='오늘/이번주/이번달 액션 각 1가지 알려줘';sendChat()}}
-].forEach(function(b){var btn=document.createElement('button');btn.className='chat-ex-btn';btn.textContent=b.label;btn.addEventListener('click',b.action);btns.appendChild(btn)});
+].forEach(function(b){var btn=document.createElement('button');btn.className='ic-ex-btn';btn.textContent=b.label;btn.addEventListener('click',b.action);btns.appendChild(btn)});
 r.appendChild(btns);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight
-}).catch(function(){msgs.removeChild(typing);var r=document.createElement('div');r.className='chat-msg agent';r.style.whiteSpace='pre-line';r.textContent='연결 오류. 잠시 후 다시 시도해주세요.';var t2=document.createElement('div');t2.className='chat-msg-time';t2.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight})}
+}).catch(function(){msgs.removeChild(typing);var r=document.createElement('div');r.className='ic-msg agent';r.style.whiteSpace='pre-line';r.textContent='연결 오류. 잠시 후 다시 시도해주세요.';var t2=document.createElement('div');t2.className='ic-msg-time';t2.textContent=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});r.appendChild(t2);msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight})}
 
 document.querySelectorAll('[data-page]').forEach(function(el){el.addEventListener('click',function(e){e.preventDefault();showPage(this.getAttribute('data-page'))})});
 document.getElementById('headerDate').textContent=new Date().toISOString().split('T')[0];
@@ -1263,7 +1279,7 @@ document.getElementById('inf-tab-monthly').style.color=tab==='monthly'?'#fff':'#
 function toggleTask(el){var span=el.parentElement.querySelector('span');
 if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A5568'}
 else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
-function toggleMobileChat(){var cp=document.querySelector('.chat-panel');if(!cp)return;cp.classList.toggle('open')}
+function toggleMobileChat(){var cp=document.getElementById('inlineChat');if(!cp)return;if(cp.style.display==='flex'){cp.style.display='none'}else{cp.style.display='flex';cp.style.position='fixed';cp.style.top='0';cp.style.right='0';cp.style.bottom='0';cp.style.width='85vw';cp.style.maxWidth='340px';cp.style.zIndex='300';cp.style.boxShadow='-4px 0 20px rgba(0,0,0,0.1)';cp.style.borderRadius='0'}}
 
 // ===== showPage hook =====
 // ===== 인플루언서 차트 + KPI =====
@@ -1419,6 +1435,29 @@ var la3=document.getElementById('pitch-agent-matched');if(la3)la3.textContent=lu
 // 루나 — 인바운드
 var inf=kpi.month||{};
 var lbn=document.getElementById('luna-ib-new');if(lbn)lbn.textContent=luna.welcome_sent||0;
+// 목표 대비 게이지 렌더링
+var targets=d.targets||{};
+function renderGauge(containerId,agentName){
+  var el=document.getElementById(containerId);if(!el)return;
+  var at=targets[agentName];if(!at)return;
+  while(el.firstChild)el.removeChild(el.firstChild);
+  var daily=at.daily||{};
+  Object.keys(daily).forEach(function(k){
+    var item=daily[k];
+    var pct=item.pct||0;
+    var color=pct>=80?'#1A7A4C':pct>=50?'#B8860B':'#C4332B';
+    var row=document.createElement('div');row.style.cssText='margin-bottom:6px';
+    var label=document.createElement('div');label.style.cssText='display:flex;justify-content:space-between;font-size:10px;color:#6B6B6B;margin-bottom:2px';
+    label.textContent=k+' '+item.actual+'/'+item.target+' ('+pct+'%)';
+    row.appendChild(label);
+    var bar=document.createElement('div');bar.style.cssText='height:4px;background:#EDEBE7;border-radius:2px;overflow:hidden';
+    var fill=document.createElement('div');fill.style.cssText='height:100%;border-radius:2px;background:'+color+';width:'+Math.min(pct,100)+'%';
+    bar.appendChild(fill);row.appendChild(bar);el.appendChild(row);
+  });
+}
+renderGauge('pitch-gauge','피치');
+renderGauge('luna-gauge','루나');
+renderGauge('sophie-gauge','소피');
 }).catch(function(){})}
 loadAgentPerf();
 

@@ -158,7 +158,34 @@ AGENT_EMAILS = {
 DEFAULT_GOALS = {
     "revenue": 160000000, "contracts": 38, "inbound_db": 500,
     "valid_db": 150, "cpa": 50000, "influencer_pool": 1550000,
-    "alert_threshold": 0.3,  # 30% 이하 시 알림
+    "alert_threshold": 0.3,
+}
+
+# ===== 에이전트별 목표 (일/주/월) =====
+AGENT_TARGETS = {
+    "피치": {
+        "monthly": {"new_contract": 10, "renew_contract": 10, "meeting_booked": 60, "inbound_email": 3000, "outbound_email": 5000, "total_email": 8000},
+        "weekly":  {"new_contract": 2.5, "renew_contract": 2.5, "meeting_booked": 15, "inbound_email": 750, "outbound_email": 1250, "total_email": 2000},
+        "daily":   {"meeting_booked": 3, "inbound_email": 150, "outbound_email": 250, "total_email": 400},
+    },
+    "루나": {
+        "monthly": {"influencer_acquired": 300, "outbound_email": 3000, "crawl_data": 5000, "email_reply": 450},
+        "weekly":  {"influencer_acquired": 75, "outbound_email": 750, "crawl_data": 1250, "email_reply": 113},
+        "daily":   {"influencer_acquired": 15, "outbound_email": 150, "crawl_data": 250, "email_reply": 23},
+    },
+    "소피": {
+        "monthly": {"b2b_content": 20, "b2c_content": 20, "b2b_lead": 300, "b2c_lead": 500},
+        "weekly":  {"b2b_content": 5, "b2c_content": 5, "b2b_lead": 75, "b2c_lead": 125},
+        "daily":   {"b2b_content": 1, "b2c_content": 1, "b2b_lead": 15, "b2c_lead": 25},
+    },
+    "맥스": {
+        "monthly": {"cpa_target": 20000, "valid_db_ratio_x": 2},
+    },
+    "카일": {
+        "daily":   {"dashboard_check": 1, "improvement_proposals": 2},
+        "weekly":  {"improvement_proposals": 10, "kpi_achievement": 80},
+        "monthly": {"improvement_proposals": 40, "kpi_achievement": 80},
+    },
 }
 
 def load_goals() -> dict:
@@ -1925,15 +1952,51 @@ async def _sophie_daily_content():
 # ===== 에이전트 성과 API =====
 @app.get("/api/agent-performance")
 async def api_agent_performance(agent: Optional[str] = None):
-    """에이전트별 일일 성과 조회."""
+    """에이전트별 일일 성과 + 목표 대비 달성률."""
     perf = load_agent_perf()
-    today = datetime.now(KST).strftime("%Y-%m-%d")
-    yesterday = (datetime.now(KST) - timedelta(days=1)).strftime("%Y-%m-%d")
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
     today_perf = perf.get(today, {})
     yesterday_perf = perf.get(yesterday, {})
+    # 월간 누적 계산
+    month_prefix = now.strftime("%Y-%m")
+    monthly_perf = {}
+    for date_key, agents_data in perf.items():
+        if date_key.startswith(month_prefix):
+            for ag, metrics in agents_data.items():
+                monthly_perf.setdefault(ag, {})
+                for mk, mv in metrics.items():
+                    monthly_perf[ag][mk] = monthly_perf[ag].get(mk, 0) + mv
+    # 주간 누적
+    week_start = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
+    weekly_perf = {}
+    for date_key, agents_data in perf.items():
+        if date_key >= week_start:
+            for ag, metrics in agents_data.items():
+                weekly_perf.setdefault(ag, {})
+                for mk, mv in metrics.items():
+                    weekly_perf[ag][mk] = weekly_perf[ag].get(mk, 0) + mv
+    # 목표 대비 달성률
+    targets = {}
+    for ag_name, ag_targets in AGENT_TARGETS.items():
+        daily_t = ag_targets.get("daily", {})
+        daily_a = today_perf.get(ag_name, {})
+        weekly_t = ag_targets.get("weekly", {})
+        weekly_a = weekly_perf.get(ag_name, {})
+        monthly_t = ag_targets.get("monthly", {})
+        monthly_a = monthly_perf.get(ag_name, {})
+        targets[ag_name] = {
+            "daily": {k: {"target": v, "actual": daily_a.get(k, 0), "pct": min(100, round(daily_a.get(k, 0) / max(v, 1) * 100))} for k, v in daily_t.items()},
+            "weekly": {k: {"target": v, "actual": weekly_a.get(k, 0), "pct": min(100, round(weekly_a.get(k, 0) / max(v, 1) * 100)) if isinstance(v, (int, float)) and v > 0 else 0} for k, v in weekly_t.items()},
+            "monthly": {k: {"target": v, "actual": monthly_a.get(k, 0), "pct": min(100, round(monthly_a.get(k, 0) / max(v, 1) * 100)) if isinstance(v, (int, float)) and v > 0 else 0} for k, v in monthly_t.items()},
+        }
     if agent:
-        return {"today": today_perf.get(agent, {}), "yesterday": yesterday_perf.get(agent, {}), "agent": agent}
-    return {"today": today_perf, "yesterday": yesterday_perf, "date": today}
+        return {"today": today_perf.get(agent, {}), "yesterday": yesterday_perf.get(agent, {}),
+                "monthly": monthly_perf.get(agent, {}), "weekly": weekly_perf.get(agent, {}),
+                "targets": targets.get(agent, {}), "agent": agent}
+    return {"today": today_perf, "yesterday": yesterday_perf, "monthly": monthly_perf,
+            "weekly": weekly_perf, "targets": targets, "date": today}
 
 
 # ===== 목표 설정 API =====
@@ -2160,6 +2223,24 @@ async def _agent_auto_cycle():
                     "timestamp": now_ts, "resolved": False})
         except Exception as e:
             print(f"Sophie auto error: {e}")
+
+        # 9-3. 자동 에스컬레이션 — 일 목표 50% 미달 에이전트 감지
+        try:
+            perf = load_agent_perf()
+            today_perf = perf.get(now_ts[:10], {})
+            for ag_name, ag_targets in AGENT_TARGETS.items():
+                daily_t = ag_targets.get("daily", {})
+                daily_a = today_perf.get(ag_name, {})
+                for metric, target in daily_t.items():
+                    if isinstance(target, (int, float)) and target > 0:
+                        actual = daily_a.get(metric, 0)
+                        if actual < target * 0.5:
+                            alerts_posted.append({"id": _id(), "agent": ag_name, "severity": "critical",
+                                "summary": f"🚨 {ag_name} 목표 미달: {metric} {actual}/{target} ({round(actual/target*100)}%)",
+                                "detail": f"일 목표의 50% 미달. 원인 분석 및 즉시 대응 필요.",
+                                "timestamp": now_ts, "resolved": False})
+        except Exception as e:
+            print(f"Escalation check error: {e}")
 
         # 10. 카일 — 전체 브리핑 이메일 발송
         try:
@@ -2892,8 +2973,32 @@ async def api_kyle_suggestions():
     return {"suggestions": suggestions, "timestamp": now.isoformat(), "agent": "카일"}
 
 
-@app.get("/api/agent-performance")
-async def api_agent_performance():
+@app.get("/api/agent-scoreboard")
+async def api_agent_scoreboard():
+    """주간 에이전트 랭킹 스코어보드."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    week_start = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
+    weekly = {}
+    for date_key, agents_data in perf.items():
+        if date_key >= week_start:
+            for ag, metrics in agents_data.items():
+                weekly.setdefault(ag, {})
+                for mk, mv in metrics.items():
+                    weekly[ag][mk] = weekly[ag].get(mk, 0) + mv
+    scoreboard = []
+    for ag_name, ag_targets in AGENT_TARGETS.items():
+        weekly_t = ag_targets.get("weekly", {})
+        weekly_a = weekly.get(ag_name, {})
+        total_target = sum(v for v in weekly_t.values() if isinstance(v, (int, float)))
+        total_actual = sum(weekly_a.get(k, 0) for k in weekly_t.keys())
+        pct = min(100, round(total_actual / max(total_target, 1) * 100)) if total_target > 0 else 0
+        scoreboard.append({"agent": ag_name, "pct": pct, "actual": total_actual, "target": total_target, "details": weekly_a})
+    scoreboard.sort(key=lambda x: -x["pct"])
+    return {"scoreboard": scoreboard, "week_start": week_start}
+
+@app.get("/api/agent-kpi-dashboard")
+async def api_agent_kpi_dashboard():
     """에이전트별 KPI 달성률 — 카일 대시보드용."""
     goals = load_goals()
     brand = await api_brand_pipeline()
