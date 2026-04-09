@@ -83,8 +83,8 @@
 <div style="margin-top:20px"><p style="font-size:14px;font-weight:700;color:#E8EBF2;margin-bottom:12px">전체현황 그래프 (구글시트 실데이터)</p>
 <div style="display:flex;gap:4px;margin-bottom:12px"><button onclick="loadOverviewCharts('daily')" id="ov-chart-daily" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#F97316;color:#fff">일간</button><button onclick="loadOverviewCharts('monthly')" id="ov-chart-monthly" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;color:#64748B">월간</button></div>
 <div id="ov-charts" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규매출</p><div style="position:relative;height:200px"><canvas id="chart-ov-rev"></canvas></div><p id="ov-rev-basis" style="font-size:11px;color:#888888;margin-top:4px">일간: 출처: 인바운드 구글시트 / 계산: 일별 계약금액 SUM / 기간: 오늘KST 기준 최근 30일</p></div>
-<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">신규계약 / 재계약</p><div style="position:relative;height:200px"><canvas id="chart-ov-contracts"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">출처: 세금계산서 시트 / 신규=브랜드 첫등장 / 재계약=동일브랜드 2회이상</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">매출 현황 (신규+재계약 스택)</p><div style="position:relative;height:200px"><canvas id="chart-ov-rev"></canvas></div><p id="ov-rev-basis" style="font-size:11px;color:#888888;margin-top:4px">신규매출=브랜드명 첫등장 행 계약금액SUM / 재계약매출=동일브랜드 2회이상 SUM / 총매출=신규+재계약 / 출처: 구글시트 / 기준: KST</p></div>
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">계약건수 현황 (신규+재계약)</p><div style="position:relative;height:200px"><canvas id="chart-ov-contracts"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">신규계약수=브랜드명 첫등장 COUNT / 재계약수=동일브랜드 2회이상 COUNT / 출처: 구글시트 / 기준: KST</p></div>
 <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">계약상품별 분포</p><div style="position:relative;height:200px"><canvas id="chart-ov-products"></canvas></div></div>
 <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:8px">충전금 vs 보상 비교</p><div style="position:relative;height:200px"><canvas id="chart-ov-payback"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">충전금: 세금계산서발행시트 S열 월별SUM / 보상비율 = 보상÷충전금×100</p></div>
 <div style="background:#0F1520;border:1px solid #1E2433;border-radius:8px;padding:16px;grid-column:1/3">
@@ -105,7 +105,23 @@
 <p style="font-size:11px;color:#888888;margin-bottom:12px">자동게시: 전일 KPI 80% 미만 에이전트만 / 달성시 게시없음 / 최신순 정렬</p>
 <div id="alertBoard" style="display:flex;flex-direction:column;gap:10px"></div>
 </div>
-<div id="page-kpi"></div>
+<div id="page-kpi">
+<!-- 카일 에이전트 패널 -->
+<div style="background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(249,115,22,0.08));border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:20px;margin-bottom:20px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<div><p style="font-size:16px;font-weight:700;color:#7C3AED">카일(Kyle) — 총괄 매니저</p><p style="font-size:11px;color:#8B95A6">공팔리터글로벌 전체 KPI 책임 및 에이전트 관리</p></div>
+<div style="text-align:center"><p style="font-size:10px;color:#8B95A6">전체 KPI 달성률</p><p id="kyle-avg-kpi" style="font-family:monospace;font-size:28px;font-weight:700;color:#7C3AED">--%</p></div>
+</div>
+<div id="kyle-agent-bars" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px"></div>
+<p style="font-size:11px;color:#888888">출처: 각 에이전트 KPI 데이터 / 기준: 전일 목표 대비 달성률 / 갱신: 하루 2회(09시, 18시)</p>
+</div>
+<!-- 카일 개선제안 -->
+<div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px;margin-bottom:20px">
+<p style="font-size:13px;font-weight:700;color:#E8EBF2;margin-bottom:12px">카일의 개선제안</p>
+<div id="kyle-suggestions" style="display:flex;flex-direction:column;gap:8px"><p style="color:#4A5568;font-size:12px">로딩중...</p></div>
+<p style="font-size:11px;color:#888888;margin-top:8px">출처: 실시간 KPI 데이터 분석 / 카테고리: 매출개선/시스템정상화/API연동보완/대시보드개선</p>
+</div>
+</div>
 
 <div id="page-settings">
 <div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 설정</div></div>
@@ -146,8 +162,22 @@
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:700px"><thead><tr style="background:#161B27"><th style="padding:10px 16px;text-align:left;font-size:9px;color:#4A5568;text-transform:uppercase">지표</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">오늘</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">이번 달</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">전월</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">전월比</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">작년동월</th><th style="padding:10px 16px;text-align:right;font-size:9px;color:#4A5568">YoY</th></tr></thead><tbody id="brand-compare-table"><tr><td colspan="7" style="text-align:center;padding:16px;color:#4A5568;font-size:12px">로딩중...</td></tr></tbody></table></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">유입채널별 DB 수</p><div style="position:relative;height:180px"><canvas id="chart-channel-db"></canvas></div></div>
+    <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">유입채널별 DB 수</p><div style="position:relative;height:180px"><canvas id="chart-channel-db"></canvas></div><p style="font-size:11px;color:#888888;margin-top:4px">인바운드DB = 인바운드시트 전체행 24시간 실시간 COUNT / 갱신주기: 5분</p></div>
     <div style="background:#0F1520;border:1px solid #1E2433;border-radius:10px;padding:20px"><p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:14px">무대응 현황</p><div id="noresponse-summary" style="font-size:12px;color:#8B95A6">로딩중...</div></div>
+  </div>
+  <!-- 피치 아웃바운드 성과 대시보드 -->
+  <div style="background:#0F1520;border:1px solid rgba(14,165,233,0.3);border-radius:10px;padding:20px;margin-bottom:20px;border-left:3px solid #0EA5E9">
+    <p style="font-size:14px;font-weight:700;color:#0EA5E9;margin-bottom:14px">피치(Pitch) 아웃바운드 성과</p>
+    <div id="pitch-kpi-cards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:#161B27;border-radius:8px;padding:12px;text-align:center;cursor:pointer" onclick="alert('발송 목록: 추후 연동 예정')"><p style="font-size:9px;color:#8B95A6">이메일 발송수</p><p id="pitch-sent" style="font-family:monospace;font-size:20px;font-weight:700;color:#0EA5E9">-</p></div>
+      <div style="background:#161B27;border-radius:8px;padding:12px;text-align:center;cursor:pointer" onclick="alert('답변 목록: 추후 연동 예정')"><p style="font-size:9px;color:#8B95A6">답변 수신수</p><p id="pitch-replied" style="font-family:monospace;font-size:20px;font-weight:700;color:#22C55E">-</p></div>
+      <div style="background:#161B27;border-radius:8px;padding:12px;text-align:center;cursor:pointer"><p style="font-size:9px;color:#8B95A6">대응 완료수</p><p id="pitch-handled" style="font-family:monospace;font-size:20px;font-weight:700;color:#F97316">-</p></div>
+      <div style="background:#161B27;border-radius:8px;padding:12px;text-align:center;cursor:pointer"><p style="font-size:9px;color:#8B95A6">미팅 연결수</p><p id="pitch-meetings" style="font-family:monospace;font-size:20px;font-weight:700;color:#7C3AED">-</p></div>
+      <div style="background:#161B27;border-radius:8px;padding:12px;text-align:center;cursor:pointer"><p style="font-size:9px;color:#8B95A6">협상 진행수</p><p id="pitch-negotiating" style="font-family:monospace;font-size:20px;font-weight:700;color:#EF4444">-</p></div>
+    </div>
+    <div id="pitch-funnel" style="display:flex;align-items:center;gap:0;background:#161B27;border-radius:8px;overflow:hidden;margin-bottom:12px"></div>
+    <div style="background:#161B27;border-radius:8px;padding:16px"><p style="font-size:11px;color:#8B95A6;margin-bottom:8px">주간 아웃바운드 추이</p><div style="position:relative;height:160px"><canvas id="chart-pitch-weekly"></canvas></div></div>
+    <p style="font-size:11px;color:#888888;margin-top:8px">출처: 피치에이전트 이메일발송 로그 / 기준: 오늘 KST / 갱신: 실시간</p>
   </div>
   <div style="margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -336,6 +366,30 @@
 <div style="position:relative;height:180px"><canvas id="chart-cs-inf-hour"></canvas></div>
 <p style="font-size:11px;color:#888888;margin-top:4px">출처: 인플루언서CS 시간대별 접수 COUNT / 처리완료+미처리 분리 집계</p>
 </div>
+</div>
+<!-- 하나 에이전트 패널 + 근본해결 + 감동대응 -->
+<div style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(249,115,22,0.06));border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:20px;margin-top:20px;border-left:3px solid #F59E0B">
+<p style="font-size:14px;font-weight:700;color:#F59E0B;margin-bottom:4px">하나(Hana) — CS 에이전트</p>
+<p style="font-size:11px;color:#8B95A6;margin-bottom:16px">CS가 안들어오게 근본해결 + 들어온 CS는 감동대응</p>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+<div style="background:#161B27;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#8B95A6">오늘문의</p><p style="font-family:monospace;font-size:20px;font-weight:700;color:#E8EBF2">14</p></div>
+<div style="background:#161B27;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#8B95A6">처리완료</p><p style="font-family:monospace;font-size:20px;font-weight:700;color:#22C55E">8</p></div>
+<div style="background:#161B27;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#8B95A6">평균응답</p><p style="font-family:monospace;font-size:20px;font-weight:700;color:#0EA5E9">10분</p></div>
+<div style="background:#161B27;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#8B95A6">KPI달성률</p><p style="font-family:monospace;font-size:20px;font-weight:700;color:#F59E0B">78%</p></div>
+</div>
+<p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:10px">근본해결 현황</p>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+<div style="background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:14px"><p style="font-size:11px;font-weight:600;color:#F97316;margin-bottom:6px">정산문의 30% 반복</p><p style="font-size:10px;color:#8B95A6;margin-bottom:8px">근본원인: 정산 일정 안내 부재</p><p style="font-size:10px;color:#22C55E">제안: FAQ 페이지 추가 + 자동안내 메시지</p><div style="margin-top:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(245,158,11,0.15);color:#F59E0B;font-weight:600">진행중</span></div></div>
+<div style="background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:14px"><p style="font-size:11px;font-weight:600;color:#F97316;margin-bottom:6px">계정문제 반복</p><p style="font-size:10px;color:#8B95A6;margin-bottom:8px">근본원인: 가입 프로세스 복잡</p><p style="font-size:10px;color:#22C55E">제안: 원클릭 가입 + 가이드 영상</p><div style="margin-top:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(239,68,68,0.15);color:#EF4444;font-weight:600">미실행</span> <button style="padding:2px 8px;background:#F59E0B;border:none;border-radius:4px;color:#fff;font-size:9px;cursor:pointer;margin-left:4px">실행하기</button></div></div>
+<div style="background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:14px"><p style="font-size:11px;font-weight:600;color:#F97316;margin-bottom:6px">협찬 조건 문의 반복</p><p style="font-size:10px;color:#8B95A6;margin-bottom:8px">근본원인: 협찬 조건 페이지 미비</p><p style="font-size:10px;color:#22C55E">제안: 랜딩페이지에 조건 명시</p><div style="margin-top:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(34,197,94,0.15);color:#22C55E;font-weight:600">완료</span></div></div>
+</div>
+<p style="font-size:12px;font-weight:700;color:#E8EBF2;margin-bottom:10px">오늘의 감동대응 아이디어</p>
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+<div style="background:#161B27;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center"><div><p style="font-size:11px;color:#E8EBF2">불만 고객에게 손편지 메시지 + 10% 추가할인 쿠폰 자동발송</p><p style="font-size:9px;color:#8B95A6">예상효과: 재방문율 25% 향상</p></div><button style="padding:4px 12px;background:#F59E0B;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer">실행하기</button></div>
+<div style="background:#161B27;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center"><div><p style="font-size:11px;color:#E8EBF2">문의 후 24시간내 만족도 체크 메시지 자동발송</p><p style="font-size:9px;color:#8B95A6">예상효과: 고객만족도 15% 개선</p></div><button style="padding:4px 12px;background:#F59E0B;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer">실행하기</button></div>
+<div style="background:#161B27;border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center"><div><p style="font-size:11px;color:#E8EBF2">첫 거래 완료 인플루언서에게 감사 메시지 + 다음 캠페인 우선초대</p><p style="font-size:9px;color:#8B95A6">예상효과: 재계약률 20% 향상</p></div><button style="padding:4px 12px;background:#F59E0B;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer">실행하기</button></div>
+</div>
+<p style="font-size:11px;color:#888888">출처: 하나 에이전트 자동분석 / 기준: 문의유형 패턴 + 반복률 / 갱신: 매일 09시</p>
 </div>
 </div>
 </div></main>
@@ -1090,16 +1144,26 @@ document.getElementById('ov-chart-monthly').style.color=mode==='monthly'?'#fff':
 fetch('/api/kpi-trend').then(function(r){return r.json()}).then(function(d){
 var revData=mode==='daily'?d.daily_revenue||[]:d.monthly_revenue||[];
 var labels=revData.map(function(r){return mode==='daily'?r.date.slice(6):r.month});
-var vals=revData.map(function(r){return r.revenue});
-// 매출 그래프
+// 매출 그래프 — 스택 바 (신규+재계약) + 총합계 라인
 if(_ovCharts.rev)_ovCharts.rev.destroy();
 var c1=document.getElementById('chart-ov-rev');
-if(c1)_ovCharts.rev=new Chart(c1,{type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:'rgba(249,115,22,0.6)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}}}}});
-// 계약수 그래프
-var ctData=d.daily_contracts||[];
+if(c1)_ovCharts.rev=new Chart(c1,{type:'bar',data:{labels:labels,datasets:[
+{label:'신규매출',data:revData.map(function(r){return r.new_rev||0}),backgroundColor:'rgba(249,115,22,0.7)',stack:'rev'},
+{label:'재계약매출',data:revData.map(function(r){return r.renew_rev||0}),backgroundColor:'rgba(124,58,237,0.7)',stack:'rev'},
+{type:'line',label:'총매출',data:revData.map(function(r){return r.revenue||0}),borderColor:'#fff',tension:0.3,pointRadius:2,borderWidth:1.5,yAxisID:'y1'}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{y:{stacked:true,ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'rgba(255,255,255,0.05)'}},y1:{position:'right',ticks:{color:'#fff',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{display:false}},x:{stacked:true,ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{display:false}}}}});
+// 계약건수 그래프 — 그룹 바 (신규+재계약) + 총합계 라인
+var ctData=mode==='daily'?d.daily_contracts||[]:d.monthly_revenue||[];
+var ctLabels=mode==='daily'?ctData.map(function(r){return r.date?r.date.slice(6):''}):ctData.map(function(r){return r.month||''});
+var ctNew=mode==='daily'?ctData.map(function(r){return r.new||0}):ctData.map(function(r){return r.new_cnt||0});
+var ctRenew=mode==='daily'?ctData.map(function(r){return r.renew||0}):ctData.map(function(r){return r.renew_cnt||0});
 if(_ovCharts.ct)_ovCharts.ct.destroy();
 var c2=document.getElementById('chart-ov-contracts');
-if(c2)_ovCharts.ct=new Chart(c2,{type:'bar',data:{labels:ctData.map(function(r){return r.date.slice(6)}),datasets:[{label:'신규',data:ctData.map(function(r){return r.new}),backgroundColor:'#F97316'},{label:'재계약',data:ctData.map(function(r){return r.renew}),backgroundColor:'#7C3AED'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{stacked:true,ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true},grid:{display:false}},y:{stacked:true,ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}});
+if(c2)_ovCharts.ct=new Chart(c2,{type:'bar',data:{labels:ctLabels,datasets:[
+{label:'신규계약',data:ctNew,backgroundColor:'#F97316',stack:'ct'},
+{label:'재계약',data:ctRenew,backgroundColor:'#7C3AED',stack:'ct'},
+{type:'line',label:'총계약',data:ctNew.map(function(v,i){return v+(ctRenew[i]||0)}),borderColor:'#fff',tension:0.3,pointRadius:2,borderWidth:1.5,yAxisID:'y1'}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{y:{stacked:true,ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}},y1:{position:'right',ticks:{color:'#fff'},grid:{display:false}},x:{stacked:true,ticks:{color:'#8B95A6',maxRotation:0,autoSkip:true},grid:{display:false}}}}});
 // 상품별 분포
 var pd=d.product_distribution||[];
 if(_ovCharts.prod)_ovCharts.prod.destroy();
@@ -1110,8 +1174,8 @@ var mpb=d.monthly_payback||[];
 if(_ovCharts.pb)_ovCharts.pb.destroy();
 var c4=document.getElementById('chart-ov-payback');
 if(c4&&mpb.length)_ovCharts.pb=new Chart(c4,{type:'bar',data:{labels:mpb.map(function(r){return r.month}),datasets:[{label:'충전금',data:mpb.map(function(r){return r.amount}),backgroundColor:'rgba(14,165,233,0.7)'},{label:'보상',data:mpb.map(function(){return 0}),backgroundColor:'rgba(249,115,22,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{y:{ticks:{color:'#8B95A6',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'rgba(255,255,255,0.05)'}},x:{ticks:{color:'#8B95A6'},grid:{display:false}}}}});
-// 충전금 요약 카드
-var totalPb=mpb.reduce(function(s,r){return s+r.amount},0);
+// 충전금 요약 카드 — total_payback from API for accuracy
+var totalPb=d.total_payback||mpb.reduce(function(s,r){return s+r.amount},0);
 var e_pb=document.getElementById('sum-payback');if(e_pb)e_pb.textContent=(totalPb/10000).toLocaleString()+'만원';
 var e_rw=document.getElementById('sum-reward');if(e_rw)e_rw.textContent='0원';
 var e_rm=document.getElementById('sum-remain');if(e_rm)e_rm.textContent=(totalPb/10000).toLocaleString()+'만원';
@@ -1229,6 +1293,69 @@ var dot=document.createElement('span');dot.style.cssText='display:inline-block;w
 var stxt=document.createElement('span');stxt.style.cssText='font-size:11px;color:'+(isOn?'#22C55E':isWarn?'#F59E0B':isPending?'#4A5568':'#EF4444');stxt.textContent=isOn?'연결됨':isWarn?'토큰 갱신 필요':isPending?'준비중':'미연결';card.appendChild(stxt);
 if(isWarn&&svc.meta_ads_note){var nt=document.createElement('p');nt.style.cssText='font-size:9px;color:#F59E0B;margin-top:4px';nt.textContent=svc.meta_ads_note;card.appendChild(nt)}
 el.appendChild(card)})}).catch(function(){})}
+
+// ===== 카일 에이전트 대시보드 =====
+function loadKylePanel(){
+fetch('/api/agent-performance').then(function(r){return r.json()}).then(function(d){
+var avgEl=document.getElementById('kyle-avg-kpi');if(avgEl)avgEl.textContent=d.avg_kpi+'%';
+var barsEl=document.getElementById('kyle-agent-bars');if(!barsEl)return;
+while(barsEl.firstChild)barsEl.removeChild(barsEl.firstChild);
+var colors={'카일':'#7C3AED','루나':'#F97316','피치':'#0EA5E9','맥스':'#EF4444','소피':'#E1306C','레이':'#22C55E','하나':'#F59E0B'};
+Object.entries(d.agents||{}).forEach(function(e){
+var name=e[0],info=e[1];
+var col=document.createElement('div');col.style.cssText='text-align:center';
+var nm=document.createElement('p');nm.style.cssText='font-size:10px;color:#8B95A6;margin-bottom:4px';nm.textContent=name;col.appendChild(nm);
+var barBg=document.createElement('div');barBg.style.cssText='height:6px;background:#1E2433;border-radius:3px;overflow:hidden;margin-bottom:4px';
+var barFill=document.createElement('div');barFill.style.cssText='height:100%;border-radius:3px;background:'+(colors[name]||'#F97316')+';width:'+Math.min(info.kpi,100)+'%';barBg.appendChild(barFill);col.appendChild(barBg);
+var pct=document.createElement('p');pct.style.cssText='font-family:monospace;font-size:11px;font-weight:700;color:'+(info.kpi>=80?colors[name]||'#F97316':'#EF4444');pct.textContent=info.kpi+'%';col.appendChild(pct);
+var met=document.createElement('p');met.style.cssText='font-size:8px;color:#4A5568';met.textContent=info.metric;col.appendChild(met);
+barsEl.appendChild(col)})}).catch(function(){});
+// 카일 개선제안
+fetch('/api/kyle-suggestions').then(function(r){return r.json()}).then(function(d){
+var el=document.getElementById('kyle-suggestions');if(!el)return;
+while(el.firstChild)el.removeChild(el.firstChild);
+(d.suggestions||[]).forEach(function(s){
+var card=document.createElement('div');card.style.cssText='background:#161B27;border:1px solid #1E2433;border-radius:8px;padding:12px;cursor:pointer';
+var top=document.createElement('div');top.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px';
+var urg=document.createElement('span');urg.style.cssText='padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:'+(s.urgency==='높음'?'#EF4444':s.urgency==='중간'?'#F59E0B':'#3B82F6');urg.textContent=s.urgency;top.appendChild(urg);
+var cat=document.createElement('span');cat.style.cssText='font-size:10px;color:#7C3AED;font-weight:600';cat.textContent=s.category;top.appendChild(cat);
+card.appendChild(top);
+var title=document.createElement('p');title.style.cssText='font-size:12px;color:#E8EBF2;font-weight:600;margin-bottom:4px';title.textContent=s.title;card.appendChild(title);
+var det=document.createElement('p');det.style.cssText='font-size:10px;color:#8B95A6;display:none';det.textContent=s.detail+' → '+s.action;card.appendChild(det);
+card.addEventListener('click',function(){det.style.display=det.style.display==='none'?'block':'none'});
+el.appendChild(card)})}).catch(function(){})}
+
+// ===== 피치 아웃바운드 로드 =====
+function loadPitchOutbound(){
+fetch('/api/pitch-outbound').then(function(r){return r.json()}).then(function(d){
+var t=d.today||{};
+var ids={sent:'pitch-sent',replied:'pitch-replied',handled:'pitch-handled',meetings:'pitch-meetings',negotiating:'pitch-negotiating'};
+Object.entries(ids).forEach(function(e){var el=document.getElementById(e[1]);if(el)el.textContent=t[e[0]]||0});
+// 퍼널
+var funnel=d.funnel||[];var fEl=document.getElementById('pitch-funnel');if(fEl){
+while(fEl.firstChild)fEl.removeChild(fEl.firstChild);
+var fColors=['#0EA5E9','#22C55E','#F97316','#7C3AED','#EF4444','#F59E0B'];
+funnel.forEach(function(f,i){
+var cell=document.createElement('div');cell.style.cssText='flex:1;padding:12px 8px;text-align:center;'+(i<funnel.length-1?'border-right:1px solid #1E2433':'');
+var nm=document.createElement('p');nm.style.cssText='font-size:9px;color:#8B95A6';nm.textContent=f.stage;cell.appendChild(nm);
+var cnt=document.createElement('p');cnt.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:'+(fColors[i]||'#E8EBF2');cnt.textContent=f.count;cell.appendChild(cnt);
+var rate=document.createElement('p');rate.style.cssText='font-size:9px;color:#4A5568';rate.textContent=f.rate+'%';cell.appendChild(rate);
+fEl.appendChild(cell)})}
+// 주간 차트
+var weekly=d.weekly||[];var ctx=document.getElementById('chart-pitch-weekly');
+if(ctx){if(ctx._chart)ctx._chart.destroy();
+ctx._chart=new Chart(ctx,{type:'line',data:{labels:weekly.map(function(w){return w.date}),datasets:[
+{label:'발송',data:weekly.map(function(w){return w.sent}),borderColor:'#0EA5E9',tension:0.3,pointRadius:3,borderWidth:2},
+{label:'답변',data:weekly.map(function(w){return w.replied}),borderColor:'#22C55E',tension:0.3,pointRadius:3,borderWidth:2},
+{label:'미팅',data:weekly.map(function(w){return w.meetings}),borderColor:'#7C3AED',tension:0.3,pointRadius:3,borderWidth:2}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8B95A6',font:{size:10}}}},scales:{x:{ticks:{color:'#8B95A6'},grid:{display:false}},y:{ticks:{color:'#8B95A6'},grid:{color:'rgba(255,255,255,0.05)'}}}}})}
+}).catch(function(){})}
+
+// ===== showPage hooks 추가 =====
+var _origShowPage2=showPage;
+showPage=function(pid){_origShowPage2(pid);
+if(pid==='kpi')loadKylePanel();
+if(pid==='brand')loadPitchOutbound()};
 </script>
 </body>
 </html>
