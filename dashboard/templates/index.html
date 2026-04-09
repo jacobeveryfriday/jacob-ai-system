@@ -302,6 +302,26 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
       <button onclick="generatePitchEmails()" style="padding:6px 14px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer;white-space:nowrap">이메일 생성</button>
     </div>
   </div>
+  <!-- 프로모션 설정 카드 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">이메일 제안 내용 설정</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+      <div>
+        <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">프로모션 선택</p>
+        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="4월 앵콜 — 숏폼 무제한 300만원" checked style="width:12px;height:12px"> 숏폼 무제한 300만원</label>
+        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="구매평 체험단 — 100건 이상 3천원/건" style="width:12px;height:12px"> 구매평 체험단 3천원/건</label>
+        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="글로벌 구매평 — 100건 이상 3만원/건" style="width:12px;height:12px"> 글로벌 구매평 3만원/건</label>
+        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="맞춤형 키 인플루언서 — 최소 10만원/인" style="width:12px;height:12px"> 키 인플루언서 10만원/인</label>
+      </div>
+      <div>
+        <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">강조 포인트</p>
+        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-highlight" value="리뷰 없으면 구매 없다" checked style="width:12px;height:12px"> 리뷰 없으면 구매 없다</label>
+        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-highlight" value="무제한 숏폼" style="width:12px;height:12px"> 무제한 숏폼</label>
+        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-highlight" value="매출 전환 보장" style="width:12px;height:12px"> 매출 전환 보장</label>
+      </div>
+    </div>
+    <button onclick="generatePromoEmails()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">이 설정으로 이메일 생성</button>
+  </div>
   <div id="pitch-gauge" style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">일간</button>
@@ -541,34 +561,40 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-sns">
-<div id="sophie-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
-<!-- 소피 에이전트 KPI -->
-<div class="agent-kpi-grid">
-  <div class="agent-kpi-item inactive"><div class="label">콘텐츠 생성</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">브랜드 리드 확보</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">인플루언서 리드 확보</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">에이전트 상태</div><div class="value">SNS API 연동 대기</div></div>
+<!-- 소피 리드 현황 KPI -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">B2B 리드</p><p id="sns-b2b-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">0 / 300</p></div>
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">B2C 리드</p><p id="sns-b2c-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">0 / 500</p></div>
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">오늘 콘텐츠</p><p id="sns-today-content" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">0 / 2</p></div>
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">리드 전달</p><p style="font-size:11px;color:#B8860B;margin-top:4px">→ 피치 0건 / → 루나 0건</p></div>
 </div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:12px">SNS 수동 입력</p>
-<div style="display:flex;flex-direction:column;gap:8px">
-<select id="sns-channel" style="padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px"><option value="instagram_b2b">B2B 인스타 @insight._.lab</option><option value="instagram_b2c">B2C 인스타 @08l_korea</option><option value="youtube_b2b">유튜브 @08L_insight</option><option value="tiktok_b2b">B2B 틱톡 @08l_insight</option><option value="tiktok_b2c">B2C 틱톡 @08liter_korea</option></select>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-<div><label style="font-size:10px;color:#6B6B6B">팔로워/구독자</label><input id="sns-followers" type="number" value="0" style="width:100%;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;font-family:monospace"></div>
-<div><label style="font-size:10px;color:#6B6B6B">인게이지먼트(%)</label><input id="sns-engagement" type="number" step="0.1" value="0" style="width:100%;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;font-family:monospace"></div>
+<!-- 오늘의 콘텐츠 승인 -->
+<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <span style="font-size:13px;font-weight:700;color:#1B2A4A">오늘의 콘텐츠 — CEO 승인</span>
+    <button onclick="generateSnsContent()" style="padding:5px 12px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer;font-weight:600">콘텐츠 생성</button>
+  </div>
+  <div id="sns-content-queue" style="font-size:11px;color:#9B9B9B">[콘텐츠 생성] 버튼을 눌러 오늘의 B2B/B2C 콘텐츠를 생성하세요.</div>
 </div>
-<button onclick="saveSnsManual()" style="padding:8px 20px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
-<span id="sns-manual-msg" style="font-size:10px;color:#1A7A4C"></span>
+<!-- 콘텐츠 주제 설정 -->
+<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+  <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">콘텐츠 설정</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div>
+      <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">B2B 주제</p>
+      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2b-topic" value="인플루언서 마케팅 성공사례" checked style="width:12px;height:12px"> 성공사례</label>
+      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2b-topic" value="4월 프로모션 안내" style="width:12px;height:12px"> 프로모션 안내</label>
+      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2b-topic" value="리뷰의 중요성 데이터 기반" style="width:12px;height:12px"> 리뷰 데이터</label>
+    </div>
+    <div>
+      <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">B2C 주제</p>
+      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2c-topic" value="무료 협찬 모집" checked style="width:12px;height:12px"> 무료 협찬 모집</label>
+      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2c-topic" value="K-뷰티 트렌드" style="width:12px;height:12px"> K-뷰티 트렌드</label>
+      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2c-topic" value="인플루언서 수익화 팁" style="width:12px;height:12px"> 수익화 팁</label>
+    </div>
+  </div>
 </div>
-</div>
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:12px">소피 콘텐츠 생성</p>
-<p style="font-size:11px;color:#6B6B6B;margin-bottom:10px">B2B/B2C 이번 주 콘텐츠 주제 + 캡션 + 해시태그 자동 생성</p>
-<button onclick="generateSophieContent()" style="padding:8px 20px;background:#7C3AED;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">콘텐츠 생성하기</button>
-<div id="sophie-content-result" style="margin-top:12px;font-size:12px;color:#6B6B6B;white-space:pre-line;max-height:400px;overflow-y:auto"></div>
-</div>
-</div>
+<div id="sophie-gauge" style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
 </div>
 
 <div id="page-management">
@@ -1571,18 +1597,41 @@ fetch('/api/email-queue?agent='+encodeURIComponent(agent)).then(function(r){retu
 var el=document.getElementById(containerId);if(!el)return;
 if(!d.emails||!d.emails.length){el.textContent='대기 중인 이메일 없음';return}
 while(el.firstChild)el.removeChild(el.firstChild);
-d.emails.slice(0,5).forEach(function(e){
-var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #EDEBE7';
-var info=document.createElement('div');
-var to=document.createElement('div');to.style.cssText='font-size:11px;font-weight:600;color:#1B2A4A';to.textContent=e.to;info.appendChild(to);
-var subj=document.createElement('div');subj.style.cssText='font-size:10px;color:#6B6B6B';subj.textContent=e.subject;info.appendChild(subj);
-row.appendChild(info);
-var btns=document.createElement('div');btns.style.cssText='display:flex;gap:4px;flex-shrink:0';
-var b1=document.createElement('button');b1.style.cssText='padding:3px 8px;background:#1B2A4A;border:none;border-radius:4px;color:#fff;font-size:9px;cursor:pointer';b1.textContent='승인';
-b1.addEventListener('click',(function(id){return function(){fetch('/api/email-queue/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(){loadEmailQueue(agent,containerId)})}})(e.id));btns.appendChild(b1);
-var b2=document.createElement('button');b2.style.cssText='padding:3px 8px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#C4332B;font-size:9px;cursor:pointer';b2.textContent='삭제';
+d.emails.slice(0,10).forEach(function(e){
+var card=document.createElement('div');card.style.cssText='background:#F8F7F5;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:10px';
+// 수신자
+var hdr=document.createElement('div');hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px';
+var rcpt=document.createElement('div');rcpt.style.cssText='font-size:11px;font-weight:600;color:#1B2A4A';rcpt.textContent='수신: '+e.to+(e.meta&&e.meta.target?' ('+e.meta.target+')':'');hdr.appendChild(rcpt);
+var tag=document.createElement('span');tag.style.cssText='font-size:9px;color:#6B6B6B;background:#EDEBE7;padding:2px 6px;border-radius:4px';tag.textContent=agent;hdr.appendChild(tag);
+card.appendChild(hdr);
+// 제목 (인라인 편집)
+var subjWrap=document.createElement('div');subjWrap.style.cssText='margin-bottom:6px';
+var subjInput=document.createElement('input');subjInput.type='text';subjInput.value=e.subject;
+subjInput.style.cssText='width:100%;padding:6px 8px;border:0.5px solid #E8E6E1;border-radius:4px;font-size:12px;font-weight:600;color:#1B2A4A;background:#FFF;font-family:inherit';
+subjInput.dataset.id=e.id;subjWrap.appendChild(subjInput);card.appendChild(subjWrap);
+// 본문 (인라인 편집) — HTML에서 텍스트 추출
+var bodyText=e.html?e.html.replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim().substring(0,500):'';
+var bodyArea=document.createElement('textarea');bodyArea.value=bodyText;
+bodyArea.style.cssText='width:100%;min-height:100px;padding:8px;border:0.5px solid #E8E6E1;border-radius:4px;font-size:11px;color:#1B2A4A;background:#FFF;font-family:inherit;resize:vertical;line-height:1.6';
+bodyArea.dataset.id=e.id;card.appendChild(bodyArea);
+// 하단: 버튼
+var foot=document.createElement('div');foot.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-top:8px';
+var meta=document.createElement('span');meta.style.cssText='font-size:9px;color:#9B9B9B';meta.textContent='미팅 링크 포함';foot.appendChild(meta);
+var btns=document.createElement('div');btns.style.cssText='display:flex;gap:4px';
+// 승인 발송
+var b1=document.createElement('button');b1.style.cssText='padding:4px 10px;background:#1B2A4A;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer;font-weight:600';b1.textContent='승인 발송';
+b1.addEventListener('click',(function(id,si,ba){return function(){
+var newSubj=si.value;var newBody=ba.value;
+fetch('/api/email-queue/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,subject:newSubj,body_text:newBody})}).then(function(){
+return fetch('/api/email-queue/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})}).then(function(){loadEmailQueue(agent,containerId)})
+}})(e.id,subjInput,bodyArea));btns.appendChild(b1);
+// 재생성
+var b3=document.createElement('button');b3.style.cssText='padding:4px 10px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#2D4A7A;font-size:10px;cursor:pointer';b3.textContent='재생성';
+b3.addEventListener('click',(function(id){return function(){fetch('/api/email-queue/regenerate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(){loadEmailQueue(agent,containerId)})}})(e.id));btns.appendChild(b3);
+// 삭제
+var b2=document.createElement('button');b2.style.cssText='padding:4px 10px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#C4332B;font-size:10px;cursor:pointer';b2.textContent='삭제';
 b2.addEventListener('click',(function(id){return function(){fetch('/api/email-queue/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(){loadEmailQueue(agent,containerId)})}})(e.id));btns.appendChild(b2);
-row.appendChild(btns);el.appendChild(row)})}).catch(function(){})}
+foot.appendChild(btns);card.appendChild(foot);el.appendChild(card)})}).catch(function(){})}
 function toggleAutoSend(agent,on){
 fetch('/api/agent-auto-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:agent,enabled:on})}).catch(function(){})}
 // 자동 발송 토글 초기화
@@ -1652,6 +1701,37 @@ fetch('/api/crawl/brands',{method:'POST',headers:{'Content-Type':'application/js
 if(!d.results||!d.results.length){alert('대상 없음');return}
 fetch('/api/generate-emails',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targets:d.results,agent:'피치',template:'pitch_outbound'})}).then(function(r){return r.json()}).then(function(r){alert('이메일 '+r.queued+'건 생성 → 검수 큐');loadEmailQueue('피치','pitch-email-queue');loadPipelineStats()})
 }).catch(function(){alert('오류')})}
+// 프로모션 기반 이메일 생성
+function generatePromoEmails(){
+var promos=[];document.querySelectorAll('.pitch-promo:checked').forEach(function(c){promos.push(c.value)});
+var highlights=[];document.querySelectorAll('.pitch-highlight:checked').forEach(function(c){highlights.push(c.value)});
+fetch('/api/crawl/brands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels:['인바운드DB'],limit:10})}).then(function(r){return r.json()}).then(function(d){
+if(!d.results||!d.results.length){alert('대상 없음');return}
+fetch('/api/generate-with-promo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:'피치',promos:promos,highlights:highlights,targets:d.results})}).then(function(r){return r.json()}).then(function(r){alert(r.queued+'건 이메일 생성 → 검수 큐');loadEmailQueue('피치','pitch-email-queue')})
+}).catch(function(){alert('오류')})}
+// SNS 콘텐츠 생성
+function generateSnsContent(){
+var b2b=[];document.querySelectorAll('.sns-b2b-topic:checked').forEach(function(c){b2b.push(c.value)});
+var b2c=[];document.querySelectorAll('.sns-b2c-topic:checked').forEach(function(c){b2c.push(c.value)});
+var el=document.getElementById('sns-content-queue');if(el)el.textContent='콘텐츠 생성중...';
+fetch('/api/sns-content/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({b2b_topics:b2b,b2c_topics:b2c})}).then(function(r){return r.json()}).then(function(d){
+if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
+['b2b','b2c'].forEach(function(ct){
+if(!d.results[ct])return;
+var card=document.createElement('div');card.style.cssText='background:#F8F7F5;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:10px';
+var hdr=document.createElement('div');hdr.style.cssText='display:flex;justify-content:space-between;margin-bottom:8px';
+var label=document.createElement('span');label.style.cssText='font-size:11px;font-weight:700;color:#1B2A4A';label.textContent=(ct==='b2b'?'B2B':'B2C')+' — '+d.results[ct].channel;hdr.appendChild(label);
+var target=document.createElement('span');target.style.cssText='font-size:9px;color:#6B6B6B';target.textContent='타겟: '+d.results[ct].target;hdr.appendChild(target);
+card.appendChild(hdr);
+var area=document.createElement('textarea');area.value=d.results[ct].content;
+area.style.cssText='width:100%;min-height:120px;padding:8px;border:0.5px solid #E8E6E1;border-radius:4px;font-size:11px;color:#1B2A4A;background:#FFF;font-family:inherit;resize:vertical;line-height:1.6';
+card.appendChild(area);
+var btns=document.createElement('div');btns.style.cssText='display:flex;gap:4px;margin-top:8px;justify-content:flex-end';
+var b1=document.createElement('button');b1.style.cssText='padding:4px 10px;background:#1B2A4A;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer;font-weight:600';b1.textContent='승인 발행';btns.appendChild(b1);
+var b2=document.createElement('button');b2.style.cssText='padding:4px 10px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#2D4A7A;font-size:10px;cursor:pointer';b2.textContent='재생성';
+b2.addEventListener('click',function(){generateSnsContent()});btns.appendChild(b2);
+card.appendChild(btns);el.appendChild(card)})
+}).catch(function(){if(el)el.textContent='생성 오류'})}
 function generateLunaEmails(){
 fetch('/api/crawl/influencers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:['KR'],platforms:['Instagram'],limit:10})}).then(function(r){return r.json()}).then(function(d){
 if(!d.results||!d.results.length){alert('대상 없음');return}

@@ -3222,6 +3222,124 @@ async def api_email_update(request: Request):
     save_email_queue(queue)
     return {"status": "ok"}
 
+@app.post("/api/email-queue/regenerate")
+async def api_email_regenerate(request: Request):
+    """AI로 이메일 내용 재생성."""
+    body = await request.json()
+    eid = body.get("id")
+    queue = load_email_queue()
+    for e in queue:
+        if e.get("id") == eid and e.get("status") == "pending":
+            target = e.get("meta", {}).get("target", "고객")
+            agent = e.get("agent", "피치")
+            if ANTHROPIC_API_KEY:
+                try:
+                    prompt = f"{target}에게 보낼 {'인플루언서 마케팅' if agent=='피치' else '협찬'} 제안 이메일을 작성해주세요. 100단어, 미팅 링크 포함."
+                    async with httpx.AsyncClient(timeout=20) as client:
+                        resp = await client.post("https://api.anthropic.com/v1/messages",
+                            headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 512,
+                                  "messages": [{"role": "user", "content": prompt}]})
+                        if resp.status_code == 200:
+                            new_body = resp.json()["content"][0]["text"]
+                            e["subject"] = f"[공팔리터글로벌] {target} 맞춤 제안"
+                            e["html"] = _build_pitch_html(target, new_body + f"\n\n[미팅 예약하기]({MEETING_LINK})")
+                            e["meta"]["regenerated"] = True
+                            usage = resp.json().get("usage", {})
+                            _record_tokens(agent, usage.get("input_tokens", 0), usage.get("output_tokens", 0), "haiku")
+                except Exception as ex:
+                    print(f"Regenerate error: {ex}")
+            break
+    save_email_queue(queue)
+    return {"status": "ok"}
+
+@app.post("/api/generate-with-promo")
+async def api_generate_with_promo(request: Request):
+    """프로모션/협찬 설정 기반 이메일 생성."""
+    body = await request.json()
+    agent = body.get("agent", "피치")
+    promos = body.get("promos", [])
+    highlights = body.get("highlights", [])
+    targets = body.get("targets", [])
+    promo_text = " / ".join(promos) if promos else "4월 프로모션"
+    highlight_text = " / ".join(highlights) if highlights else ""
+    queued = 0
+    for t in targets[:20]:
+        email = t.get("email", "")
+        if not email or "@" not in email:
+            continue
+        name = t.get("company", t.get("name", "담당자"))
+        email_body = f"안녕하세요, {name} 담당자님.\n글로벌 인플루언서 마케팅 플랫폼 공팔리터의 제이콥입니다.\n\n"
+        if agent == "피치":
+            email_body += f"현재 진행 중인 프로모션을 안내드립니다:\n"
+            for p in promos:
+                email_body += f"• {p}\n"
+            if highlight_text:
+                email_body += f"\n핵심 포인트: {highlight_text}\n"
+            email_body += f"\n10분 비대면 미팅으로 {name}에 맞는 맞춤 제안 드립니다."
+        else:
+            email_body += f"협찬 제안드립니다:\n"
+            for p in promos:
+                email_body += f"• {p}\n"
+            email_body += f"\n관심 있으시면 답장 부탁드립니다."
+        html = _build_pitch_html(name, email_body + f"\n\n[미팅 예약하기]({MEETING_LINK})")
+        subject = f"[공팔리터글로벌] {name} {'맞춤 프로모션' if agent=='피치' else '무료 협찬 제안'}"
+        _queue_or_send_email(agent, email, subject, html, {"target": name, "promos": promos})
+        queued += 1
+    return {"status": "ok", "queued": queued}
+
+@app.post("/api/sns-content/generate")
+async def api_sns_content_generate(request: Request):
+    """소피: 프로모션 설정 기반 B2B/B2C 콘텐츠 생성 → 승인 큐."""
+    body = await request.json()
+    b2b_topics = body.get("b2b_topics", ["인플루언서 마케팅 성공사례"])
+    b2c_topics = body.get("b2c_topics", ["무료 협찬 모집"])
+    b2b_channel = body.get("b2b_channel", "Instagram")
+    b2c_channel = body.get("b2c_channel", "TikTok")
+    now = datetime.now(KST)
+    results = {"b2b": None, "b2c": None}
+    if ANTHROPIC_API_KEY:
+        for content_type, topics, channel in [("b2b", b2b_topics, b2b_channel), ("b2c", b2c_topics, b2c_channel)]:
+            target = "브랜드 마케팅 담당자" if content_type == "b2b" else "뷰티 인플루언서"
+            prompt = (f"공팔리터글로벌 {channel}용 {'B2B' if content_type=='b2b' else 'B2C'} 콘텐츠를 작성해주세요.\n"
+                      f"타겟: {target}\n주제: {', '.join(topics)}\n"
+                      f"형식: {'카드뉴스 텍스트' if channel=='Instagram' else '숏폼 스크립트'}\n"
+                      f"제목 + 본문(150단어) + 해시태그 5개 + CTA 1줄을 작성해주세요.")
+            try:
+                async with httpx.AsyncClient(timeout=25) as client:
+                    resp = await client.post("https://api.anthropic.com/v1/messages",
+                        headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                        json={"model": "claude-haiku-4-5-20251001", "max_tokens": 600,
+                              "messages": [{"role": "user", "content": prompt}]})
+                    if resp.status_code == 200:
+                        content = resp.json()["content"][0]["text"]
+                        results[content_type] = {"channel": channel, "target": target, "content": content, "topics": topics}
+                        usage = resp.json().get("usage", {})
+                        _record_tokens("소피", usage.get("input_tokens", 0), usage.get("output_tokens", 0), "haiku")
+            except Exception as ex:
+                print(f"SNS content gen error: {ex}")
+    else:
+        results["b2b"] = {"channel": b2b_channel, "target": "브랜드 담당자", "content": f"[B2B] {', '.join(b2b_topics)}\n\n리뷰 0개인 브랜드가 3주만에 100개 만든 비결...\n\n#인플루언서마케팅 #공팔리터 #리뷰마케팅 #K뷰티 #브랜드성장\n\nCTA: 프로필 링크에서 무료 상담 예약", "topics": b2b_topics}
+        results["b2c"] = {"channel": b2c_channel, "target": "뷰티 인플루언서", "content": f"[B2C] {', '.join(b2c_topics)}\n\nK-뷰티 제품 공짜로 받고 싶으세요?\n공팔리터에서 매주 새로운 협찬 기회!\n\n#무료협찬 #K뷰티 #인플루언서 #뷰티크리에이터 #협찬제안\n\nCTA: 프로필 링크에서 지금 신청!", "topics": b2c_topics}
+    # 승인 큐에 등록
+    proposals = load_proposals()
+    for ct in ["b2b", "b2c"]:
+        if results[ct]:
+            proposals.append({
+                "id": int(time.time() * 1000) % 10000000 + (1 if ct == "b2c" else 0),
+                "agent": "소피", "status": "pending_approval",
+                "proposal": f"{'B2B' if ct=='b2b' else 'B2C'} 콘텐츠 — {results[ct]['channel']}",
+                "detail": results[ct]["content"],
+                "expected_impact": f"예상 리드: {'5~15' if ct=='b2b' else '10~30'}건",
+                "action_type": "sns_content",
+                "channel": results[ct]["channel"],
+                "content_type": ct,
+                "ceo_comment": "", "created_at": now.isoformat(),
+            })
+    save_proposals(proposals[-200:])
+    _record_perf("소피", "content_created", 2)
+    return {"status": "ok", "results": results}
+
 @app.get("/api/outbound-dashboard")
 async def api_outbound_dashboard(agent: str = "피치"):
     """섹션 최상단 통합 KPI — CEO 대시보드용."""
