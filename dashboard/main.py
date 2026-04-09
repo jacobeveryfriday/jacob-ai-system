@@ -139,6 +139,9 @@ GOALS_FILE = DATA_DIR / "goals.json"
 ALERTS_FILE = DATA_DIR / "alerts.json"
 PROPOSALS_FILE = DATA_DIR / "proposals.json"
 CYCLE_LOG_FILE = DATA_DIR / "cycle_log.json"
+AGENT_PERF_FILE = DATA_DIR / "agent_performance.json"
+
+MEETING_LINK = "https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ3b3pndYo35A_3SjrHJeeXfAm3YpvBX0IXfkJqXP0QXixBEADR_ehY__tHBlJdNBkL5I2868Rrd"
 
 # ===== 에이전트 이메일 계정 =====
 AGENT_EMAILS = {
@@ -166,6 +169,23 @@ def load_goals() -> dict:
 def save_goals(data: dict):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     GOALS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def load_agent_perf() -> dict:
+    if AGENT_PERF_FILE.exists():
+        return json.loads(AGENT_PERF_FILE.read_text(encoding="utf-8"))
+    return {}
+
+def save_agent_perf(data: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    AGENT_PERF_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _record_perf(agent: str, metric: str, delta: int = 1):
+    """에이전트 일일 성과 기록. {날짜: {에이전트: {metric: count}}}"""
+    perf = load_agent_perf()
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf.setdefault(today, {}).setdefault(agent, {})
+    perf[today][agent][metric] = perf[today][agent].get(metric, 0) + delta
+    save_agent_perf(perf)
 
 def load_alerts() -> list:
     if ALERTS_FILE.exists():
@@ -1600,30 +1620,56 @@ def _build_pitch_html(brand_name: str, body_text: str) -> str:
 </td></tr></table></body></html>"""
 
 
+def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
+    """Naver Works SMTP로 이메일 1건 발송."""
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    smtp_host = os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com")
+    smtp_port = int(os.getenv("NAVER_WORKS_SMTP_PORT", "587"))
+    smtp_user = os.getenv("NAVER_WORKS_SMTP_USER", "")
+    smtp_pass = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
+    if not smtp_user or not smtp_pass:
+        return {"status": "not_configured", "message": "NAVER_WORKS_SMTP 미설정"}
+    agent_email = AGENT_EMAILS.get(agent_name, smtp_user)
+    sender_name = f"{agent_name} | 공팔리터글로벌"
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{sender_name} <{smtp_user}>"
+        msg["To"] = to_email
+        msg.attach(MIMEText(html, "html", "utf-8"))
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, [to_email], msg.as_string())
+        return {"status": "ok", "to": to_email, "method": "smtp"}
+    except Exception as e:
+        return {"status": "error", "message": str(e), "method": "smtp"}
+
 def _send_email(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
-    """Resend HTTP API로 이메일 1건 발송. agent_name으로 발신자 자동 매핑."""
+    """이메일 발송: SMTP 우선 → Resend 폴백."""
+    # 1차: Naver Works SMTP
+    smtp_result = _send_email_smtp(to_email, subject, html, agent_name)
+    if smtp_result["status"] == "ok":
+        _record_perf(agent_name, "email_sent")
+        return smtp_result
+    # 2차: Resend API 폴백
     api_key = os.getenv("RESEND_API_KEY", "")
-    agent_email = AGENT_EMAILS.get(agent_name, "luna@08liter.com")
-    # Resend 도메인 인증 전에는 onboarding@resend.dev 사용
     from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
     sender_name = f"{agent_name} | 공팔리터글로벌"
     if not api_key:
-        in_env = "RESEND_API_KEY" in os.environ
-        return {"status": "error", "message": f"RESEND_API_KEY 미설정. in_os_environ={in_env}. Railway Variables에 추가 필요."}
+        return {"status": "error", "message": f"SMTP 실패({smtp_result.get('message','')}), RESEND_API_KEY도 미설정"}
     try:
         resp = req_lib.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "from": f"{sender_name} <{from_email}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html,
-            },
+            json={"from": f"{sender_name} <{from_email}>", "to": [to_email], "subject": subject, "html": html},
             timeout=15,
         )
         data = resp.json()
         if resp.status_code == 200:
+            _record_perf(agent_name, "email_sent")
             return {"status": "ok", "to": to_email, "id": data.get("id", ""), "method": "resend"}
         return {"status": "error", "message": data.get("message", resp.text[:200]), "code": resp.status_code}
     except Exception as e:
@@ -1701,6 +1747,193 @@ async def api_campaign_recontact(request: Request):
     """루나 재접촉 캠페인 실행 API."""
     body = await request.json()
     return await _run_recontact_campaign(dry_run=body.get("dry_run", True), limit=body.get("limit", 10))
+
+
+# ===== 에이전트 자율 업무 함수 =====
+
+async def _pitch_inbound_auto():
+    """피치: 신규 인바운드 감지 → 자동 응대 이메일 + 미팅 링크 발송."""
+    inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+    if not inbound_rows:
+        return {"sent": 0}
+    hdr_idx = _find_header_row(inbound_rows, "국가", "컨택현황", "컨텍현황", "담당자")
+    headers = [str(h).replace("\n", " ").strip() for h in inbound_rows[hdr_idx]]
+    email_idx = _find_col(headers, "이메일") or 6
+    brand_idx = _find_col(headers, "업체명", "브랜드") or 4
+    status_idx = _find_col(headers, "컨텍현황", "컨택현황") or 16
+    staff_idx = _find_col(headers, "담당자") or 14
+    date_idx = 2
+    now = datetime.now(KST)
+    today_str = now.strftime("%-m/%-d")
+    today_iso = now.strftime("%Y-%m-%d")
+    sent = 0
+    for row in inbound_rows[hdr_idx + 1:]:
+        if len(row) < 5:
+            continue
+        date_val = str(row[date_idx]).strip() if date_idx < len(row) else ""
+        is_today = (date_val == today_str or date_val.startswith(today_iso))
+        if not is_today:
+            continue
+        staff = str(row[staff_idx]).strip() if staff_idx < len(row) else ""
+        status = str(row[status_idx]).strip() if status_idx < len(row) else ""
+        if staff or status:
+            continue
+        email = str(row[email_idx]).strip() if email_idx < len(row) else ""
+        brand = str(row[brand_idx]).strip() if brand_idx < len(row) else ""
+        if not email or "@" not in email:
+            continue
+        body = (f"안녕하세요, 공팔리터글로벌 피치입니다.\n\n"
+                f"{brand} 관련 문의 감사합니다. 빠른 시일 내에 맞춤 제안을 준비해 드리겠습니다.\n\n"
+                f"편하신 시간에 15분 비대면 미팅을 통해 상세히 안내드리겠습니다.\n\n"
+                f"미팅 예약: {MEETING_LINK}\n\n감사합니다.\n피치 드림")
+        html = _build_pitch_html(brand, body)
+        result = _send_email(email, f"[공팔리터글로벌] {brand} 인플루언서 마케팅 제안", html, "피치")
+        if result["status"] == "ok":
+            sent += 1
+            _record_perf("피치", "meeting_invite")
+    _record_perf("피치", "inbound_processed", sent)
+    return {"sent": sent}
+
+async def _pitch_outbound_crm():
+    """피치: 유효DB 중 미계약 브랜드에 CRM 뉴스레터 발송."""
+    leads_data = await api_recontact_leads()
+    leads = leads_data.get("leads", [])
+    targets = [l for l in leads if l.get("email") and "@" in l.get("email", "")][:10]
+    sent = 0
+    for lead in targets:
+        brand = lead["name"]
+        body = (f"안녕하세요, 공팔리터글로벌 피치입니다.\n\n"
+                f"현재 {brand}에 최적화된 프로모션 패키지를 준비했습니다.\n\n"
+                f"글로벌 155만+ 인플루언서 네트워크를 활용한 맞춤형 캠페인으로\n"
+                f"브랜드 인지도와 매출을 동시에 높여드립니다.\n\n"
+                f"비대면 미팅 예약: {MEETING_LINK}\n\n감사합니다.\n피치 드림")
+        html = _build_pitch_html(brand, body)
+        result = _send_email(lead["email"], f"[공팔리터글로벌] {brand} 맞춤 프로모션 안내", html, "피치")
+        if result["status"] == "ok":
+            sent += 1
+    _record_perf("피치", "crm_newsletter", sent)
+    return {"sent": sent, "total_leads": len(leads)}
+
+async def _luna_inbound_welcome():
+    """루나: 신규 인플루언서 지원자에게 환영 이메일 + 캠페인 안내."""
+    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows:
+        return {"sent": 0}
+    now = datetime.now(KST)
+    today_str = now.strftime("%Y-%m-%d")
+    sent = 0
+    for row in rows[-20:]:
+        if len(row) < 8:
+            continue
+        contact_date = str(row[0]).strip() if len(row) > 0 else ""
+        if not contact_date.startswith(today_str):
+            continue
+        name = str(row[4]).strip() if len(row) > 4 else ""
+        email = str(row[6]).strip() if len(row) > 6 else ""
+        if not email or "@" not in email:
+            continue
+        body = (f"안녕하세요 {name}님, 공팔리터글로벌 루나입니다!\n\n"
+                f"인플루언서 파트너 등록을 환영합니다.\n\n"
+                f"현재 진행 중인 캠페인을 안내드립니다:\n"
+                f"• K-뷰티 체험 캠페인 (밀리밀리)\n"
+                f"• 글로벌 리뷰 캠페인\n"
+                f"• 해외 구매평 서비스\n\n"
+                f"관심 있는 캠페인이 있으시면 회신해 주세요.\n루나 드림")
+        html = _build_pitch_html(name, body)
+        result = _send_email(email, f"[공팔리터글로벌] {name}님 환영합니다!", html, "루나")
+        if result["status"] == "ok":
+            sent += 1
+    _record_perf("루나", "welcome_sent", sent)
+    return {"sent": sent}
+
+async def _luna_outbound_pitch():
+    """루나: 인플루언서 DB에서 이메일 있는 대상에게 캠페인 제안 발송."""
+    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows:
+        return {"sent": 0}
+    targets = []
+    for row in rows:
+        if len(row) < 12:
+            continue
+        status = str(row[10]).strip() if len(row) > 10 else ""
+        if status != "단순리스트업" and status != "1. 단순리스트업":
+            continue
+        email = str(row[6]).strip() if len(row) > 6 else ""
+        name = str(row[4]).strip() if len(row) > 4 else ""
+        followers = str(row[7]).strip() if len(row) > 7 else "0"
+        if not email or "@" not in email:
+            continue
+        targets.append({"name": name, "email": email, "followers": followers})
+    targets = targets[:10]
+    sent = 0
+    for t in targets:
+        body = (f"Hi {t['name']},\n\n"
+                f"I'm Luna from 08Liter Global, a K-beauty influencer marketing agency.\n\n"
+                f"We're looking for talented creators like you for our upcoming campaigns.\n"
+                f"We offer competitive compensation and work with top K-beauty brands.\n\n"
+                f"Interested? Just reply to this email and I'll send you the details!\n\n"
+                f"Best,\nLuna | 08Liter Global")
+        html = _build_pitch_html(t["name"], body)
+        result = _send_email(t["email"], f"[08Liter] Campaign opportunity for {t['name']}", html, "루나")
+        if result["status"] == "ok":
+            sent += 1
+    _record_perf("루나", "outbound_sent", sent)
+    return {"sent": sent, "targeted": len(targets)}
+
+async def _sophie_daily_content():
+    """소피: Anthropic API로 B2B/B2C 콘텐츠 기획 + 승인 큐 등록."""
+    if not ANTHROPIC_API_KEY:
+        return {"status": "no_api_key"}
+    now = datetime.now(KST)
+    prompt = (f"오늘은 {now.strftime('%Y년 %m월 %d일 %A')}입니다.\n"
+              f"공팔리터글로벌의 SNS 콘텐츠를 기획해주세요.\n\n"
+              f"1. B2B 콘텐츠 1개 (브랜드 담당자 타겟)\n"
+              f"  - 인플루언서 마케팅 성공사례 또는 프로모션 안내\n"
+              f"  - Instagram 카드뉴스 형식\n"
+              f"2. B2C 콘텐츠 1개 (인플루언서 타겟)\n"
+              f"  - 수익화 팁 또는 캠페인 모집 안내\n"
+              f"  - TikTok/Instagram 릴스 형식\n\n"
+              f"각 콘텐츠의 제목, 본문 텍스트, 해시태그 5개, CTA를 작성해주세요.")
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post("https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={"model": ANTHROPIC_MODEL, "max_tokens": 1024,
+                      "system": "당신은 소피, 공팔리터글로벌 SNS 운영 에이전트입니다. 매력적인 콘텐츠를 기획합니다.",
+                      "messages": [{"role": "user", "content": prompt}]})
+            if resp.status_code == 200:
+                content = resp.json()["content"][0]["text"]
+                proposals = load_proposals()
+                proposals.append({
+                    "id": int(time.time() * 1000) % 10000000,
+                    "agent": "소피", "status": "pending_approval",
+                    "proposal": f"오늘의 SNS 콘텐츠 (B2B + B2C)",
+                    "detail": content[:500],
+                    "expected_impact": "B2B: 브랜드 리드 1건+ / B2C: 인플루언서 리드 2건+",
+                    "action_type": "sns_content",
+                    "ceo_comment": "", "created_at": now.isoformat(),
+                    "approved_at": None, "executed_at": None, "result": None,
+                })
+                save_proposals(proposals[-200:])
+                _record_perf("소피", "content_created", 2)
+                return {"status": "ok", "content": content}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    return {"status": "error"}
+
+
+# ===== 에이전트 성과 API =====
+@app.get("/api/agent-performance")
+async def api_agent_performance(agent: Optional[str] = None):
+    """에이전트별 일일 성과 조회."""
+    perf = load_agent_perf()
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    yesterday = (datetime.now(KST) - timedelta(days=1)).strftime("%Y-%m-%d")
+    today_perf = perf.get(today, {})
+    yesterday_perf = perf.get(yesterday, {})
+    if agent:
+        return {"today": today_perf.get(agent, {}), "yesterday": yesterday_perf.get(agent, {}), "agent": agent}
+    return {"today": today_perf, "yesterday": yesterday_perf, "date": today}
 
 
 # ===== 목표 설정 API =====
@@ -1886,17 +2119,47 @@ async def _agent_auto_cycle():
         except Exception as e:
             print(f"Ray management error: {e}")
 
-        # 9. 루나 — 재접촉 캠페인 자동 실행
+        # 9. 피치 — 인바운드 자동 응대 + CRM 뉴스레터
         try:
-            recontact = await _run_recontact_campaign(dry_run=False, limit=5)
-            sent = recontact.get("sent", 0)
-            total_leads = recontact.get("total_leads", 0)
-            if total_leads > 0:
-                alerts_posted.append({"id": _id(), "agent": "루나", "severity": "info",
-                    "summary": f"✉️ 재접촉 캠페인: {total_leads}건 대상, {sent}건 발송", "detail": "",
+            pitch_ib = await _pitch_inbound_auto()
+            pitch_crm = await _pitch_outbound_crm()
+            ib_sent = pitch_ib.get("sent", 0)
+            crm_sent = pitch_crm.get("sent", 0)
+            if ib_sent + crm_sent > 0:
+                alerts_posted.append({"id": _id(), "agent": "피치", "severity": "info",
+                    "summary": f"📧 피치 자율업무: 인바운드 응대 {ib_sent}건 + CRM 뉴스레터 {crm_sent}건",
+                    "detail": f"미팅 예약 링크 포함 발송 완료",
                     "timestamp": now_ts, "resolved": False})
         except Exception as e:
-            print(f"Luna recontact error: {e}")
+            print(f"Pitch auto error: {e}")
+
+        # 9-1. 루나 — 인플루언서 환영 + 아웃바운드 + 재접촉
+        try:
+            luna_welcome = await _luna_inbound_welcome()
+            luna_outbound = await _luna_outbound_pitch()
+            recontact = await _run_recontact_campaign(dry_run=False, limit=5)
+            w_sent = luna_welcome.get("sent", 0)
+            o_sent = luna_outbound.get("sent", 0)
+            r_sent = recontact.get("sent", 0)
+            total_sent = w_sent + o_sent + r_sent
+            if total_sent > 0:
+                alerts_posted.append({"id": _id(), "agent": "루나", "severity": "info",
+                    "summary": f"✉️ 루나 자율업무: 환영 {w_sent}건 + 아웃바운드 {o_sent}건 + 재접촉 {r_sent}건",
+                    "detail": "",
+                    "timestamp": now_ts, "resolved": False})
+        except Exception as e:
+            print(f"Luna auto error: {e}")
+
+        # 9-2. 소피 — 일일 콘텐츠 기획
+        try:
+            sophie = await _sophie_daily_content()
+            if sophie.get("status") == "ok":
+                alerts_posted.append({"id": _id(), "agent": "소피", "severity": "info",
+                    "summary": "📱 소피 자율업무: 오늘의 B2B/B2C 콘텐츠 기획 완료",
+                    "detail": "승인 큐에서 확인 후 승인해주세요",
+                    "timestamp": now_ts, "resolved": False})
+        except Exception as e:
+            print(f"Sophie auto error: {e}")
 
         # 10. 카일 — 전체 브리핑 이메일 발송
         try:

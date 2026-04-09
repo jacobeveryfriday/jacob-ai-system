@@ -1362,6 +1362,24 @@ function generateSophieContent(){
 var el=document.getElementById('sophie-content-result');if(el)el.textContent='소피가 콘텐츠를 생성 중...';
 fetch('/api/sophie-content').then(function(r){return r.json()}).then(function(d){if(el)el.textContent=d.content||d.message||'생성 실패'}).catch(function(){if(el)el.textContent='오류 발생'})}
 
+// 에이전트 성과 데이터 로드
+function loadAgentPerf(){
+fetch('/api/agent-performance').then(function(r){return r.json()}).then(function(d){
+var t=d.today||{};
+// 피치 (브랜드)
+var pitch=t['피치']||{};
+var el1=document.getElementById('brand-agent-sent');if(el1)el1.textContent=(pitch.email_sent||0)+(pitch.crm_newsletter||0);
+var el2=document.getElementById('brand-agent-meetings');if(el2)el2.textContent=pitch.meeting_invite||0;
+var el3=document.getElementById('brand-agent-contracts');if(el3)el3.textContent=pitch.inbound_processed||0;
+var ps=document.getElementById('pitch-sent');if(ps)ps.textContent=(pitch.email_sent||0);
+// 루나 (인플루언서)
+var luna=t['루나']||{};
+var la1=document.getElementById('pitch-agent-sent');if(la1)la1.textContent=(luna.email_sent||0)+(luna.outbound_sent||0);
+var la2=document.getElementById('pitch-agent-replied');if(la2)la2.textContent=luna.reply_received||0;
+var la3=document.getElementById('pitch-agent-matched');if(la3)la3.textContent=luna.match_completed||0;
+}).catch(function(){})}
+loadAgentPerf();
+
 var _origShowPage=showPage;
 showPage=function(pageId){_origShowPage(pageId);
 if(pageId==='brand')loadBrandPipeline();
@@ -1369,7 +1387,8 @@ if(pageId==='influencer')loadInfluencerData();
 if(pageId==='alerts')loadAlertBoard();
 if(pageId==='settings')loadGoals();
 if(pageId==='api-status')loadApiStatus();
-if(pageId==='cs')initCsCharts('brand')};
+if(pageId==='cs')initCsCharts('brand');
+loadAgentPerf()};
 
 function loadAlertBoard(){
 var agentFilter='';
