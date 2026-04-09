@@ -3180,6 +3180,110 @@ async def api_email_delete(request: Request):
     save_email_queue(queue)
     return {"status": "ok"}
 
+@app.post("/api/email-queue/approve-all")
+async def api_email_approve_all(request: Request):
+    """대기 중인 이메일 전체 승인 발송."""
+    body = await request.json()
+    agent = body.get("agent")
+    queue = load_email_queue()
+    sent = 0
+    for e in queue:
+        if e.get("status") != "pending":
+            continue
+        if agent and e.get("agent") != agent:
+            continue
+        if not _check_send_limit():
+            break
+        result = _send_email(e["to"], e["subject"], e["html"], e.get("agent", "피치"))
+        e["status"] = "sent" if result["status"] == "ok" else "failed"
+        e["sent_at"] = datetime.now(KST).isoformat()
+        e["result"] = result
+        if result["status"] == "ok":
+            _log_email(e.get("agent", ""), e["to"], e["subject"], "sent", e.get("meta"))
+            sent += 1
+    save_email_queue(queue)
+    return {"status": "ok", "sent": sent}
+
+@app.post("/api/email-queue/update")
+async def api_email_update(request: Request):
+    """대기 이메일 제목/본문 수정 (status는 pending 유지)."""
+    body = await request.json()
+    eid = body.get("id")
+    queue = load_email_queue()
+    for e in queue:
+        if e.get("id") == eid and e.get("status") == "pending":
+            if body.get("subject"):
+                e["subject"] = body["subject"]
+            if body.get("html"):
+                e["html"] = body["html"]
+            if body.get("body_text"):
+                e["html"] = _build_pitch_html(e.get("meta", {}).get("target", ""), body["body_text"] + f"\n\n[미팅 예약하기]({MEETING_LINK})")
+            break
+    save_email_queue(queue)
+    return {"status": "ok"}
+
+@app.get("/api/outbound-dashboard")
+async def api_outbound_dashboard(agent: str = "피치"):
+    """섹션 최상단 통합 KPI — CEO 대시보드용."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    month_prefix = now.strftime("%Y-%m")
+    week_start = (now - timedelta(days=now.weekday())).strftime("%Y-%m-%d")
+    today_perf = perf.get(today, {}).get(agent, {})
+    # 월간/주간 누적
+    monthly_p, weekly_p = {}, {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix) and agent in ad:
+            for mk, mv in ad[agent].items():
+                monthly_p[mk] = monthly_p.get(mk, 0) + mv
+        if dk >= week_start and agent in ad:
+            for mk, mv in ad[agent].items():
+                weekly_p[mk] = weekly_p.get(mk, 0) + mv
+    # 발송 현황
+    log = load_email_log()
+    agent_log = [e for e in log if e.get("agent") == agent]
+    today_sent = sum(1 for e in agent_log if e.get("sent_at", "").startswith(today) and e.get("status") == "sent")
+    today_opened = sum(1 for e in agent_log if e.get("sent_at", "").startswith(today) and e.get("opened"))
+    today_replied = sum(1 for e in agent_log if e.get("sent_at", "").startswith(today) and e.get("replied"))
+    queue = load_email_queue()
+    pending = sum(1 for q in queue if q.get("agent") == agent and q.get("status") == "pending")
+    crawled = load_crawled()
+    agent_type = "brand" if agent == "피치" else "influencer"
+    total_crawled = sum(1 for c in crawled if c.get("type") == agent_type)
+    # 벤치마크
+    bench = load_benchmarks()
+    bm = bench.get("cold_email_b2b", {}) if agent == "피치" else bench.get("influencer_outreach", {})
+    open_rate = round(today_opened / max(today_sent, 1) * 100, 1)
+    reply_rate = round(today_replied / max(today_sent, 1) * 100, 1)
+    bm_reply = bm.get("reply_rate", {})
+    # 목표
+    targets = AGENT_TARGETS.get(agent, {})
+    daily_t = targets.get("daily", {})
+    weekly_t = targets.get("weekly", {})
+    monthly_t = targets.get("monthly", {})
+    meeting_key = "meeting_booked" if agent == "피치" else "influencer_acquired"
+    # 토큰
+    token_today = today_perf.get("cost_usd_x100", 0) / 100
+    token_month = monthly_p.get("cost_usd_x100", 0) / 100
+    return {
+        "target_summary": f"{'K-뷰티 브랜드' if agent=='피치' else 'SNS 인플루언서'} / 총 {total_crawled}개 확보",
+        "send_status": {"today_sent": today_sent, "pending": pending, "today_opened": today_opened, "today_replied": today_replied},
+        "ctr": {"open_rate": open_rate, "reply_rate": reply_rate,
+                "bench_reply_avg": bm_reply.get("average", 0), "bench_reply_good": bm_reply.get("good", 0),
+                "bench_source": bm_reply.get("source", "")},
+        "goal": {
+            "today": {"actual": today_perf.get(meeting_key, 0), "target": daily_t.get(meeting_key, 0)},
+            "week": {"actual": weekly_p.get(meeting_key, 0), "target": weekly_t.get(meeting_key, 0)},
+            "month": {"actual": monthly_p.get(meeting_key, 0), "target": monthly_t.get(meeting_key, 0)},
+        },
+        "token": {"today": round(token_today, 2), "month": round(token_month, 2)},
+        "funnel": {"crawled": total_crawled, "email_found": total_crawled,
+                   "sent": sum(1 for e in agent_log if e.get("status") == "sent"),
+                   "opened": sum(1 for e in agent_log if e.get("opened")),
+                   "replied": sum(1 for e in agent_log if e.get("replied")), "converted": 0},
+    }
+
 @app.get("/api/agent-auto-send")
 async def api_agent_auto_send_get():
     """에이전트별 자동 발송 모드 조회."""

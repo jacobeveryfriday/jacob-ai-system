@@ -241,50 +241,68 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-brand">
-  <!-- 피치 에이전트 — 인바운드 + 아웃바운드 -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
-      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">인바운드 성과</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">금일 문의</p><p id="pitch-ib-today" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">이번달 누적</p><p id="pitch-ib-month" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅 전환</p><p id="pitch-ib-meetings" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
-      </div>
-    </div>
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
-      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">아웃바운드 성과</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">이메일 발송</p><p id="brand-agent-sent" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅 유도</p><p id="brand-agent-meetings" style="font-family:monospace;font-size:20px;font-weight:700;color:#B8860B">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">계약 전환</p><p id="brand-agent-contracts" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
-      </div>
-    </div>
+  <!-- 1. 최상단 5개 KPI 카드 -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="brand-top-kpi">
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">주요 타겟</p><p id="bd-target" style="font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">—</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">발송 현황</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">발송 <span id="bd-sent">0</span> / 대기 <span id="bd-pending">0</span></p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">평균 CTR</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">답변 <span id="bd-reply-rate">0</span>%</p><p id="bd-bench" style="font-size:8px;color:#9B9B9B;margin-top:2px">—</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">목표 — 비대면 미팅</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px"><span id="bd-meeting-today">0</span> / <span id="bd-meeting-target">3</span>건</p><div style="height:3px;background:#EDEBE7;border-radius:2px;margin-top:6px"><div id="bd-meeting-bar" style="height:100%;background:#1A7A4C;border-radius:2px;width:0%"></div></div></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="bd-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="bd-token-month">0</span></p></div>
   </div>
-  <div id="pitch-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
-  <!-- 피치 파이프라인 퍼널 -->
-  <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">아웃바운드 파이프라인</p>
-    <div style="display:flex;gap:4px;align-items:center;margin-bottom:10px" id="pitch-funnel-bar"></div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="pitch-pipeline-nums">
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">크롤링</p><p id="pp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">검수 대기</p><p id="pp-queued" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">발송</p><p id="pp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">답변</p><p id="pp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅</p><p id="pp-meetings" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="startCrawlBrands()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">크롤링 시작</button>
-      <button onclick="generatePitchEmails()" style="padding:6px 14px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer">이메일 생성</button>
-    </div>
-  </div>
-  <!-- 피치 이메일 검수 큐 -->
-  <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <span style="font-size:12px;font-weight:700;color:#1B2A4A">발송 대기 이메일</span>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:4px;cursor:pointer">자동 발송<input type="checkbox" id="pitch-auto-send" onchange="toggleAutoSend('피치',this.checked)" style="width:14px;height:14px;accent-color:#1B2A4A"></label>
+  <!-- 2. CEO 승인 큐 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:700;color:#1B2A4A">발송 대기 이메일 — CEO 승인 필요</span>
+        <span id="bd-queue-badge" style="background:#C4332B;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">0</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button onclick="approveAllEmails('피치')" style="padding:5px 12px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer;font-weight:600">전체 승인</button>
+        <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:4px;cursor:pointer">자동<input type="checkbox" id="pitch-auto-send" onchange="toggleAutoSend('피치',this.checked)" style="width:13px;height:13px;accent-color:#1B2A4A"></label>
+      </div>
     </div>
     <div id="pitch-email-queue" style="font-size:11px;color:#9B9B9B">로딩중...</div>
   </div>
+  <!-- 3. 아웃바운드 퍼널 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">아웃바운드 파이프라인</p>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px" id="pitch-pipeline-nums">
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">타겟</p><p id="pp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">대기</p><p id="pp-queued" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">발송</p><p id="pp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">오픈</p><p id="pp-opened" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">답변</p><p id="pp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">미팅</p><p id="pp-meetings" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+    </div>
+    <div id="bd-bench-compare" style="font-size:9px;color:#9B9B9B;margin-top:8px"></div>
+  </div>
+  <!-- 4. 인바운드 현황 -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">금일 문의</p><p id="pitch-ib-today" style="font-family:monospace;font-size:18px;font-weight:700;color:#1B2A4A">—</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">자동 응대</p><p id="pitch-ib-month" style="font-family:monospace;font-size:18px;font-weight:700;color:#2D4A7A">—</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅 예약</p><p id="pitch-ib-meetings" style="font-family:monospace;font-size:18px;font-weight:700;color:#1A7A4C">—</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">미응대</p><p id="pitch-ib-unhandled" style="font-family:monospace;font-size:18px;font-weight:700;color:#C4332B">—</p></div>
+  </div>
+  <!-- 5. 크롤링/타겟 설정 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">타겟 설정 + 크롤링</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">인바운드DB</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">올리브영</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">쿠팡</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">스마트스토어</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">LinkedIn</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">와디즈</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">IG 브랜드</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">정부지원사업</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input id="crawl-keyword" placeholder="키워드 (예: 비건 화장품)" style="flex:1;padding:6px 10px;background:#F8F7F5;border:0.5px solid #E8E6E1;border-radius:6px;font-size:11px;color:#1B2A4A">
+      <button onclick="startCrawlBrands()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap">크롤링 시작</button>
+      <button onclick="generatePitchEmails()" style="padding:6px 14px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer;white-space:nowrap">이메일 생성</button>
+    </div>
+  </div>
+  <div id="pitch-gauge" style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">일간</button>
     <button id="brand-tab-monthly" onclick="setBrandTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">누적</button>
@@ -350,28 +368,59 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-influencer">
-  <!-- 루나 파이프라인 퍼널 -->
-  <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">인플루언서 확보 파이프라인</p>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="luna-pipeline-nums">
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">크롤링</p><p id="lp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">이메일발견</p><p id="lp-emails" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">발송</p><p id="lp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">답변</p><p id="lp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">확보</p><p id="lp-secured" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="startCrawlInfluencers()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">크롤링 시작</button>
-      <button onclick="generateLunaEmails()" style="padding:6px 14px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer">이메일 생성</button>
-    </div>
+  <!-- 1. 최상단 5개 KPI 카드 -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="inf-top-kpi">
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">주요 타겟</p><p id="inf-target" style="font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">—</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">발송 현황</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">발송 <span id="inf-sent">0</span> / 대기 <span id="inf-pending">0</span></p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">평균 CTR</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">답변 <span id="inf-reply-rate">0</span>%</p><p id="inf-bench" style="font-size:8px;color:#9B9B9B;margin-top:2px">—</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">목표 — 인플루언서 확보</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px"><span id="inf-acq-today">0</span> / <span id="inf-acq-target">15</span>명</p><div style="height:3px;background:#EDEBE7;border-radius:2px;margin-top:6px"><div id="inf-acq-bar" style="height:100%;background:#1A7A4C;border-radius:2px;width:0%"></div></div></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="inf-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="inf-token-month">0</span></p></div>
   </div>
-  <!-- 루나 이메일 검수 큐 -->
-  <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <span style="font-size:12px;font-weight:700;color:#1B2A4A">발송 대기 이메일</span>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:4px;cursor:pointer">자동 발송<input type="checkbox" id="luna-auto-send" onchange="toggleAutoSend('루나',this.checked)" style="width:14px;height:14px;accent-color:#1B2A4A"></label>
+  <!-- 2. CEO 승인 큐 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:700;color:#1B2A4A">발송 대기 이메일 — CEO 승인 필요</span>
+        <span id="inf-queue-badge" style="background:#C4332B;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">0</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button onclick="approveAllEmails('루나')" style="padding:5px 12px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer;font-weight:600">전체 승인</button>
+        <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:4px;cursor:pointer">자동<input type="checkbox" id="luna-auto-send" onchange="toggleAutoSend('루나',this.checked)" style="width:13px;height:13px;accent-color:#1B2A4A"></label>
+      </div>
     </div>
     <div id="luna-email-queue" style="font-size:11px;color:#9B9B9B">로딩중...</div>
+  </div>
+  <!-- 3. 인플루언서 확보 퍼널 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">인플루언서 확보 파이프라인</p>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">크롤링</p><p id="lp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">이메일발견</p><p id="lp-emails" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">발송</p><p id="lp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">오픈</p><p id="lp-opened" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">답변</p><p id="lp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">확보</p><p id="lp-secured" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+    </div>
+  </div>
+  <!-- 4. 타겟 설정 + 크롤링 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">인플루언서 타겟 설정</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">KR</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">US</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">JP</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">VN</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">ID</label>
+      <span style="color:#E8E6E1">|</span>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">Instagram</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">TikTok</label>
+      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">YouTube</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input placeholder="해시태그 (kbeauty, skincare)" style="flex:1;padding:6px 10px;background:#F8F7F5;border:0.5px solid #E8E6E1;border-radius:6px;font-size:11px;color:#1B2A4A">
+      <button onclick="startCrawlInfluencers()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap">크롤링 시작</button>
+      <button onclick="generateLunaEmails()" style="padding:6px 14px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer;white-space:nowrap">이메일 생성</button>
+    </div>
   </div>
   <div id="luna-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
   <!-- 루나 에이전트 — 당일+누적+인바운드 -->
@@ -538,7 +587,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
   <div class="agent-kpi-item" style="border-top-color:#B8860B"><div class="label">오늘 문의 접수</div><div class="value">14</div><div class="note">브랜드+인플루언서</div></div>
   <div class="agent-kpi-item" style="border-top-color:#1A7A4C"><div class="label">해결 건수</div><div class="value">8</div><div class="note">오늘 기준</div></div>
   <div class="agent-kpi-item" style="border-top-color:#2D4A7A"><div class="label">평균 응답시간</div><div class="value">10분</div><div class="note">목표 15분 이내</div></div>
-  <div class="agent-kpi-item" style="border-top-color:#1B2A4A"><div class="label">에이전트 상태</div><div class="value" style="font-size:16px;color:#B8860B">카카오 연동 대기</div></div>
+  <div class="agent-kpi-item" style="border-top-color:#1B2A4A"><div class="label">에이전트 상태</div><div class="value" id="cs-kakao-status" style="font-size:16px;color:#B8860B">확인중...</div></div>
 </div>
 <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
 <button onclick="setCsTab('brand')" id="cs-tab-brand" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">브랜드</button>
@@ -1555,6 +1604,43 @@ e('pp-crawled',p.crawled.today);e('pp-queued',p.queued.total);e('pp-sent',p.sent
 e('lp-crawled',l.crawled.today);e('lp-emails',l.crawled.total);e('lp-sent',l.sent.today);e('lp-replied',l.replied.today);e('lp-secured',l.replied.total);
 }).catch(function(){})}
 loadPipelineStats();
+// 아웃바운드 대시보드 KPI 로드
+function loadOutboundDashboard(agent,prefix){
+fetch('/api/outbound-dashboard?agent='+encodeURIComponent(agent)).then(function(r){return r.json()}).then(function(d){
+var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
+s(prefix+'-target',d.target_summary);
+s(prefix+'-sent',d.send_status.today_sent);s(prefix+'-pending',d.send_status.pending);
+s(prefix+'-reply-rate',d.ctr.reply_rate);
+s(prefix+'-bench','업계평균 '+d.ctr.bench_reply_avg+'% '+(d.ctr.reply_rate>=d.ctr.bench_reply_good?'Good':''));
+s(prefix+'-token-today',d.token.today);s(prefix+'-token-month',d.token.month);
+// 목표 프로그레스
+var goalKey=agent==='피치'?'bd-meeting':'inf-acq';
+s(goalKey+'-today',d.goal.today.actual);s(goalKey+'-target',d.goal.today.target);
+var pct=d.goal.today.target>0?Math.min(100,Math.round(d.goal.today.actual/d.goal.today.target*100)):0;
+var bar=document.getElementById(goalKey+'-bar');if(bar)bar.style.width=pct+'%';
+// 퍼널 숫자
+var pp=prefix==='bd'?'pp':'lp';
+s(pp+'-crawled',d.funnel.crawled);s(pp+'-sent',d.funnel.sent);
+s(pp+'-opened',d.funnel.opened);s(pp+'-replied',d.funnel.replied);
+// 큐 배지
+var badge=document.getElementById(prefix===('bd')?'bd-queue-badge':'inf-queue-badge');
+if(badge)badge.textContent=d.send_status.pending;
+}).catch(function(){})}
+// 전체 승인
+function approveAllEmails(agent){
+if(!confirm(agent+' 에이전트의 대기 이메일을 전체 승인 발송합니까?'))return;
+fetch('/api/email-queue/approve-all',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:agent})}).then(function(r){return r.json()}).then(function(d){
+alert('발송 완료: '+d.sent+'건');
+loadEmailQueue(agent,agent==='피치'?'pitch-email-queue':'luna-email-queue');
+loadOutboundDashboard(agent,agent==='피치'?'bd':'inf');
+}).catch(function(){alert('발송 오류')})}
+// 카카오 상태 동적 로드
+function loadKakaoStatus(){
+fetch('/health').then(function(r){return r.json()}).then(function(d){
+var svc=d.services||{};var isOn=svc.kakao_b2b==='connected'||svc.kakao_b2c==='connected';
+var el=document.getElementById('cs-kakao-status');
+if(el){el.textContent=isOn?'연결됨':'미연결';el.style.color=isOn?'#1A7A4C':'#C4332B'}
+}).catch(function(){})}
 // 크롤링 실행
 function startCrawlBrands(){
 fetch('/api/crawl/brands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels:['인바운드DB'],keyword:'K-뷰티',limit:50})}).then(function(r){return r.json()}).then(function(d){alert('크롤링 완료: '+d.count+'건 (신규 '+d.new+'건)');loadPipelineStats()}).catch(function(){alert('크롤링 오류')})}
@@ -1579,7 +1665,9 @@ if(pageId==='influencer')loadInfluencerData();
 if(pageId==='alerts')loadAlertBoard();
 if(pageId==='settings')loadGoals();
 if(pageId==='api-status')loadApiStatus();
-if(pageId==='cs')initCsCharts('brand');
+if(pageId==='cs'){initCsCharts('brand');loadKakaoStatus()}
+if(pageId==='brand')loadOutboundDashboard('피치','bd');
+if(pageId==='influencer')loadOutboundDashboard('루나','inf');
 loadAgentPerf()};
 
 function loadAlertBoard(){
