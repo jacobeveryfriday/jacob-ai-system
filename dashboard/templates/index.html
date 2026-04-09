@@ -287,6 +287,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
       <div id="unhandled-list" style="display:flex;flex-direction:column;gap:4px"></div>
     </div>
   </div>
+  <!-- 월별 추세 그래프 (누적 탭) -->
+  <div id="brand-monthly-trend" style="display:none;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">월별 매출 추이</p><div style="position:relative;height:200px"><canvas id="chart-brand-rev-trend"></canvas></div></div>
+      <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">월별 계약건수 추이</p><div style="position:relative;height:200px"><canvas id="chart-brand-cnt-trend"></canvas></div></div>
+    </div>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><div style="display:flex;justify-content:space-between;margin-bottom:14px"><p style="font-size:12px;font-weight:700;color:#1B2A4A">실시간 현황</p><span style="font-size:10px;color:#9B9B9B">방금 전</span></div><div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#6B6B6B">오늘 신규 인바운드</span><span style="background:rgba(27,42,74,0.06);color:#1B2A4A;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">3건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#6B6B6B">오늘 미팅 예정</span><span style="background:rgba(27,42,74,0.06);color:#2D4A7A;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">2건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#6B6B6B">응답 대기 견적</span><span style="background:rgba(184,134,11,0.1);color:#B8860B;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">4건</span></div><div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:#6B6B6B">계약 진행중</span><span style="background:rgba(26,122,76,0.08);color:#1A7A4C;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">1건</span></div></div></div>
     <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:14px">오늘 업무 현황</p><div style="display:flex;flex-direction:column;gap:8px" id="brand-tasks"><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#6B6B6B">Growth 패키지 견적 발송 (8건)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#6B6B6B">인바운드 리드 1차 응답 (3건)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#6B6B6B">비대면 미팅 준비 (오후 2시, 3시)</span></label><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer"><input type="checkbox" checked onchange="toggleTask(this)" style="margin-top:2px"><span style="font-size:11px;color:#9B9B9B;text-decoration:line-through">오전 KPI 확인 완료</span></label></div></div>
@@ -294,6 +301,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-influencer">
+  <!-- 피치 에이전트 KPI -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">아웃바운드 발송</p><p id="pitch-agent-sent" style="font-family:monospace;font-size:22px;font-weight:700;color:#1B2A4A">—</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">피치 에이전트 이메일 발송</p></div>
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">답변 수신</p><p id="pitch-agent-replied" style="font-family:monospace;font-size:22px;font-weight:700;color:#1A7A4C">—</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">답변율 기반</p></div>
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">매칭 완료</p><p id="pitch-agent-matched" style="font-family:monospace;font-size:22px;font-weight:700;color:#2D4A7A">—</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">캠페인 연결</p></div>
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:10px;color:#6B6B6B">에이전트 상태</p><p id="pitch-agent-status" style="font-family:monospace;font-size:22px;font-weight:700;color:#B8860B">정상</p><p style="font-size:9px;color:#9B9B9B;margin-top:4px">실시간 모니터링</p></div>
+  </div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
     <button onclick="setInfMainTab('members')" id="inf-main-tab-members" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">플랫폼 회원현황</button>
     <button onclick="setInfMainTab('list')" id="inf-main-tab-list" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">키인플루언서 현황</button>
@@ -937,18 +951,38 @@ loadKpiData();setInterval(loadKpiData,1800000);
 
 // ===== Brand Pipeline Functions =====
 var _brandData=null,_brandTab='daily';
+var _brandTrendCharts={};
 function setBrandTab(tab){_brandTab=tab;
-document.getElementById('brand-tab-daily').style.background=tab==='daily'?'#F97316':'transparent';
-document.getElementById('brand-tab-daily').style.color=tab==='daily'?'#fff':'#64748B';
-document.getElementById('brand-tab-monthly').style.background=tab==='monthly'?'#F97316':'transparent';
-document.getElementById('brand-tab-monthly').style.color=tab==='monthly'?'#fff':'#64748B';
+document.getElementById('brand-tab-daily').style.background=tab==='daily'?'#1B2A4A':'transparent';
+document.getElementById('brand-tab-daily').style.color=tab==='daily'?'#fff':'#9B9B9B';
+document.getElementById('brand-tab-monthly').style.background=tab==='monthly'?'#1B2A4A':'transparent';
+document.getElementById('brand-tab-monthly').style.color=tab==='monthly'?'#fff':'#9B9B9B';
+var trendEl=document.getElementById('brand-monthly-trend');
+if(trendEl)trendEl.style.display=tab==='monthly'?'block':'none';
+if(tab==='monthly'&&!_brandTrendCharts.loaded)loadBrandTrendCharts();
 if(_brandData)updateBrandKpiCards(_brandData)}
+function loadBrandTrendCharts(){
+fetch('/api/kpi-trend').then(function(r){return r.json()}).then(function(d){
+var mr=d.monthly_revenue||[];if(!mr.length)return;
+var labels=mr.map(function(r){return r.month});
+var copts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9B9B9B',font:{size:10}}}},scales:{x:{ticks:{color:'#9B9B9B',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#9B9B9B',font:{size:10}},grid:{color:'#EDEBE7',lineWidth:0.5}}}};
+if(_brandTrendCharts.rev)_brandTrendCharts.rev.destroy();
+_brandTrendCharts.rev=new Chart(document.getElementById('chart-brand-rev-trend'),{type:'line',data:{labels:labels,datasets:[
+{label:'신규매출',data:mr.map(function(r){return r.new_rev||0}),borderColor:'rgba(27,42,74,0.4)',backgroundColor:'rgba(27,42,74,0.05)',fill:true,tension:0.3,pointRadius:2,borderWidth:1.5},
+{label:'재계약매출',data:mr.map(function(r){return r.renew_rev||0}),borderColor:'#1B2A4A',backgroundColor:'rgba(27,42,74,0.1)',fill:true,tension:0.3,pointRadius:2,borderWidth:1.5}
+]},options:Object.assign({},copts,{scales:Object.assign({},copts.scales,{y:Object.assign({},copts.scales.y,{ticks:Object.assign({},copts.scales.y.ticks,{callback:function(v){return(v/10000).toLocaleString()+'만'}})})})})});
+if(_brandTrendCharts.cnt)_brandTrendCharts.cnt.destroy();
+_brandTrendCharts.cnt=new Chart(document.getElementById('chart-brand-cnt-trend'),{type:'line',data:{labels:labels,datasets:[
+{label:'신규',data:mr.map(function(r){return r.new_cnt||0}),borderColor:'rgba(27,42,74,0.4)',tension:0.3,pointRadius:2,borderWidth:1.5},
+{label:'재계약',data:mr.map(function(r){return r.renew_cnt||0}),borderColor:'#1B2A4A',tension:0.3,pointRadius:2,borderWidth:1.5}
+]},options:copts});
+_brandTrendCharts.loaded=true}).catch(function(){})}
 
 var _pipeTab='daily';var _brandDataCache=null;
 function setPipeTab(tab){_pipeTab=tab;
 var d1=document.getElementById('pipe-tab-daily'),d2=document.getElementById('pipe-tab-monthly');
-if(d1){d1.style.background=tab==='daily'?'#F97316':'transparent';d1.style.color=tab==='daily'?'#fff':'#64748B'}
-if(d2){d2.style.background=tab==='monthly'?'#F97316':'transparent';d2.style.color=tab==='monthly'?'#fff':'#64748B'}
+if(d1){d1.style.background=tab==='daily'?'#1B2A4A':'transparent';d1.style.color=tab==='daily'?'#fff':'#9B9B9B'}
+if(d2){d2.style.background=tab==='monthly'?'#1B2A4A':'transparent';d2.style.color=tab==='monthly'?'#fff':'#9B9B9B'}
 if(_brandDataCache)renderPipelineSummary(_brandDataCache)}
 
 function loadBrandPipeline(){
@@ -1266,9 +1300,9 @@ var c4=document.getElementById('chart-ov-payback');
 if(c4&&mpb.length)_ovCharts.pb=new Chart(c4,{type:'bar',data:{labels:mpb.map(function(r){return r.month}),datasets:[{label:'충전금',data:mpb.map(function(r){return r.amount}),backgroundColor:'rgba(14,165,233,0.7)'},{label:'보상',data:mpb.map(function(){return 0}),backgroundColor:'rgba(249,115,22,0.7)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#9B9B9B',font:{size:10}}}},scales:{y:{ticks:{color:'#9B9B9B',callback:function(v){return(v/10000).toLocaleString()+'만'}},grid:{color:'#EDEBE7'}},x:{ticks:{color:'#9B9B9B'},grid:{display:false}}}}});
 // 충전금 요약 카드 — total_payback from API for accuracy
 var totalPb=d.total_payback||mpb.reduce(function(s,r){return s+r.amount},0);
-var e_pb=document.getElementById('sum-payback');if(e_pb)e_pb.textContent=(totalPb/10000).toLocaleString()+'만원';
+var e_pb=document.getElementById('sum-payback');if(e_pb){e_pb.textContent=Math.round(totalPb/10000).toLocaleString()+'만원';if(d.today_payback>0){var todayPbEl=document.createElement('span');todayPbEl.style.cssText='display:block;font-size:11px;color:#1A7A4C;margin-top:4px';todayPbEl.textContent='금일 +'+Math.round(d.today_payback/10000).toLocaleString()+'만원';e_pb.parentNode.appendChild(todayPbEl)}}
 var e_rw=document.getElementById('sum-reward');if(e_rw)e_rw.textContent='0원';
-var e_rm=document.getElementById('sum-remain');if(e_rm)e_rm.textContent=(totalPb/10000).toLocaleString()+'만원';
+var e_rm=document.getElementById('sum-remain');if(e_rm)e_rm.textContent=Math.round(totalPb/10000).toLocaleString()+'만원';
 var e_rt=document.getElementById('sum-ratio');if(e_rt)e_rt.textContent='0%';
 // 산정근거 업데이트
 var basisEl=document.getElementById('ov-rev-basis');
@@ -1306,18 +1340,21 @@ var el=document.getElementById('alertBoard');if(!el)return;while(el.firstChild)e
 var alerts=d.alerts||[];
 if(agentFilter)alerts=alerts.filter(function(a){return a.agent===agentFilter});
 if(!alerts.length){var p=document.createElement('p');p.style.cssText='color:#9B9B9B;font-size:12px;padding:20px';p.textContent='알림 없음. KPI 점검 실행 버튼을 눌러주세요.';el.appendChild(p);return}
-var agentColors={'카일':'#7C3AED','루나':'#F97316','피치':'#0EA5E9','맥스':'#EF4444','소피':'#E1306C','레이':'#22C55E','하나':'#F59E0B'};
+var agentColors={'카일':'#1B2A4A','루나':'#2D4A7A','피치':'#3D6A9A','맥스':'#C4332B','소피':'#7A5C3A','레이':'#1A7A4C','하나':'#B8860B'};
 alerts.forEach(function(a){
-var card=document.createElement('div');card.style.cssText='background:#FFFFFF;border:1px solid '+(a.resolved?'#1E2433':'rgba(239,68,68,0.3)')+';border-radius:10px;padding:16px 20px;border-left:3px solid '+(agentColors[a.agent]||'#F97316');
+var card=document.createElement('div');card.style.cssText='background:#FFFFFF;border:0.5px solid '+(a.resolved?'#E8E6E1':'rgba(196,51,43,0.2)')+';border-radius:8px;padding:16px 20px;border-left:3px solid '+(agentColors[a.agent]||'#1B2A4A');
 var top=document.createElement('div');top.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap';
-var agentTag=document.createElement('span');agentTag.style.cssText='padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:'+(agentColors[a.agent]||'#F97316');agentTag.textContent=a.agent;top.appendChild(agentTag);
+var agentTag=document.createElement('span');agentTag.style.cssText='padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;background:'+(agentColors[a.agent]||'#1B2A4A');agentTag.textContent=a.agent;top.appendChild(agentTag);
 var ts=document.createElement('span');ts.style.cssText='font-size:10px;color:#9B9B9B';ts.textContent=(a.timestamp||'').slice(0,16);top.appendChild(ts);
-var badge=document.createElement('span');badge.style.cssText='padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:'+(a.severity==='critical'?'#EF4444':a.severity==='warning'?'#F59E0B':'#3B82F6');badge.textContent=a.severity.toUpperCase();top.appendChild(badge);
-if(a.resolved){var rtag=document.createElement('span');rtag.style.cssText='padding:2px 6px;border-radius:4px;font-size:9px;background:#1A7A4C20;color:#1A7A4C';rtag.textContent='해결됨';top.appendChild(rtag)}
+var badge=document.createElement('span');badge.style.cssText='padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;color:#fff;background:'+(a.severity==='critical'?'#C4332B':a.severity==='warning'?'#B8860B':'#2D4A7A');badge.textContent=a.severity.toUpperCase();top.appendChild(badge);
+if(a.resolved){var rtag=document.createElement('span');rtag.style.cssText='padding:2px 6px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C';rtag.textContent='해결됨';top.appendChild(rtag)}
 card.appendChild(top);
 var summary=document.createElement('p');summary.style.cssText='font-size:13px;color:#1B2A4A;margin:0 0 6px 0;font-weight:600';summary.textContent=a.summary;card.appendChild(summary);
 if(a.detail){var detail=document.createElement('p');detail.style.cssText='font-size:11px;color:#6B6B6B;margin:0 0 8px 0;line-height:1.5';detail.textContent=a.detail;card.appendChild(detail)}
-if(!a.resolved){var btn=document.createElement('button');btn.style.cssText='padding:4px 12px;background:#1A7A4C;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer';btn.textContent='해결';btn.addEventListener('click',function(){fetch('/api/alerts-board/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:a.id})}).then(function(){loadAlertBoard()})});card.appendChild(btn)}
+if(!a.resolved){var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px';
+var b1=document.createElement('button');b1.style.cssText='padding:4px 12px;background:#1B2A4A;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer';b1.textContent='승인';b1.addEventListener('click',(function(id){return function(){fetch('/api/alerts-board/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(){loadAlertBoard()})}})(a.id));btns.appendChild(b1);
+var b2=document.createElement('button');b2.style.cssText='padding:4px 12px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#1B2A4A;font-size:10px;cursor:pointer';b2.textContent='수정요청';b2.addEventListener('click',(function(agent){return function(){var msg=prompt(agent+' 에이전트에게 수정 요청:');if(msg)fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:agent,message:msg})})}})(a.agent));btns.appendChild(b2);
+card.appendChild(btns)}
 el.appendChild(card)})}).catch(function(){})}
 
 function runAgentCycle(){fetch('/api/agent-cycle').then(function(r){return r.json()}).then(function(d){alert('KPI 점검 완료: '+d.alerts_posted+'건 경고');loadAlertBoard()}).catch(function(){alert('실행 실패')})}

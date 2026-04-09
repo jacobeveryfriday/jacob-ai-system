@@ -15,11 +15,13 @@ import requests as req_lib
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 load_dotenv(override=False)  # OS 환경변수(Railway)가 .env보다 우선
 app = FastAPI(title="Command Center")
+app.add_middleware(GZipMiddleware, minimum_size=500)
 KST = ZoneInfo("Asia/Seoul")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -1331,6 +1333,30 @@ def _rule_based_reply(msg: str, kpi: dict, page: str) -> str:
 
 # ===== Slack Webhook =====
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
+SLACK_TOGGLE_FILE = DATA_DIR / "slack_toggle.json"
+
+def _slack_enabled():
+    """Slack 보고 토글 상태. 기본 OFF."""
+    if SLACK_TOGGLE_FILE.exists():
+        try:
+            return json.loads(SLACK_TOGGLE_FILE.read_text(encoding="utf-8")).get("enabled", False)
+        except Exception:
+            pass
+    return False
+
+@app.get("/api/slack/toggle")
+async def slack_toggle_get():
+    """Slack 보고 토글 상태 조회."""
+    return {"enabled": _slack_enabled(), "webhook_configured": bool(SLACK_WEBHOOK_URL),
+            "setup_guide": "" if SLACK_WEBHOOK_URL else "1) Slack 앱 > https://api.slack.com/apps 에서 새 앱 생성\n2) Incoming Webhooks 활성화\n3) Add New Webhook to Workspace → #ceo-briefing 채널 선택\n4) Webhook URL 복사 → Railway Variables에 SLACK_WEBHOOK_URL=URL 추가"}
+
+@app.post("/api/slack/toggle")
+async def slack_toggle_set(request: Request):
+    """Slack 보고 ON/OFF 토글."""
+    body = await request.json()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    SLACK_TOGGLE_FILE.write_text(json.dumps({"enabled": bool(body.get("enabled")), "updated_at": datetime.now(KST).isoformat()}, ensure_ascii=False), encoding="utf-8")
+    return {"status": "ok", "enabled": bool(body.get("enabled"))}
 
 @app.post("/api/slack/test")
 async def slack_test():
@@ -1351,6 +1377,8 @@ async def slack_kpi_report():
     """KPI 리포트 Slack 발송 (09:00 스케줄 또는 수동 트리거)"""
     if not SLACK_WEBHOOK_URL:
         return {"status": "error", "message": "SLACK_WEBHOOK_URL 미설정. .env에 추가 필요."}
+    if not _slack_enabled():
+        return {"status": "disabled", "message": "Slack 보고 OFF 상태. 대시보드에서 토글을 켜주세요."}
     try:
         brand = await api_brand_pipeline()
         t = brand.get("today", {})
@@ -1373,6 +1401,8 @@ async def slack_daily_brief():
     """매일 아침 9시 Slack CEO 브리핑 — KPI + 에이전트 제안 + 실행결과."""
     if not SLACK_WEBHOOK_URL:
         return {"status": "error", "message": "SLACK_WEBHOOK_URL 미설정"}
+    if not _slack_enabled():
+        return {"status": "disabled", "message": "Slack 보고 OFF 상태. 대시보드에서 토글을 켜주세요."}
     try:
         brand = await api_brand_pipeline()
         t = brand.get("today", {})
@@ -2008,7 +2038,7 @@ async def api_kpi_trend():
         monthly = ads.get("monthly_trend", [])
     except Exception:
         pass
-    # 계산서에서 월별 매출 집계
+    # 계산서에서 월별 매출 집계 (B열 날짜 기반 통일)
     ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
     monthly_rev = {}
     if ct_rows:
@@ -2016,24 +2046,6 @@ async def api_kpi_trend():
         headers = [str(h).replace("\n", " ").strip() for h in ct_rows[hdr]]
         date_idx = _find_col(headers, "작성일자", "등록기준일") or 1
         amount_idx = _find_col(headers, "공급가액") or 19
-        month_col = _find_col(headers, "작성월") or 3
-        for row in ct_rows[hdr + 1:]:
-            if len(row) < 3:
-                continue
-            mv = str(row[month_col]).strip() if month_col < len(row) else ""
-            rv = str(row[amount_idx]).strip() if amount_idx < len(row) else "0"
-            if not mv or "20" not in mv:
-                dr = str(row[date_idx]).strip() if date_idx < len(row) else ""
-                dc = dr.replace("-", "").replace(".", "").replace("/", "")
-                if len(dc) >= 6 and dc[:4].isdigit():
-                    mv = dc[:4] + "." + dc[4:6]
-            if mv and "20" in mv:
-                try:
-                    rev = int(float(rv.replace(",", "").replace("₩", "").replace(" ", "")))
-                except (ValueError, TypeError):
-                    rev = 0
-                if rev > 0:
-                    monthly_rev[mv] = monthly_rev.get(mv, 0) + rev
     # 일별 매출 + 계약수 + 상품별 + 충전금
     daily_rev = {}
     daily_new = {}
@@ -2087,7 +2099,8 @@ async def api_kpi_trend():
                         is_renew = True
                 else:
                     is_renew = False
-            # 월별 집계 (전체 기간)
+            # 월별 집계 (전체 기간 — B열 날짜 기반 통일)
+            monthly_rev[mk] = monthly_rev.get(mk, 0) + rev
             if is_renew:
                 monthly_renew_rev[mk] = monthly_renew_rev.get(mk, 0) + rev
                 monthly_renew_cnt[mk] = monthly_renew_cnt.get(mk, 0) + 1
@@ -2145,6 +2158,7 @@ async def api_kpi_trend():
         "daily_payback": [{"date": k, "amount": v} for k, v in sorted(daily_payback.items())[-90:]],
         "monthly_payback": [{"month": k, "amount": v} for k, v in sorted(monthly_payback.items())[-12:]],
         "total_payback": total_payback,
+        "today_payback": daily_payback.get(datetime.now(KST).strftime("%Y%m%d"), 0),
     }
 
 

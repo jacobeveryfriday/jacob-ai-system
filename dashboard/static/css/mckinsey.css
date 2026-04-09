@@ -407,8 +407,19 @@ textarea.input-field:focus {
 .gap-row { display: flex; gap: var(--gap); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
 
-@media (max-width: 640px) {
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .page-wrapper { padding: 0 16px; }
+  .kpi-row { grid-template-columns: 1fr; }
   .agent-grid { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .top-bar-inner { flex-direction: column; gap: 8px; }
+}
+@media (max-width: 640px) {
   .timeline-item { grid-template-columns: 60px 1fr; }
   .timeline-agent, .timeline-result { display: none; }
 }

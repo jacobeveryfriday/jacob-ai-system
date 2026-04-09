@@ -22,6 +22,10 @@
       <span class="badge-dot"></span>
       <span>CEO 결정 필요 <b id="actionCount">0</b>건</span>
     </div>
+    <label id="slackToggleWrap" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text-muted)" title="Slack 보고 ON/OFF">
+      <span id="slackToggleLabel">Slack 보고</span>
+      <input type="checkbox" id="slackToggle" onchange="toggleSlack(this.checked)" style="width:14px;height:14px;accent-color:var(--accent)">
+    </label>
     <a href="/old" style="font-size:12px;color:var(--text-muted);text-decoration:none">기존 대시보드</a>
   </div>
 </div>
@@ -651,6 +655,19 @@ function sendSlackBrief() {
     if (d.status === 'ok') alert('Slack CEO 브리핑 발송 완료');
     else alert('발송 실패: ' + (d.message||''));
   }).catch(function(){ alert('네트워크 오류'); });
+}
+
+// Slack 토글 초기화
+fetch('/api/slack/toggle').then(function(r){return r.json()}).then(function(d){
+  var cb=document.getElementById('slackToggle');if(cb)cb.checked=d.enabled;
+  var lbl=document.getElementById('slackToggleLabel');
+  if(lbl)lbl.textContent='Slack 보고 '+(d.enabled?'ON':'OFF');
+  if(!d.webhook_configured&&d.setup_guide){console.log('Slack 설정 안내:\n'+d.setup_guide)}
+}).catch(function(){});
+function toggleSlack(on){
+  fetch('/api/slack/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:on})}).then(function(r){return r.json()}).then(function(d){
+    var lbl=document.getElementById('slackToggleLabel');if(lbl)lbl.textContent='Slack 보고 '+(d.enabled?'ON':'OFF');
+  }).catch(function(){});
 }
 
 loadAll();
