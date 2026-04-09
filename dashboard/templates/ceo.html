@@ -64,6 +64,14 @@
       <div class="kpi-basis">실데이터 연동 에이전트 수 / 전체 등록 에이전트 수</div>
     </div>
   </div>
+  <!-- 토큰 비용 요약 -->
+  <div style="background:var(--bg-card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:12px;font-weight:600;color:var(--text-secondary)">AI 토큰 비용</span>
+      <span id="token-total-today" style="font-size:11px;color:var(--text-muted)">로딩중...</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="tokenAgentCards"></div>
+  </div>
   <div class="grid-2 mt-6">
     <div class="chart-card">
       <div class="chart-title">월별 매출 추이 (신규 + 재계약)</div>
@@ -688,6 +696,22 @@ function toggleSlack(on){
     var lbl=document.getElementById('slackToggleLabel');if(lbl)lbl.textContent='Slack 보고 '+(d.enabled?'ON':'OFF');
   }).catch(function(){});
 }
+
+// 토큰 비용 로드
+fetch('/api/token-usage').then(function(r){return r.json()}).then(function(d){
+  var el=document.getElementById('token-total-today');
+  if(el)el.textContent='오늘 $'+d.total.today_cost+' / 이번달 $'+d.total.month_cost+' / 예상 $'+d.total.projected;
+  var grid=document.getElementById('tokenAgentCards');
+  if(grid){while(grid.firstChild)grid.removeChild(grid.firstChild);
+  ['피치','루나','소피','맥스','카일'].forEach(function(ag){
+    var a=d.agents[ag]||{today:{cost:0,total:0}};
+    var card=document.createElement('div');card.style.cssText='text-align:center;padding:8px;background:var(--bg);border-radius:6px';
+    var n=document.createElement('div');n.style.cssText='font-size:10px;color:var(--text-secondary)';n.textContent=ag;card.appendChild(n);
+    var v=document.createElement('div');v.style.cssText='font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text)';v.textContent='$'+a.today.cost;card.appendChild(v);
+    var s=document.createElement('div');s.style.cssText='font-size:9px;color:var(--text-muted)';s.textContent=(a.today.total/1000000).toFixed(2)+'M';card.appendChild(s);
+    grid.appendChild(card);
+  })}
+}).catch(function(){});
 
 loadAll();
 loadPerformance();

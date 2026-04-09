@@ -140,8 +140,28 @@ ALERTS_FILE = DATA_DIR / "alerts.json"
 PROPOSALS_FILE = DATA_DIR / "proposals.json"
 CYCLE_LOG_FILE = DATA_DIR / "cycle_log.json"
 AGENT_PERF_FILE = DATA_DIR / "agent_performance.json"
+BENCHMARKS_FILE = DATA_DIR / "benchmarks.json"
 
-MEETING_LINK = "https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ3b3pndYo35A_3SjrHJeeXfAm3YpvBX0IXfkJqXP0QXixBEADR_ehY__tHBlJdNBkL5I2868Rrd"
+def load_benchmarks() -> dict:
+    if BENCHMARKS_FILE.exists():
+        return json.loads(BENCHMARKS_FILE.read_text(encoding="utf-8"))
+    return {}
+
+# 토큰 비용 단가 (USD per M tokens)
+TOKEN_COSTS = {
+    "haiku": {"input": 1.0, "output": 5.0},
+    "sonnet": {"input": 3.0, "output": 15.0},
+}
+
+def _record_tokens(agent: str, input_tokens: int, output_tokens: int, model: str = "sonnet"):
+    """에이전트별 토큰 사용량 기록."""
+    cost_table = TOKEN_COSTS.get("haiku" if "haiku" in model.lower() else "sonnet", TOKEN_COSTS["sonnet"])
+    cost = (input_tokens * cost_table["input"] + output_tokens * cost_table["output"]) / 1_000_000
+    _record_perf(agent, "input_tokens", input_tokens)
+    _record_perf(agent, "output_tokens", output_tokens)
+    _record_perf(agent, "cost_usd_x100", int(cost * 100))
+
+MEETING_LINK ="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ3b3pndYo35A_3SjrHJeeXfAm3YpvBX0IXfkJqXP0QXixBEADR_ehY__tHBlJdNBkL5I2868Rrd"
 
 # ===== 에이전트 이메일 계정 =====
 AGENT_EMAILS = {
@@ -1353,6 +1373,8 @@ async def api_chat(request: Request):
             if resp.status_code == 200:
                 data = resp.json()
                 reply = data["content"][0]["text"]
+                usage = data.get("usage", {})
+                _record_tokens(agent_name, usage.get("input_tokens", 0), usage.get("output_tokens", 0), ANTHROPIC_MODEL)
                 return {"reply": reply, "source": "claude-sonnet", "agent": agent_name}
             else:
                 err_detail = resp.text[:200]
@@ -2996,6 +3018,51 @@ async def api_agent_scoreboard():
         scoreboard.append({"agent": ag_name, "pct": pct, "actual": total_actual, "target": total_target, "details": weekly_a})
     scoreboard.sort(key=lambda x: -x["pct"])
     return {"scoreboard": scoreboard, "week_start": week_start}
+
+@app.get("/api/benchmarks")
+async def api_benchmarks():
+    """업계 벤치마크 데이터 조회."""
+    return load_benchmarks()
+
+@app.get("/api/token-usage")
+async def api_token_usage():
+    """에이전트별 토큰 사용량 + 비용."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    month_prefix = now.strftime("%Y-%m")
+    today_data = perf.get(today, {})
+    monthly_data = {}
+    for date_key, agents_data in perf.items():
+        if date_key.startswith(month_prefix):
+            for ag, metrics in agents_data.items():
+                monthly_data.setdefault(ag, {})
+                for mk, mv in metrics.items():
+                    monthly_data[ag][mk] = monthly_data[ag].get(mk, 0) + mv
+    agents = {}
+    for ag in ["피치", "루나", "소피", "맥스", "카일"]:
+        td = today_data.get(ag, {})
+        md = monthly_data.get(ag, {})
+        today_in = td.get("input_tokens", 0)
+        today_out = td.get("output_tokens", 0)
+        today_cost = td.get("cost_usd_x100", 0) / 100
+        month_in = md.get("input_tokens", 0)
+        month_out = md.get("output_tokens", 0)
+        month_cost = md.get("cost_usd_x100", 0) / 100
+        agents[ag] = {
+            "today": {"input": today_in, "output": today_out, "total": today_in + today_out, "cost": round(today_cost, 2)},
+            "monthly": {"input": month_in, "output": month_out, "total": month_in + month_out, "cost": round(month_cost, 2)},
+        }
+    # 전체 합계
+    total_today_cost = sum(a["today"]["cost"] for a in agents.values())
+    total_month_cost = sum(a["monthly"]["cost"] for a in agents.values())
+    biz_days_left = max(1, 20 - now.day)
+    daily_avg = total_month_cost / max(now.day, 1)
+    projected = total_month_cost + daily_avg * biz_days_left
+    return {
+        "agents": agents,
+        "total": {"today_cost": round(total_today_cost, 2), "month_cost": round(total_month_cost, 2), "projected": round(projected, 2)},
+    }
 
 @app.get("/api/agent-kpi-dashboard")
 async def api_agent_kpi_dashboard():

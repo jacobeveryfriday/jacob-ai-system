@@ -1412,9 +1412,10 @@ fetch('/api/sophie-content').then(function(r){return r.json()}).then(function(d)
 function loadAgentPerf(){
 Promise.all([
   fetch('/api/agent-performance').then(function(r){return r.json()}),
-  fetch('/api/kpi-summary').then(function(r){return r.json()})
+  fetch('/api/kpi-summary').then(function(r){return r.json()}),
+  fetch('/api/benchmarks').then(function(r){return r.json()}).catch(function(){return {}})
 ]).then(function(res){
-var d=res[0],kpi=res[1];
+var d=res[0],kpi=res[1],bench=res[2];
 var t=d.today||{};
 // 피치 (브랜드) — 아웃바운드
 var pitch=t['피치']||{};
@@ -1458,6 +1459,22 @@ function renderGauge(containerId,agentName){
 renderGauge('pitch-gauge','피치');
 renderGauge('luna-gauge','루나');
 renderGauge('sophie-gauge','소피');
+// 벤치마크 비교 렌더
+function renderBenchmark(containerId,benchData,metricKey,actualValue,label){
+  var el=document.getElementById(containerId);if(!el||!benchData)return;
+  var bm=benchData[metricKey];if(!bm)return;
+  var avg=bm.average||0,good=bm.good||0,exc=bm.excellent||0;
+  var grade,color;
+  if(actualValue>=exc){grade='Excellent';color='#0D5F35'}
+  else if(actualValue>=good){grade='Good';color='#1A7A4C'}
+  else if(actualValue>=avg){grade='Average';color='#B8860B'}
+  else{grade='Below Avg';color='#C4332B'}
+  var row=document.createElement('div');row.style.cssText='font-size:10px;color:'+color+';margin-top:4px';
+  row.textContent=label+' '+actualValue+(bm.unit||'')+' — 업계평균 '+avg+(bm.unit||'')+' '+grade+' ('+bm.source+')';
+  el.appendChild(row);
+}
+if(bench.cold_email_b2b)renderBenchmark('pitch-gauge',bench.cold_email_b2b,'reply_rate',4.2,'답변율');
+if(bench.influencer_outreach)renderBenchmark('luna-gauge',bench.influencer_outreach,'reply_rate',10,'답변율');
 }).catch(function(){})}
 loadAgentPerf();
 

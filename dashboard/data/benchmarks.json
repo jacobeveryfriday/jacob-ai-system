@@ -1,0 +1,35 @@
+{
+  "cold_email_b2b": {
+    "open_rate": {"average": 27.7, "good": 40, "excellent": 50, "unit": "%", "source": "Instantly Benchmark Report 2025, RemoteReps247 2025"},
+    "reply_rate": {"average": 3.5, "good": 5, "excellent": 10, "unit": "%", "source": "Martal B2B Cold Email Statistics 2026, Belkins 2025 Study"},
+    "positive_reply_rate": {"average": 1.5, "good": 3, "excellent": 5, "unit": "%", "source": "Backlinko Email Outreach Study"},
+    "meeting_booking_rate": {"average": 0.69, "good": 1.5, "excellent": 2.34, "unit": "%", "source": "Digital Bloom 2025"},
+    "bounce_rate": {"bad": 7.5, "acceptable": 5, "good": 3, "unit": "%", "source": "ManyReach Cold Email Statistics 2025"},
+    "optimal_email_length": {"min": 50, "max": 125, "unit": "words", "source": "Boomerang Data, Belkins 2025"},
+    "best_send_day": {"day": "Thursday", "reply_rate": 6.87, "source": "Belkins 2025 Study"},
+    "best_send_time": {"window": "9:30~11:30 AM recipient timezone", "source": "RemoteReps247 2025"},
+    "personalization_lift": {"value": 142, "unit": "%", "source": "Mailshake 2025 Report"},
+    "followup_lift": {"value": "40~50%", "source": "Backlinko Email Outreach Study"}
+  },
+  "influencer_outreach": {
+    "reply_rate": {"average": 8, "good": 12, "excellent": 15, "unit": "%", "source": "인플루언서는 협찬 제안에 B2B 대비 2~3배 높은 반응 (업계 추정)"},
+    "collaboration_acceptance": {"average": 30, "good": 50, "excellent": 66, "unit": "%", "source": "인플루언서 마케팅 플랫폼 평균"},
+    "email_to_secured": {"average": 3, "good": 5, "excellent": 10, "unit": "%", "source": "reply_rate × acceptance_rate 역산"}
+  },
+  "meta_ads": {
+    "cpa": {"average": 35000, "good": 25000, "excellent": 15000, "unit": "원", "source": "국내 B2B 리드 CPA 평균 3~5만원 (메조미디어 2025)"},
+    "valid_db_ratio": {"average": 15, "good": 25, "excellent": 35, "unit": "%", "source": "B2B 리드 유효율 평균 15~20% (HubSpot 2025)"}
+  },
+  "sns_content": {
+    "engagement_rate": {"average": 1.5, "good": 3, "excellent": 5, "unit": "%", "source": "Hootsuite Global Social Media Report 2025"},
+    "lead_per_post_b2b": {"average": 5, "good": 10, "excellent": 20, "source": "LinkedIn B2B Marketing Benchmark 2025"},
+    "lead_per_post_b2c": {"average": 8, "good": 15, "excellent": 30, "source": "Instagram Creator Economy Report 2025"}
+  },
+  "token_cost": {
+    "haiku_4_5": {"input": 1, "output": 5, "unit": "$/M tokens"},
+    "sonnet_4_6": {"input": 3, "output": 15, "unit": "$/M tokens"},
+    "batch_discount": 0.5,
+    "cache_discount": 0.1,
+    "source": "Anthropic Official Pricing 2026"
+  }
+}
