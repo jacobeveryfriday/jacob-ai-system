@@ -747,7 +747,7 @@ async def add_checklist_item(request: Request):
 
 # ===== Google Sheets API Endpoints =====
 @app.get("/api/brand-pipeline")
-async def api_brand_pipeline(brand_filter: Optional[str] = Query(None)):
+async def api_brand_pipeline(brand_filter: Optional[str] = None):
     """브랜드 파이프라인 (Google Sheets 연동 or 더미). 헤더 기반 자동 감지."""
     if not GSHEETS_API_KEY:
         dummy = _dummy_brand_pipeline()
