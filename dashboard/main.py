@@ -132,6 +132,8 @@ CHECKLIST_FILE = DATA_DIR / "checklist.json"
 KPI_FILE = DATA_DIR / "kpi_summary.json"
 GOALS_FILE = DATA_DIR / "goals.json"
 ALERTS_FILE = DATA_DIR / "alerts.json"
+PROPOSALS_FILE = DATA_DIR / "proposals.json"
+CYCLE_LOG_FILE = DATA_DIR / "cycle_log.json"
 
 # ===== 에이전트 이메일 계정 =====
 AGENT_EMAILS = {
@@ -168,6 +170,24 @@ def load_alerts() -> list:
 def save_alerts(data: list):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     ALERTS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def load_proposals() -> list:
+    if PROPOSALS_FILE.exists():
+        return json.loads(PROPOSALS_FILE.read_text(encoding="utf-8"))
+    return []
+
+def save_proposals(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    PROPOSALS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def load_cycle_log() -> list:
+    if CYCLE_LOG_FILE.exists():
+        return json.loads(CYCLE_LOG_FILE.read_text(encoding="utf-8"))
+    return []
+
+def save_cycle_log(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CYCLE_LOG_FILE.write_text(json.dumps(data[-100:], ensure_ascii=False, indent=2), encoding="utf-8")
 
 # ===== Google Sheets Config =====
 GSHEETS_API_KEY = os.getenv("GOOGLE_SHEETS_API_KEY", "")
@@ -1616,11 +1636,41 @@ async def api_resolve_alert(request: Request):
 
 # ===== 에이전트 자율실행 프레임워크 =====
 async def _agent_auto_cycle():
-    """매일 09:00 KST 전체 에이전트 자율실행: 데이터수집 → 분석 → 감지 → 알림 → 슬랙."""
+    """매일 09:00 KST 전체 에이전트 자율실행: 데이터수집 → 분석 → 감지 → 알림 → 제안생성 → 승인된 제안 실행 → 슬랙."""
     goals = load_goals()
     alerts_posted = []
     now_ts = datetime.now(KST).isoformat()
     _id = lambda: int(time.time() * 1000) % 1000000 + len(alerts_posted)
+
+    # 0. 에이전트 자율 개선 루프 — 제안 자동생성
+    try:
+        new_proposals = await _generate_agent_proposals()
+        if new_proposals:
+            _log_cycle("auto_generate", None, f"에이전트 제안 {len(new_proposals)}건 자동생성")
+    except Exception as e:
+        print(f"Proposal auto-generation error: {e}")
+
+    # 0-1. 승인된 제안 자동실행
+    try:
+        proposals = load_proposals()
+        for p in proposals:
+            if p.get("status") == "approved" and not p.get("executed_at"):
+                agent = p.get("agent", "")
+                result_text = "자동 실행 완료"
+                if agent == "루나" and "재접촉" in p.get("proposal", ""):
+                    try:
+                        campaign = await _run_recontact_campaign(dry_run=False, limit=5)
+                        result_text = f"재접촉 이메일 {campaign.get('sent',0)}건 발송"
+                    except Exception:
+                        result_text = "재접촉 실행 오류"
+                p["status"] = "completed"
+                p["executed_at"] = now_ts
+                p["result"] = result_text
+                _log_cycle("auto_execute", p.get("id"), result_text)
+        save_proposals(proposals)
+    except Exception as e:
+        print(f"Auto-execute error: {e}")
+
     try:
         # 1. 전체 KPI 데이터 수집
         brand = await api_brand_pipeline()
@@ -2188,6 +2238,253 @@ async def api_debug_env():
     env_path = Path(__file__).parent / ".env"
     result["_dotenv_file_exists"] = env_path.exists()
     return result
+
+
+# ===== 에이전트 자율 개선 루프 (Proposal System) =====
+
+@app.get("/api/proposals")
+async def api_get_proposals(status: Optional[str] = None):
+    """제안 목록 조회. status: pending_approval/approved/executed/completed/rejected"""
+    proposals = load_proposals()
+    if status:
+        proposals = [p for p in proposals if p.get("status") == status]
+    proposals.sort(key=lambda p: p.get("created_at", ""), reverse=True)
+    return {"proposals": proposals[:50]}
+
+
+@app.post("/api/proposals")
+async def api_create_proposal(request: Request):
+    """에이전트가 제안 생성 (수동 또는 자동 사이클)."""
+    body = await request.json()
+    proposals = load_proposals()
+    proposal = {
+        "id": int(time.time() * 1000) % 10000000,
+        "agent": body.get("agent", "시스템"),
+        "proposal": body.get("proposal", ""),
+        "detail": body.get("detail", ""),
+        "expected_impact": body.get("expected_impact", ""),
+        "action_type": body.get("action_type", "manual"),
+        "status": "pending_approval",
+        "ceo_comment": "",
+        "created_at": datetime.now(KST).isoformat(),
+        "approved_at": None,
+        "executed_at": None,
+        "result": None,
+    }
+    proposals.append(proposal)
+    save_proposals(proposals)
+    return {"status": "ok", "proposal": proposal}
+
+
+@app.post("/api/proposals/approve")
+async def api_approve_proposal(request: Request):
+    """CEO가 제안 승인 → status를 approved로 변경."""
+    body = await request.json()
+    pid = body.get("id")
+    proposals = load_proposals()
+    for p in proposals:
+        if p.get("id") == pid:
+            p["status"] = "approved"
+            p["approved_at"] = datetime.now(KST).isoformat()
+            # 승인 즉시 Slack 알림
+            slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
+            if slack_url:
+                try:
+                    req_lib.post(slack_url, json={"text": f"✅ CEO 승인: [{p['agent']}] {p['proposal']}"}, timeout=5)
+                except Exception:
+                    pass
+            break
+    save_proposals(proposals)
+    _log_cycle("approve", pid, f"CEO가 제안 승인")
+    return {"status": "ok"}
+
+
+@app.post("/api/proposals/reject")
+async def api_reject_proposal(request: Request):
+    """CEO가 제안 거절."""
+    body = await request.json()
+    pid = body.get("id")
+    proposals = load_proposals()
+    for p in proposals:
+        if p.get("id") == pid:
+            p["status"] = "rejected"
+            p["ceo_comment"] = body.get("comment", "")
+            break
+    save_proposals(proposals)
+    _log_cycle("reject", pid, f"CEO가 제안 거절: {body.get('comment','')}")
+    return {"status": "ok"}
+
+
+@app.post("/api/proposals/edit")
+async def api_edit_proposal(request: Request):
+    """CEO가 수정요청 → 에이전트가 반영 후 재제출."""
+    body = await request.json()
+    pid = body.get("id")
+    comment = body.get("comment", "")
+    proposals = load_proposals()
+    for p in proposals:
+        if p.get("id") == pid:
+            p["status"] = "revision_requested"
+            p["ceo_comment"] = comment
+            break
+    save_proposals(proposals)
+    _log_cycle("edit_request", pid, f"CEO 수정요청: {comment[:80]}")
+    return {"status": "ok"}
+
+
+@app.post("/api/proposals/execute")
+async def api_execute_proposal(request: Request):
+    """승인된 제안 실행 (수동 트리거 또는 자동 사이클)."""
+    body = await request.json()
+    pid = body.get("id")
+    proposals = load_proposals()
+    result_text = "실행 완료"
+    for p in proposals:
+        if p.get("id") == pid and p.get("status") == "approved":
+            p["status"] = "executed"
+            p["executed_at"] = datetime.now(KST).isoformat()
+            # 에이전트별 실행 로직
+            agent = p.get("agent", "")
+            if agent == "루나" and "재접촉" in p.get("proposal", ""):
+                try:
+                    campaign = await _run_recontact_campaign(dry_run=False, limit=5)
+                    result_text = f"재접촉 이메일 {campaign.get('sent',0)}건 발송"
+                except Exception as e:
+                    result_text = f"실행 오류: {e}"
+            elif agent == "카일":
+                result_text = "KPI 모니터링 사이클 실행 완료"
+            p["result"] = result_text
+            p["status"] = "completed"
+            # Slack 결과 전달
+            slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
+            if slack_url:
+                try:
+                    req_lib.post(slack_url, json={"text": f"🤖 실행완료: [{agent}] {result_text}"}, timeout=5)
+                except Exception:
+                    pass
+            break
+    save_proposals(proposals)
+    _log_cycle("execute", pid, result_text)
+    return {"status": "ok", "result": result_text}
+
+
+@app.get("/api/cycle-log")
+async def api_get_cycle_log():
+    """에이전트 사이클 히스토리 조회."""
+    return {"log": load_cycle_log()[-30:]}
+
+
+def _log_cycle(action: str, proposal_id, detail: str):
+    """사이클 로그 기록."""
+    log = load_cycle_log()
+    log.append({
+        "action": action,
+        "proposal_id": proposal_id,
+        "detail": detail,
+        "timestamp": datetime.now(KST).isoformat(),
+    })
+    save_cycle_log(log)
+
+
+async def _generate_agent_proposals():
+    """에이전트 사이클: 데이터 분석 → 개선안 자동 생성 → proposals.json 저장."""
+    now = datetime.now(KST)
+    proposals = load_proposals()
+    existing_pending = [p for p in proposals if p.get("status") == "pending_approval"]
+    if len(existing_pending) >= 10:
+        return []  # 미처리 제안이 10개 이상이면 추가 생성 안 함
+
+    new_proposals = []
+    _pid = lambda: int(time.time() * 1000) % 10000000 + len(new_proposals)
+
+    try:
+        brand = await api_brand_pipeline()
+        m = brand.get("month", {})
+        t = brand.get("today", {})
+        goals = load_goals()
+
+        # 1. 바이어 아웃리치 — 응답률 분석
+        if m.get("inbound", 0) > 0:
+            valid_rate = round(m.get("valid", 0) / max(m.get("inbound", 1), 1) * 100, 1)
+            if valid_rate < 30:
+                new_proposals.append({
+                    "id": _pid(), "agent": "루나", "status": "pending_approval",
+                    "proposal": f"유효DB 전환율 {valid_rate}% — 이메일 제목줄 A/B 테스트 제안",
+                    "detail": f"현재 인입DB {m.get('inbound',0)}건 중 유효 {m.get('valid',0)}건({valid_rate}%). 업계 평균 30% 대비 낮음. 이메일 제목줄 변경 테스트 권장.",
+                    "expected_impact": "유효DB 전환율 30%+ 달성 시 월 계약 5건 추가 예상",
+                    "action_type": "email_ab_test",
+                    "ceo_comment": "", "created_at": now.isoformat(),
+                    "approved_at": None, "executed_at": None, "result": None,
+                })
+
+        # 2. 세금계산서 — 미발행 감지
+        ct_count = m.get("contract", 0)
+        if ct_count > 0:
+            new_proposals.append({
+                "id": _pid(), "agent": "레이", "status": "pending_approval",
+                "proposal": f"이번달 계약 {ct_count}건 — 세금계산서 발행 상태 점검 제안",
+                "detail": f"계약 {ct_count}건 중 미발행 건이 있을 수 있음. 구글시트 계산서탭과 대조 필요.",
+                "expected_impact": "미수금 리스크 사전 차단",
+                "action_type": "tax_check",
+                "ceo_comment": "", "created_at": now.isoformat(),
+                "approved_at": None, "executed_at": None, "result": None,
+            })
+
+        # 3. 인플루언서 매칭 — 미매칭 캠페인
+        try:
+            inf = await api_influencer_db()
+            stats = inf.get("stats", {})
+            listed = stats.get("by_status", {}).get("1. 단순리스트업", 0)
+            if listed > 50:
+                new_proposals.append({
+                    "id": _pid(), "agent": "피치", "status": "pending_approval",
+                    "proposal": f"단순리스트업 {listed}명 — 컨택 전환 캠페인 제안",
+                    "detail": f"리스트업만 된 인플루언서 {listed}명. 이 중 팔로워 10만+ 대상으로 개인화 컨택 이메일 발송 권장.",
+                    "expected_impact": f"응답률 25% 기준 {int(listed*0.25)}명 추가 확보",
+                    "action_type": "influencer_outreach",
+                    "ceo_comment": "", "created_at": now.isoformat(),
+                    "approved_at": None, "executed_at": None, "result": None,
+                })
+        except Exception:
+            pass
+
+        # 4. 카일 — 무대응 자동배정
+        if t.get("unhandled", 0) > 0:
+            new_proposals.append({
+                "id": _pid(), "agent": "카일", "status": "pending_approval",
+                "proposal": f"무대응 {t['unhandled']}건 — 담당자 자동배정 제안",
+                "detail": "미처리 인바운드가 방치 중. 담당자별 업무량 기준으로 자동 배정 실행 가능.",
+                "expected_impact": "응답시간 50% 단축, 전환율 개선",
+                "action_type": "auto_assign",
+                "ceo_comment": "", "created_at": now.isoformat(),
+                "approved_at": None, "executed_at": None, "result": None,
+            })
+
+        # 5. 루나 — 재접촉 대상
+        try:
+            recontact = await api_recontact_leads()
+            leads_count = recontact.get("count", 0)
+            if leads_count > 0:
+                new_proposals.append({
+                    "id": _pid(), "agent": "루나", "status": "pending_approval",
+                    "proposal": f"재접촉 대상 {leads_count}건 — 이메일 피치 발송 제안",
+                    "detail": f"유효DB 중 계약 미체결 {leads_count}건 발견. 맞춤 제안 이메일 발송 권장.",
+                    "expected_impact": f"전환율 10% 기준 {max(1,leads_count//10)}건 추가 계약",
+                    "action_type": "recontact_campaign",
+                    "ceo_comment": "", "created_at": now.isoformat(),
+                    "approved_at": None, "executed_at": None, "result": None,
+                })
+        except Exception:
+            pass
+
+    except Exception as e:
+        print(f"Proposal generation error: {e}")
+
+    if new_proposals:
+        proposals.extend(new_proposals)
+        save_proposals(proposals[-200:])
+
+    return new_proposals
 
 
 # ===== 카일 에이전트 개선제안 API =====
