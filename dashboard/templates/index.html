@@ -261,6 +261,22 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
     </div>
   </div>
   <div id="pitch-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
+  <!-- 피치 파이프라인 퍼널 -->
+  <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">아웃바운드 파이프라인</p>
+    <div style="display:flex;gap:4px;align-items:center;margin-bottom:10px" id="pitch-funnel-bar"></div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="pitch-pipeline-nums">
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">크롤링</p><p id="pp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">검수 대기</p><p id="pp-queued" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">발송</p><p id="pp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">답변</p><p id="pp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅</p><p id="pp-meetings" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="startCrawlBrands()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">크롤링 시작</button>
+      <button onclick="generatePitchEmails()" style="padding:6px 14px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer">이메일 생성</button>
+    </div>
+  </div>
   <!-- 피치 이메일 검수 큐 -->
   <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -334,6 +350,21 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-influencer">
+  <!-- 루나 파이프라인 퍼널 -->
+  <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">인플루언서 확보 파이프라인</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="luna-pipeline-nums">
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">크롤링</p><p id="lp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">이메일발견</p><p id="lp-emails" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">발송</p><p id="lp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">답변</p><p id="lp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+      <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">확보</p><p id="lp-secured" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="startCrawlInfluencers()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">크롤링 시작</button>
+      <button onclick="generateLunaEmails()" style="padding:6px 14px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer">이메일 생성</button>
+    </div>
+  </div>
   <!-- 루나 이메일 검수 큐 -->
   <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1512,6 +1543,34 @@ var l=document.getElementById('luna-auto-send');if(l)l.checked=d['루나']||fals
 }).catch(function(){});
 loadEmailQueue('피치','pitch-email-queue');
 loadEmailQueue('루나','luna-email-queue');
+// 파이프라인 통계 로드
+function loadPipelineStats(){
+Promise.all([
+  fetch('/api/pipeline-stats?agent=피치').then(function(r){return r.json()}),
+  fetch('/api/pipeline-stats?agent=루나').then(function(r){return r.json()})
+]).then(function(res){
+var p=res[0],l=res[1];
+var e=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
+e('pp-crawled',p.crawled.today);e('pp-queued',p.queued.total);e('pp-sent',p.sent.today);e('pp-replied',p.replied.today);e('pp-meetings',0);
+e('lp-crawled',l.crawled.today);e('lp-emails',l.crawled.total);e('lp-sent',l.sent.today);e('lp-replied',l.replied.today);e('lp-secured',l.replied.total);
+}).catch(function(){})}
+loadPipelineStats();
+// 크롤링 실행
+function startCrawlBrands(){
+fetch('/api/crawl/brands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels:['인바운드DB'],keyword:'K-뷰티',limit:50})}).then(function(r){return r.json()}).then(function(d){alert('크롤링 완료: '+d.count+'건 (신규 '+d.new+'건)');loadPipelineStats()}).catch(function(){alert('크롤링 오류')})}
+function startCrawlInfluencers(){
+fetch('/api/crawl/influencers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:['KR','US'],platforms:['Instagram'],limit:50})}).then(function(r){return r.json()}).then(function(d){alert('크롤링 완료: '+d.count+'건 (신규 '+d.new+'건)');loadPipelineStats()}).catch(function(){alert('크롤링 오류')})}
+// 이메일 생성
+function generatePitchEmails(){
+fetch('/api/crawl/brands',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels:['인바운드DB'],limit:10})}).then(function(r){return r.json()}).then(function(d){
+if(!d.results||!d.results.length){alert('대상 없음');return}
+fetch('/api/generate-emails',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targets:d.results,agent:'피치',template:'pitch_outbound'})}).then(function(r){return r.json()}).then(function(r){alert('이메일 '+r.queued+'건 생성 → 검수 큐');loadEmailQueue('피치','pitch-email-queue');loadPipelineStats()})
+}).catch(function(){alert('오류')})}
+function generateLunaEmails(){
+fetch('/api/crawl/influencers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:['KR'],platforms:['Instagram'],limit:10})}).then(function(r){return r.json()}).then(function(d){
+if(!d.results||!d.results.length){alert('대상 없음');return}
+fetch('/api/generate-emails',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targets:d.results,agent:'루나',template:'luna_kr'})}).then(function(r){return r.json()}).then(function(r){alert('이메일 '+r.queued+'건 생성 → 검수 큐');loadEmailQueue('루나','luna-email-queue');loadPipelineStats()})
+}).catch(function(){alert('오류')})}
 
 var _origShowPage=showPage;
 showPage=function(pageId){_origShowPage(pageId);

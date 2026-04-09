@@ -143,6 +143,44 @@ AGENT_PERF_FILE = DATA_DIR / "agent_performance.json"
 BENCHMARKS_FILE = DATA_DIR / "benchmarks.json"
 EMAIL_QUEUE_FILE = DATA_DIR / "email_queue.json"
 AGENT_AUTO_SEND_FILE = DATA_DIR / "agent_auto_send.json"
+CRAWLED_DATA_FILE = DATA_DIR / "crawled_data.json"
+EMAIL_LOG_FILE = DATA_DIR / "email_log.json"
+
+# 발송 속도 제한
+SEND_LIMITS = {"hourly": 50, "daily": 550, "interval_sec": 30}
+
+def load_crawled() -> list:
+    if CRAWLED_DATA_FILE.exists():
+        return json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8"))
+    return []
+
+def save_crawled(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CRAWLED_DATA_FILE.write_text(json.dumps(data[-5000:], ensure_ascii=False, indent=2), encoding="utf-8")
+
+def load_email_log() -> list:
+    if EMAIL_LOG_FILE.exists():
+        return json.loads(EMAIL_LOG_FILE.read_text(encoding="utf-8"))
+    return []
+
+def save_email_log(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    EMAIL_LOG_FILE.write_text(json.dumps(data[-2000:], ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _log_email(agent: str, to: str, subject: str, status: str, meta: dict = None):
+    """이메일 발송 로그 기록."""
+    log = load_email_log()
+    log.append({"agent": agent, "to": to, "subject": subject, "status": status,
+                "sent_at": datetime.now(KST).isoformat(), "opened": False,
+                "replied": False, "followup_count": 0, "meta": meta or {}})
+    save_email_log(log)
+
+def _check_send_limit() -> bool:
+    """일일 발송 한도 확인."""
+    log = load_email_log()
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    today_count = sum(1 for e in log if e.get("sent_at", "").startswith(today) and e.get("status") == "sent")
+    return today_count < SEND_LIMITS["daily"]
 
 def load_email_queue() -> list:
     if EMAIL_QUEUE_FILE.exists():
@@ -3161,6 +3199,200 @@ async def api_agent_auto_send_set(request: Request):
     existing[agent] = bool(body.get("enabled", False))
     AGENT_AUTO_SEND_FILE.write_text(json.dumps(existing, ensure_ascii=False), encoding="utf-8")
     return {"status": "ok", "agent": agent, "enabled": existing[agent]}
+
+
+# ===== 크롤링 + 파이프라인 API =====
+
+# 이메일 템플릿
+EMAIL_TEMPLATES = {
+    "pitch_outbound": {
+        "subject": "[{brand}] 리뷰 0개 → 100개, 무료로 시작하세요 (4월 한정)",
+        "body": """안녕하세요, {contact}님.
+글로벌 인플루언서 마케팅 플랫폼 공팔리터(08liter)의 제이콥입니다.
+{brand}의 {product} 관련, 현재 브랜드 단계에서 효율이 높은 3가지 핵심 혜택을 안내드립니다.
+
+1. 리뷰가 없으면 구매도 없습니다 (국내/해외 구매평 무료 제공)
+2. 터지는 숏폼, 3개월간 걱정 없이 1000개도 가능합니다 (월 100만원)
+3. 확실한 매출 전환을 위한 맞춤 키 인플루언서
+
+10분 비대면 미팅으로 {brand}에 맞는 맞춤 제안 드립니다.""",
+    },
+    "pitch_crm": {
+        "subject": "{brand}님, 4월 앵콜 프로모션 — 숏폼 무제한 300만원",
+        "body": """안녕하세요, {contact}님.
+지난번 {brand} 관련 문의를 주셨을 때 좋은 대화를 나눴었는데요,
+이후 진행 상황이 궁금하여 다시 연락드립니다.
+
+현재 4월 앵콜 프로모션 진행 중입니다:
+- 숏폼 무제한 월 300만원 (기존 500만원)
+- 해외 구매평 100건 무료 제공
+- 맞춤 키 인플루언서 3명 배정
+
+편하신 시간에 10분만 투자해 주시면 맞춤 제안을 드리겠습니다.""",
+    },
+    "pitch_followup": {
+        "subject": "Re: {brand} — 10분이면 충분합니다",
+        "body": "안녕하세요, {contact}님. 혹시 확인하셨을까요? 지금 시기가 가장 효율 좋은 타이밍입니다. 편하신 때 답변 부탁드립니다.",
+    },
+    "luna_intl": {
+        "subject": "Free K-Beauty Products for {name} — Paid Collab",
+        "body": """Hi {name},
+
+Loved your recent content! I'm Luna from 08liter, Asia's largest K-beauty influencer platform (139M+ creators).
+
+We'd love to send you:
+- Free K-beauty products
+- Content fee: ${fee}
+- Just 1 Reel/Short, 3-month rights
+
+Reply 'YES' for full details!
+
+Luna, 08liter""",
+    },
+    "luna_kr": {
+        "subject": "{name}님, 무료 협찬 + 제작비 제안",
+        "body": """안녕하세요 {name}님, 공팔리터 루나입니다!
+
+최근 콘텐츠 정말 인상적이었어요. K-뷰티 브랜드 협찬 제안드립니다:
+- 무료 제품 제공
+- 제작비: {fee}원
+- 릴스/숏츠 1개, 3개월 사용권
+
+관심 있으시면 답장만 주세요!
+
+루나 드림""",
+    },
+    "luna_followup": {
+        "subject": "Re: {name}님 — 혹시 확인하셨나요?",
+        "body": "안녕하세요 {name}님! 혹시 확인하셨나요? 관심 있으시면 답장만 주세요 :)",
+    },
+}
+
+@app.get("/api/email-templates")
+async def api_email_templates():
+    """이메일 템플릿 목록."""
+    return EMAIL_TEMPLATES
+
+@app.post("/api/crawl/brands")
+async def api_crawl_brands(request: Request):
+    """피치용 브랜드 크롤링 (시뮬레이션). 실제 크롤링은 추후 연동."""
+    body = await request.json()
+    channels = body.get("channels", [])
+    keyword = body.get("keyword", "K-뷰티")
+    limit = min(body.get("limit", 50), 200)
+    # 시뮬레이션: 구글시트 인바운드 + 크롤링 결과 병합
+    results = []
+    try:
+        leads = await api_recontact_leads()
+        for l in leads.get("leads", [])[:limit]:
+            results.append({"company": l["name"], "contact": "", "title": "담당자",
+                            "email": l.get("email", ""), "phone": l.get("contact", ""),
+                            "url": "", "product": keyword, "source": "인바운드DB", "size": ""})
+    except Exception:
+        pass
+    _record_perf("피치", "crawl_brands", len(results))
+    existing = load_crawled()
+    seen = {e.get("email") for e in existing if e.get("email")}
+    new_items = [r for r in results if r.get("email") and r["email"] not in seen]
+    existing.extend([{**r, "type": "brand", "crawled_at": datetime.now(KST).isoformat()} for r in new_items])
+    save_crawled(existing)
+    return {"status": "ok", "count": len(results), "new": len(new_items), "results": results[:50]}
+
+@app.post("/api/crawl/influencers")
+async def api_crawl_influencers(request: Request):
+    """루나용 인플루언서 크롤링 (시뮬레이션). 실제 SNS 크롤링은 추후 연동."""
+    body = await request.json()
+    countries = body.get("countries", ["KR"])
+    platforms = body.get("platforms", ["Instagram"])
+    min_followers = body.get("min_followers", 1000)
+    limit = min(body.get("limit", 50), 200)
+    results = []
+    try:
+        inf = await api_influencer_db()
+        for item in (inf.get("items") or inf.get("rows", []))[:limit]:
+            if isinstance(item, dict):
+                email = item.get("email", "")
+                if email and "@" in email:
+                    results.append({"name": item.get("account", item.get("name", "")),
+                                    "platform": item.get("platform", "Instagram"),
+                                    "followers": item.get("followers", "0"),
+                                    "category": item.get("category", "뷰티"),
+                                    "country": item.get("country", "KR"),
+                                    "email": email, "engagement": "3.2%",
+                                    "url": item.get("url", ""), "source": "인플루언서DB"})
+    except Exception:
+        pass
+    _record_perf("루나", "crawl_influencers", len(results))
+    existing = load_crawled()
+    seen = {e.get("email") for e in existing if e.get("email")}
+    new_items = [r for r in results if r.get("email") and r["email"] not in seen]
+    existing.extend([{**r, "type": "influencer", "crawled_at": datetime.now(KST).isoformat()} for r in new_items])
+    save_crawled(existing)
+    return {"status": "ok", "count": len(results), "new": len(new_items), "results": results[:50]}
+
+@app.post("/api/generate-emails")
+async def api_generate_emails(request: Request):
+    """크롤링 결과 기반 이메일 자동 생성 → 검수 큐."""
+    body = await request.json()
+    targets = body.get("targets", [])
+    agent = body.get("agent", "피치")
+    template_key = body.get("template", "pitch_outbound")
+    tmpl = EMAIL_TEMPLATES.get(template_key, EMAIL_TEMPLATES["pitch_outbound"])
+    queued = 0
+    for t in targets[:50]:
+        email = t.get("email", "")
+        if not email or "@" not in email:
+            continue
+        vars_map = {"brand": t.get("company", t.get("name", "")), "contact": t.get("contact", "담당자"),
+                    "product": t.get("product", "제품"), "name": t.get("name", ""),
+                    "fee": t.get("fee", "200"), "미팅링크": MEETING_LINK}
+        try:
+            subject = tmpl["subject"].format(**{k: vars_map.get(k, "") for k in ["brand", "contact", "name", "fee"]})
+            email_body = tmpl["body"].format(**{k: vars_map.get(k, "") for k in ["brand", "contact", "product", "name", "fee", "미팅링크"]})
+        except (KeyError, IndexError):
+            subject = tmpl["subject"]
+            email_body = tmpl["body"]
+        html = _build_pitch_html(vars_map.get("brand", vars_map.get("name", "")), email_body + f"\n\n[미팅 예약하기]({MEETING_LINK})")
+        _queue_or_send_email(agent, email, subject, html, {"target": t.get("company", t.get("name", ""))})
+        queued += 1
+    _record_perf(agent, "emails_generated", queued)
+    return {"status": "ok", "queued": queued}
+
+@app.get("/api/email-log")
+async def api_get_email_log(agent: Optional[str] = None):
+    """이메일 발송 로그 조회."""
+    log = load_email_log()
+    if agent:
+        log = [e for e in log if e.get("agent") == agent]
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    today_log = [e for e in log if e.get("sent_at", "").startswith(today)]
+    total_sent = sum(1 for e in today_log if e.get("status") == "sent")
+    total_opened = sum(1 for e in today_log if e.get("opened"))
+    total_replied = sum(1 for e in today_log if e.get("replied"))
+    return {"log": log[-50:], "today": {"sent": total_sent, "opened": total_opened, "replied": total_replied},
+            "total": len(log)}
+
+@app.get("/api/pipeline-stats")
+async def api_pipeline_stats(agent: Optional[str] = None):
+    """파이프라인 단계별 통계."""
+    log = load_email_log()
+    crawled = load_crawled()
+    queue = load_email_queue()
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    if agent:
+        log = [e for e in log if e.get("agent") == agent]
+        crawled = [c for c in crawled if c.get("type") == ("brand" if agent == "피치" else "influencer")]
+        queue = [q for q in queue if q.get("agent") == agent]
+    today_crawled = sum(1 for c in crawled if c.get("crawled_at", "").startswith(today))
+    today_queued = sum(1 for q in queue if q.get("status") == "pending" and q.get("created_at", "").startswith(today))
+    today_sent = sum(1 for e in log if e.get("sent_at", "").startswith(today) and e.get("status") == "sent")
+    today_replied = sum(1 for e in log if e.get("sent_at", "").startswith(today) and e.get("replied"))
+    return {
+        "crawled": {"total": len(crawled), "today": today_crawled},
+        "queued": {"total": sum(1 for q in queue if q.get("status") == "pending"), "today": today_queued},
+        "sent": {"total": sum(1 for e in log if e.get("status") == "sent"), "today": today_sent},
+        "replied": {"total": sum(1 for e in log if e.get("replied")), "today": today_replied},
+    }
 
 @app.get("/api/agent-kpi-dashboard")
 async def api_agent_kpi_dashboard():
