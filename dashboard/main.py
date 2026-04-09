@@ -688,7 +688,16 @@ def save_checklist(data: List[Dict]):
 
 # ===== Routes =====
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def ceo_dashboard(request: Request):
+    """새 CEO 대시보드 — McKinsey 스타일 3섹션 레이아웃."""
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=302)
+    return templates.TemplateResponse("ceo.html", {"request": request})
+
+
+@app.get("/old", response_class=HTMLResponse)
+async def legacy_dashboard(request: Request):
+    """기존 대시보드 (이전 버전)."""
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=302)
     return templates.TemplateResponse("index.html", {"request": request})

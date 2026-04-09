@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>공팔리터글로벌 — CEO Dashboard</title>
+<link rel="stylesheet" href="/static/css/mckinsey.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<!-- ===== TOP BAR (sticky) ===== -->
+<header class="top-bar">
+<div class="top-bar-inner">
+  <div>
+    <span class="top-bar-title">공팔리터글로벌</span>
+    <span class="top-bar-date" id="topDate"></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="badge-action" id="actionBadge" onclick="scrollToSection('agents')" style="display:none">
+      <span class="badge-dot"></span>
+      <span>CEO 결정 필요 <b id="actionCount">0</b>건</span>
+    </div>
+    <a href="/old" style="font-size:12px;color:var(--text-muted);text-decoration:none">기존 대시보드</a>
+  </div>
+</div>
+</header>
+
+<div class="page-wrapper">
+
+<!-- ===== SECTION 1: CEO 브리핑 ===== -->
+<section class="section" id="section-briefing">
+  <div class="section-label">CEO 브리핑</div>
+  <div class="kpi-row" id="kpiRow">
+    <div class="kpi-card">
+      <div class="kpi-label">이번달 매출</div>
+      <div class="kpi-value" id="kpi-revenue">—<span class="kpi-unit">원</span></div>
+      <div class="kpi-delta" id="kpi-revenue-delta"></div>
+      <div class="kpi-sub" id="kpi-revenue-sub">목표 1.6억</div>
+      <div class="kpi-basis">출처: 구글시트 세금계산서 T열(공급가액) / 기준: 이번달 1일~오늘 KST 합산</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">신규계약 / 재계약</div>
+      <div class="kpi-value"><span id="kpi-new">—</span> <span class="kpi-unit">/ </span><span id="kpi-renew">—</span></div>
+      <div class="kpi-sub" id="kpi-contract-sub">총 계약 —건</div>
+      <div class="kpi-basis">신규 = 브랜드명 첫등장 / 재계약 = 동일브랜드 2회이상 / 출처: 구글시트</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">인플루언서 풀</div>
+      <div class="kpi-value" id="kpi-pool">—<span class="kpi-unit">명</span></div>
+      <div class="kpi-delta" id="kpi-pool-delta"></div>
+      <div class="kpi-sub">이번달 신규 <span id="kpi-pool-new">—</span>명</div>
+      <div class="kpi-basis">출처: 구글시트 현황시트(수동매칭) 전체행 COUNT</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">에이전트 가동률</div>
+      <div class="kpi-value" id="kpi-agents">—<span class="kpi-unit">/ 9</span></div>
+      <div class="kpi-sub">실동작 에이전트</div>
+      <div class="kpi-basis">실데이터 연동 에이전트 수 / 전체 등록 에이전트 수</div>
+    </div>
+  </div>
+  <div class="grid-2 mt-6">
+    <div class="chart-card">
+      <div class="chart-title">월별 매출 추이 (신규 + 재계약)</div>
+      <div style="position:relative;height:200px"><canvas id="chart-revenue"></canvas></div>
+      <div class="kpi-basis">신규매출=연한색 / 재계약=진한색 / 출처: 구글시트 월별 GROUP BY SUM</div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">월별 계약건수</div>
+      <div style="position:relative;height:200px"><canvas id="chart-contracts"></canvas></div>
+      <div class="kpi-basis">신규계약=연한색 / 재계약=진한색 / 출처: 구글시트 월별 COUNT</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 2: 에이전트 자율운영 현황 ===== -->
+<section class="section" id="section-agents">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div class="section-label" style="margin-bottom:0">에이전트 자율운영 현황</div>
+    <button class="btn btn-secondary btn-sm" onclick="runAgentCycle()">전체 사이클 실행</button>
+  </div>
+  <div class="agent-grid" id="agentGrid"></div>
+</section>
+
+<!-- ===== SECTION 3: 실행 로그 타임라인 ===== -->
+<section class="section" id="section-timeline">
+  <div class="section-label">최근 24시간 실행 로그</div>
+  <div class="timeline" id="timelineList">
+    <p class="text-muted text-sm">로딩중...</p>
+  </div>
+</section>
+
+</div>
+
+<!-- ===== MODAL: 수정요청 ===== -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-title">수정 요청</div>
+    <p class="text-sm text-muted" style="margin-bottom:12px">CEO 코멘트를 입력하면 해당 에이전트에게 전달됩니다.</p>
+    <textarea class="input-field" id="editComment" placeholder="수정사항을 입력하세요..."></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitEdit()">전달하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 상세보기 ===== -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box" style="position:relative;max-width:720px">
+    <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<script>
+/* Agent definitions */
+var ACTIVE_AGENTS = [
+  {id:'kyle-kpi', name:'카일', role:'KPI 총괄', desc:'전체 매출/KPI 모니터링 및 에이전트 관리'},
+  {id:'luna-recontact', name:'루나', role:'재접촉 캠페인', desc:'이탈 고객 감지 → 이메일 피치 자동 발송'},
+  {id:'pitch-influencer', name:'피치', role:'인플루언서 매칭', desc:'글로벌 인플루언서 발굴/컨택/계약'},
+  {id:'tax-invoice', name:'레이', role:'세금계산서', desc:'구글시트 계산서 데이터 자동 수집/분석'},
+  {id:'inbound-lead', name:'루나', role:'인바운드 리드', desc:'신규 인바운드 감지 → 담당자 배정 제안'},
+];
+var INACTIVE_AGENTS = [
+  {id:'sophie-sns', name:'소피', role:'SNS 운영', desc:'Instagram/TikTok Business API 연동 예정'},
+  {id:'hana-cs', name:'하나', role:'CS 대응', desc:'카카오톡 API 연동 예정'},
+  {id:'max-ads', name:'맥스', role:'광고센터', desc:'Meta Ads API 토큰 갱신 후 활성화'},
+  {id:'ray-finance', name:'레이', role:'경영지원', desc:'실데이터 연동 후 활성화'},
+];
+
+document.getElementById('topDate').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+/* ===== Main data loader ===== */
+async function loadAll() {
+  try {
+    var results = await Promise.all([
+      fetch('/api/kpi-summary').then(function(r){return r.json()}),
+      fetch('/api/influencer-db').then(function(r){return r.json()}),
+      fetch('/api/kpi-trend').then(function(r){return r.json()}),
+      fetch('/api/alerts-board').then(function(r){return r.json()}),
+      fetch('/api/kyle-suggestions').then(function(r){return r.json()}),
+    ]);
+    var kpiData=results[0], infData=results[1], trendData=results[2], alertsData=results[3], suggestData=results[4];
+
+    updateKpiCards(kpiData, infData);
+    renderCharts(trendData);
+    renderAgents(suggestData.suggestions||[], alertsData.alerts||[]);
+    renderTimeline(alertsData.alerts||[]);
+
+    var pending = (suggestData.suggestions||[]).filter(function(s){return s.urgency==='높음'}).length;
+    var badge = document.getElementById('actionBadge');
+    if (pending > 0) {
+      badge.style.display = 'inline-flex';
+      document.getElementById('actionCount').textContent = pending;
+    }
+  } catch(e) { console.error('Load error:', e); }
+}
+
+/* ===== KPI Cards ===== */
+function updateKpiCards(kpi, inf) {
+  var m = kpi.month||{}, prev = kpi.prev_month||{};
+
+  /* Revenue */
+  var revVal = m.revenue||0;
+  var revEl = document.getElementById('kpi-revenue');
+  if (revVal >= 100000000) {
+    revEl.textContent = (revVal/100000000).toFixed(2);
+    revEl.nextElementSibling && (revEl.parentNode.querySelector('.kpi-unit')||{}).textContent;
+  }
+  setKpiText('kpi-revenue', revVal >= 100000000 ? (revVal/100000000).toFixed(2) : Math.round(revVal/10000).toLocaleString(),
+    revVal >= 100000000 ? '억원' : '만원');
+  var prevRev = prev.revenue||0;
+  if (prevRev > 0) {
+    var pct = ((revVal-prevRev)/prevRev*100).toFixed(1);
+    var deltaEl = document.getElementById('kpi-revenue-delta');
+    deltaEl.className = 'kpi-delta ' + (pct>=0?'up':'down');
+    deltaEl.textContent = (pct>=0?'+':'')+pct+'% vs 전월';
+  }
+  document.getElementById('kpi-revenue-sub').textContent = '목표 1.6억 · 달성률 '+Math.round(revVal/160000000*100)+'%';
+
+  /* New/Renew */
+  document.getElementById('kpi-new').textContent = m.new||0;
+  document.getElementById('kpi-renew').textContent = m.renewal||0;
+  document.getElementById('kpi-contract-sub').textContent = '총 계약 '+(m.contract||0)+'건';
+
+  /* Pool */
+  setKpiText('kpi-pool', (inf.total||0).toLocaleString(), '명');
+  document.getElementById('kpi-pool-new').textContent = (inf.stats||{}).this_month_new||0;
+
+  /* Agents */
+  setKpiText('kpi-agents', ACTIVE_AGENTS.length, '/ '+(ACTIVE_AGENTS.length+INACTIVE_AGENTS.length));
+}
+
+function setKpiText(id, value, unit) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  while(el.firstChild) el.removeChild(el.firstChild);
+  el.appendChild(document.createTextNode(value));
+  var u = document.createElement('span');
+  u.className = 'kpi-unit';
+  u.textContent = unit;
+  el.appendChild(u);
+}
+
+/* ===== Charts ===== */
+var _charts = {};
+function renderCharts(data) {
+  var mr = data.monthly_revenue||[];
+  if (!mr.length) return;
+  var labels = mr.map(function(r){return r.month});
+
+  if (_charts.rev) _charts.rev.destroy();
+  _charts.rev = new Chart(document.getElementById('chart-revenue'), {
+    type:'bar',
+    data:{labels:labels, datasets:[
+      {label:'신규매출', data:mr.map(function(r){return r.new_rev||0}), backgroundColor:'rgba(27,42,74,0.3)', stack:'s'},
+      {label:'재계약매출', data:mr.map(function(r){return r.renew_rev||0}), backgroundColor:'#1B2A4A', stack:'s'},
+    ]},
+    options:chartOpts(10000,'만')
+  });
+
+  if (_charts.ct) _charts.ct.destroy();
+  _charts.ct = new Chart(document.getElementById('chart-contracts'), {
+    type:'bar',
+    data:{labels:labels, datasets:[
+      {label:'신규', data:mr.map(function(r){return r.new_cnt||0}), backgroundColor:'rgba(27,42,74,0.3)', stack:'s'},
+      {label:'재계약', data:mr.map(function(r){return r.renew_cnt||0}), backgroundColor:'#1B2A4A', stack:'s'},
+    ]},
+    options:chartOpts(1,'건')
+  });
+}
+
+function chartOpts(div, unit) {
+  return {responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#6B6B6B',font:{size:11,family:'Inter'}}}},
+    scales:{
+      x:{stacked:true, ticks:{color:'#9B9B9B',font:{size:11}}, grid:{display:false}},
+      y:{stacked:true, ticks:{color:'#9B9B9B',font:{size:11},callback:function(v){return div>1?(v/div).toLocaleString()+unit:v+unit}}, grid:{color:'#EDEBE7',lineWidth:0.5}}
+    }
+  };
+}
+
+/* ===== Agent Cards ===== */
+function renderAgents(suggestions, alerts) {
+  var grid = document.getElementById('agentGrid');
+  while(grid.firstChild) grid.removeChild(grid.firstChild);
+
+  ACTIVE_AGENTS.forEach(function(agent) {
+    var relatedAlert = null;
+    for (var i=0; i<alerts.length; i++) {
+      if (alerts[i].agent === agent.name && !alerts[i].resolved) { relatedAlert = alerts[i]; break; }
+    }
+    var card = document.createElement('div');
+    card.className = 'agent-card';
+
+    /* Header */
+    var header = document.createElement('div');
+    header.className = 'agent-header';
+    var nameDiv = document.createElement('div');
+    var nm = document.createElement('div'); nm.className='agent-name'; nm.textContent=agent.name+' — '+agent.role; nameDiv.appendChild(nm);
+    var rl = document.createElement('div'); rl.className='agent-role'; rl.textContent=agent.desc; nameDiv.appendChild(rl);
+    header.appendChild(nameDiv);
+    var pill = document.createElement('span');
+    pill.className = 'status-pill ' + (relatedAlert && relatedAlert.severity==='critical' ? 'warn' : 'ok');
+    pill.textContent = relatedAlert && relatedAlert.severity==='critical' ? '주의' : '정상운영';
+    header.appendChild(pill);
+    card.appendChild(header);
+
+    var d1 = document.createElement('div'); d1.className='agent-divider'; card.appendChild(d1);
+
+    /* Rows */
+    var proposalText = relatedAlert ? relatedAlert.summary : '현재 이상 없음 — 정상 모니터링 중';
+    var resultText = relatedAlert ? (relatedAlert.detail||'—').substring(0,80) : '—';
+    addAgentRow(card, '자율 개선안', proposalText);
+    addAgentRow(card, '최근 실행', resultText);
+    addAgentRow(card, '다음 예정', '다음 사이클 (09시/18시) 자동 실행');
+
+    var d2 = document.createElement('div'); d2.className='agent-divider'; card.appendChild(d2);
+
+    /* Actions */
+    var actions = document.createElement('div'); actions.className='agent-actions';
+    var b1 = document.createElement('button'); b1.className='btn btn-primary btn-sm'; b1.textContent='승인';
+    b1.setAttribute('data-agent', agent.name);
+    b1.addEventListener('click', function(){approveAgent(this.getAttribute('data-agent'))});
+    actions.appendChild(b1);
+    var b2 = document.createElement('button'); b2.className='btn btn-secondary btn-sm'; b2.textContent='수정요청';
+    b2.setAttribute('data-agent', agent.name);
+    b2.addEventListener('click', function(){openEditModal(this.getAttribute('data-agent'))});
+    actions.appendChild(b2);
+    var b3 = document.createElement('button'); b3.className='btn btn-secondary btn-sm'; b3.textContent='상세보기';
+    b3.setAttribute('data-agent', agent.name);
+    b3.addEventListener('click', function(){openDetail(this.getAttribute('data-agent'))});
+    actions.appendChild(b3);
+    card.appendChild(actions);
+
+    grid.appendChild(card);
+  });
+
+  INACTIVE_AGENTS.forEach(function(agent) {
+    var card = document.createElement('div');
+    card.className = 'agent-card inactive';
+    var header = document.createElement('div'); header.className='agent-header';
+    var nameDiv = document.createElement('div');
+    var nm = document.createElement('div'); nm.className='agent-name'; nm.textContent=agent.name+' — '+agent.role; nameDiv.appendChild(nm);
+    var rl = document.createElement('div'); rl.className='agent-role'; rl.textContent=agent.desc; nameDiv.appendChild(rl);
+    header.appendChild(nameDiv);
+    var pill = document.createElement('span'); pill.className='status-pill off'; pill.textContent='데이터 연동 준비중';
+    header.appendChild(pill);
+    card.appendChild(header);
+    var d1 = document.createElement('div'); d1.className='agent-divider'; card.appendChild(d1);
+    var msg = document.createElement('div');
+    msg.style.cssText = 'text-align:center;padding:12px 0;color:var(--text-muted);font-size:12px';
+    msg.textContent = '실데이터 연동 후 자동 활성화됩니다';
+    card.appendChild(msg);
+    grid.appendChild(card);
+  });
+}
+
+function addAgentRow(card, label, value) {
+  var row = document.createElement('div'); row.className='agent-row';
+  var l = document.createElement('span'); l.className='agent-row-label'; l.textContent=label; row.appendChild(l);
+  var v = document.createElement('span'); v.className='agent-row-value'; v.textContent=value; row.appendChild(v);
+  card.appendChild(row);
+}
+
+/* ===== Timeline ===== */
+function renderTimeline(alerts) {
+  var el = document.getElementById('timelineList');
+  while(el.firstChild) el.removeChild(el.firstChild);
+
+  if (!alerts.length) {
+    var p = document.createElement('p'); p.className='text-muted text-sm';
+    p.style.padding='20px 0';
+    p.textContent = '최근 24시간 실행 기록이 없습니다. "전체 사이클 실행" 버튼을 눌러 에이전트를 가동하세요.';
+    el.appendChild(p); return;
+  }
+
+  var sorted = alerts.slice().sort(function(a,b){return (b.timestamp||'').localeCompare(a.timestamp||'')}).slice(0,20);
+  sorted.forEach(function(a) {
+    var item = document.createElement('div');
+    item.className = 'timeline-item' + (!a.resolved && a.severity==='critical' ? ' timeline-highlight' : '');
+    var ts = document.createElement('span'); ts.className='timeline-time';
+    ts.textContent = ((a.timestamp||'').substring(5,10)||'')+' '+((a.timestamp||'').substring(11,16)||'—');
+    item.appendChild(ts);
+    var ag = document.createElement('span'); ag.className='timeline-agent'; ag.textContent=a.agent||'시스템';
+    item.appendChild(ag);
+    var act = document.createElement('span'); act.className='timeline-action'; act.textContent=a.summary||'';
+    item.appendChild(act);
+    var res = document.createElement('span'); res.className='timeline-result';
+    res.textContent = a.resolved ? '완료' : (a.severity==='critical' ? 'CEO 확인 필요' : '진행중');
+    item.appendChild(res);
+    el.appendChild(item);
+  });
+}
+
+/* ===== Actions ===== */
+var _editTarget = '';
+
+function approveAgent(agentName) {
+  fetch('/api/slack/test', {method:'POST'}).then(function(){
+    alert(agentName+' 에이전트에게 승인 전달 완료');
+  }).catch(function(){ alert('Slack 연결 확인 필요'); });
+}
+
+function openEditModal(agentName) {
+  _editTarget = agentName;
+  document.getElementById('editModal').classList.add('open');
+  document.getElementById('editComment').value = '';
+  document.getElementById('editComment').focus();
+}
+function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+function submitEdit() {
+  var comment = document.getElementById('editComment').value.trim();
+  if (!comment) return;
+  fetch('/api/alerts-board', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({agent:_editTarget, severity:'info', summary:'CEO 수정요청: '+comment.substring(0,100), detail:comment})
+  }).then(function(){ closeModal(); alert(_editTarget+' 에이전트에게 수정요청 전달 완료'); loadAll(); });
+}
+
+function openDetail(agentName) {
+  var box = document.getElementById('detailContent');
+  while(box.firstChild) box.removeChild(box.firstChild);
+  var title = document.createElement('div'); title.className='modal-title'; title.textContent=agentName+' 에이전트 상세';
+  box.appendChild(title);
+  var loading = document.createElement('p'); loading.className='text-muted text-sm'; loading.textContent='불러오는 중...';
+  box.appendChild(loading);
+  document.getElementById('detailModal').classList.add('open');
+
+  Promise.all([
+    fetch('/api/kpi-summary').then(function(r){return r.json()}),
+    fetch('/api/alerts-board').then(function(r){return r.json()})
+  ]).then(function(res) {
+    var kpi=res[0], agentAlerts=(res[1].alerts||[]).filter(function(a){return a.agent===agentName}).slice(0,5);
+    box.removeChild(loading);
+    var m=kpi.month||{};
+    var grid = document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px';
+    var b1 = document.createElement('div'); b1.style.cssText='background:var(--bg);padding:16px;border-radius:8px';
+    var l1 = document.createElement('div'); l1.className='kpi-label'; l1.textContent='이번달 매출'; b1.appendChild(l1);
+    var v1 = document.createElement('div'); v1.style.cssText='font-family:var(--mono);font-size:24px;font-weight:700'; v1.textContent=(m.revenue||0).toLocaleString()+'원'; b1.appendChild(v1);
+    grid.appendChild(b1);
+    var b2 = document.createElement('div'); b2.style.cssText='background:var(--bg);padding:16px;border-radius:8px';
+    var l2 = document.createElement('div'); l2.className='kpi-label'; l2.textContent='계약 건수'; b2.appendChild(l2);
+    var v2 = document.createElement('div'); v2.style.cssText='font-family:var(--mono);font-size:24px;font-weight:700'; v2.textContent=(m.contract||0)+'건'; b2.appendChild(v2);
+    grid.appendChild(b2);
+    box.appendChild(grid);
+    var label = document.createElement('div'); label.className='section-label'; label.textContent='최근 알림'; box.appendChild(label);
+    if (!agentAlerts.length) { var none=document.createElement('p'); none.className='text-muted text-sm'; none.textContent='최근 알림 없음'; box.appendChild(none); }
+    agentAlerts.forEach(function(a) {
+      var row = document.createElement('div'); row.style.cssText='padding:10px 0;border-bottom:0.5px solid var(--border-light)';
+      var s = document.createElement('div'); s.style.cssText='font-size:13px;font-weight:600'; s.textContent=a.summary||''; row.appendChild(s);
+      var t = document.createElement('div'); t.style.cssText='font-size:11px;color:var(--text-muted);margin-top:4px';
+      t.textContent=(a.timestamp||'').substring(0,16)+' · '+(a.resolved?'해결됨':'미해결'); row.appendChild(t);
+      box.appendChild(row);
+    });
+  });
+}
+function closeDetailModal() { document.getElementById('detailModal').classList.remove('open'); }
+function scrollToSection(id) { document.getElementById('section-'+id).scrollIntoView({behavior:'smooth'}); }
+function runAgentCycle() {
+  fetch('/api/agent-cycle').then(function(r){return r.json()}).then(function(d){
+    alert('에이전트 사이클 완료: '+d.alerts_posted+'건 알림 생성'); loadAll();
+  }).catch(function(){ alert('실행 실패'); });
+}
+
+loadAll();
+setInterval(loadAll, 300000);
+</script>
+</body>
+</html>
