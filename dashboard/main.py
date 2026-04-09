@@ -141,6 +141,47 @@ PROPOSALS_FILE = DATA_DIR / "proposals.json"
 CYCLE_LOG_FILE = DATA_DIR / "cycle_log.json"
 AGENT_PERF_FILE = DATA_DIR / "agent_performance.json"
 BENCHMARKS_FILE = DATA_DIR / "benchmarks.json"
+EMAIL_QUEUE_FILE = DATA_DIR / "email_queue.json"
+AGENT_AUTO_SEND_FILE = DATA_DIR / "agent_auto_send.json"
+
+def load_email_queue() -> list:
+    if EMAIL_QUEUE_FILE.exists():
+        return json.loads(EMAIL_QUEUE_FILE.read_text(encoding="utf-8"))
+    return []
+
+def save_email_queue(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    EMAIL_QUEUE_FILE.write_text(json.dumps(data[-200:], ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _is_auto_send(agent: str) -> bool:
+    """에이전트 자동 발송 모드 확인. 기본 OFF."""
+    if AGENT_AUTO_SEND_FILE.exists():
+        try:
+            return json.loads(AGENT_AUTO_SEND_FILE.read_text(encoding="utf-8")).get(agent, False)
+        except Exception:
+            pass
+    return False
+
+def _queue_or_send_email(agent: str, to_email: str, subject: str, html: str, meta: dict = None) -> dict:
+    """자동 발송 모드면 즉시 발송, 아니면 검수 큐에 추가."""
+    if _is_auto_send(agent):
+        result = _send_email(to_email, subject, html, agent)
+        result["mode"] = "auto"
+        return result
+    queue = load_email_queue()
+    entry = {
+        "id": int(time.time() * 1000) % 10000000,
+        "agent": agent,
+        "to": to_email,
+        "subject": subject,
+        "html": html,
+        "meta": meta or {},
+        "status": "pending",
+        "created_at": datetime.now(KST).isoformat(),
+    }
+    queue.append(entry)
+    save_email_queue(queue)
+    return {"status": "queued", "id": entry["id"], "mode": "review"}
 
 def load_benchmarks() -> dict:
     if BENCHMARKS_FILE.exists():
@@ -1836,8 +1877,8 @@ async def _pitch_inbound_auto():
                 f"편하신 시간에 15분 비대면 미팅을 통해 상세히 안내드리겠습니다.\n\n"
                 f"미팅 예약: {MEETING_LINK}\n\n감사합니다.\n피치 드림")
         html = _build_pitch_html(brand, body)
-        result = _send_email(email, f"[공팔리터글로벌] {brand} 인플루언서 마케팅 제안", html, "피치")
-        if result["status"] == "ok":
+        result = _queue_or_send_email("피치", email, f"[공팔리터글로벌] {brand} 인플루언서 마케팅 제안", html, {"brand": brand})
+        if result["status"] in ("ok", "queued"):
             sent += 1
             _record_perf("피치", "meeting_invite")
     _record_perf("피치", "inbound_processed", sent)
@@ -1889,8 +1930,8 @@ async def _luna_inbound_welcome():
                 f"• 해외 구매평 서비스\n\n"
                 f"관심 있는 캠페인이 있으시면 회신해 주세요.\n루나 드림")
         html = _build_pitch_html(name, body)
-        result = _send_email(email, f"[공팔리터글로벌] {name}님 환영합니다!", html, "루나")
-        if result["status"] == "ok":
+        result = _queue_or_send_email("루나", email, f"[공팔리터글로벌] {name}님 환영합니다!", html, {"influencer": name})
+        if result["status"] in ("ok", "queued"):
             sent += 1
     _record_perf("루나", "welcome_sent", sent)
     return {"sent": sent}
@@ -1923,7 +1964,7 @@ async def _luna_outbound_pitch():
                 f"Interested? Just reply to this email and I'll send you the details!\n\n"
                 f"Best,\nLuna | 08Liter Global")
         html = _build_pitch_html(t["name"], body)
-        result = _send_email(t["email"], f"[08Liter] Campaign opportunity for {t['name']}", html, "루나")
+        result = _queue_or_send_email("루나", t["email"], f"[08Liter] Campaign opportunity for {t['name']}", html, {"influencer": t["name"]})
         if result["status"] == "ok":
             sent += 1
     _record_perf("루나", "outbound_sent", sent)
@@ -3063,6 +3104,63 @@ async def api_token_usage():
         "agents": agents,
         "total": {"today_cost": round(total_today_cost, 2), "month_cost": round(total_month_cost, 2), "projected": round(projected, 2)},
     }
+
+@app.get("/api/email-queue")
+async def api_email_queue(agent: Optional[str] = None):
+    """발송 대기 이메일 큐 조회."""
+    queue = load_email_queue()
+    pending = [e for e in queue if e.get("status") == "pending"]
+    if agent:
+        pending = [e for e in pending if e.get("agent") == agent]
+    return {"emails": pending, "count": len(pending)}
+
+@app.post("/api/email-queue/approve")
+async def api_email_approve(request: Request):
+    """CEO가 이메일 승인 발송."""
+    body = await request.json()
+    eid = body.get("id")
+    queue = load_email_queue()
+    for e in queue:
+        if e.get("id") == eid and e.get("status") == "pending":
+            subject = body.get("subject", e["subject"])
+            html = body.get("html", e["html"])
+            result = _send_email(e["to"], subject, html, e.get("agent", "피치"))
+            e["status"] = "sent" if result["status"] == "ok" else "failed"
+            e["sent_at"] = datetime.now(KST).isoformat()
+            e["result"] = result
+            break
+    save_email_queue(queue)
+    return {"status": "ok"}
+
+@app.post("/api/email-queue/delete")
+async def api_email_delete(request: Request):
+    """이메일 삭제."""
+    body = await request.json()
+    eid = body.get("id")
+    queue = load_email_queue()
+    queue = [e for e in queue if e.get("id") != eid]
+    save_email_queue(queue)
+    return {"status": "ok"}
+
+@app.get("/api/agent-auto-send")
+async def api_agent_auto_send_get():
+    """에이전트별 자동 발송 모드 조회."""
+    if AGENT_AUTO_SEND_FILE.exists():
+        return json.loads(AGENT_AUTO_SEND_FILE.read_text(encoding="utf-8"))
+    return {"피치": False, "루나": False}
+
+@app.post("/api/agent-auto-send")
+async def api_agent_auto_send_set(request: Request):
+    """에이전트별 자동 발송 ON/OFF."""
+    body = await request.json()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    existing = {}
+    if AGENT_AUTO_SEND_FILE.exists():
+        existing = json.loads(AGENT_AUTO_SEND_FILE.read_text(encoding="utf-8"))
+    agent = body.get("agent", "")
+    existing[agent] = bool(body.get("enabled", False))
+    AGENT_AUTO_SEND_FILE.write_text(json.dumps(existing, ensure_ascii=False), encoding="utf-8")
+    return {"status": "ok", "agent": agent, "enabled": existing[agent]}
 
 @app.get("/api/agent-kpi-dashboard")
 async def api_agent_kpi_dashboard():
