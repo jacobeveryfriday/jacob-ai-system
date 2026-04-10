@@ -861,13 +861,12 @@ pH+='</div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:ita
 var thisM=new Date().getFullYear()+'.'+(new Date().getMonth()+1<10?'0':'')+(new Date().getMonth()+1);
 function cell(v,suffix){return v!=null?'<span style="font-family:monospace">'+fmtM(v)+(suffix||'')+'</span>':'<span style="color:#9B9B9B">-</span>'}
 var tE=document.getElementById('ads-trend-table');
-var tH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월별 매출 & ROAS</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>당월계약건수</th><th>매출합계</th><th>매출(신규)</th><th>매출(재계약)</th><th>ROAS(%)</th></tr></thead><tbody>';
+var tH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월별 매출 & ROAS</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>당월계약건수</th><th>매출합계</th><th>매출(신규)</th><th>매출(재계약)</th><th>광고비</th><th>ROAS(%)</th><th>평균단가</th></tr></thead><tbody>';
 var showed25=false,showed26=false;
 trend.forEach(function(t){
 var isCur=t.month===thisM;
 var is26=t.month.startsWith('2026');
-// 연도 구분선
-if(is26&&!showed26&&showed25){tH+='<tr><td colspan="6" style="height:3px;background:#2563EB;padding:0"></td></tr>';showed26=true}
+if(is26&&!showed26&&showed25){tH+='<tr><td colspan="8" style="height:3px;background:#2563EB;padding:0"></td></tr>';showed26=true}
 if(!is26)showed25=true;
 var bg=isCur?'background:#BFDBFE;font-weight:700':(is26?'background:#EEF4FF':'');
 tH+='<tr style="'+bg+'">';
@@ -876,7 +875,9 @@ tH+='<td>'+cell(t.contracts,'건')+'</td>';
 tH+='<td>'+cell(t.total,'원')+'</td>';
 tH+='<td>'+cell(t.new_sales,'원')+'</td>';
 tH+='<td>'+cell(t.renew_sales,'원')+'</td>';
+tH+='<td>'+cell(t.ad_cost,'원')+'</td>';
 tH+='<td>'+(t.roas!=null?'<span style="font-family:monospace;font-weight:600">'+t.roas+'%</span>':'<span style="color:#9B9B9B">-</span>')+'</td>';
+tH+='<td>'+cell(t.avg_price,'원')+'</td>';
 tH+='</tr>'});
 tH+='</tbody></table></div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">출처: 세금계산서시트 "월별매출&로하스" 탭 / 시트 수식값 그대로 표시</p></div>';
 tE.innerHTML=tH;

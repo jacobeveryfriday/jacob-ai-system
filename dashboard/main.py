@@ -1502,10 +1502,22 @@ async def api_ads_performance():
                 if ("계약" in rt or "매출" in rt) and "월" in rt: mr_hdr_idx = ri; break
             mh = [str(h).replace("\n"," ").strip() for h in mr_rows[mr_hdr_idx]]
             print(f"[ads-perf] 월별매출 헤더(row{mr_hdr_idx}): {mh}")
-            mc = {"month": _find_col(mh,"월") or 0, "contracts": _find_col(mh,"당월계약건수","계약건수") or 1,
-                  "revenue": _find_col(mh,"매출합계") or 2, "new": _find_col(mh,"매출(신규)","신규") or 3,
-                  "renew": _find_col(mh,"매출(재계약)","재계약") or 4,
-                  "roas": _find_col(mh,"ROAS","로하스") or 6, "avg": _find_col(mh,"평균단가","월별계약") or 7}
+            # 시트 구조: A=월, B=당월계약건수, C=매출합계, D=매출(신규), E=매출(재계약), F=광고비, G=ROAS, H=평균단가
+            # exact match로 "월" 컬럼 찾기 (부분매칭 시 "월별계약" 등에 오매칭 방지)
+            mc_month = None
+            for i, h in enumerate(mh):
+                if h == "월": mc_month = i; break
+            if mc_month is None: mc_month = 0
+            mc = {
+                "month": mc_month,
+                "contracts": _find_col(mh, "당월계약건수") or _find_col(mh, "계약건수") or 1,
+                "revenue": _find_col(mh, "매출합계") or 2,
+                "new": _find_col(mh, "매출(신규)") or _find_col(mh, "신규") or 3,
+                "renew": _find_col(mh, "매출(재계약)") or _find_col(mh, "재계약") or 4,
+                "ad_cost": _find_col(mh, "고비") or _find_col(mh, "광고비") or 5,
+                "roas": _find_col(mh, "ROAS") or _find_col(mh, "로하스") or 6,
+                "avg": _find_col(mh, "평균단가") or 7,
+            }
             print(f"[ads-perf] 월별매출 컬럼: {mc}")
             for row in mr_rows[mr_hdr_idx+1:]:
                 if not row or len(row) < 2: continue
@@ -1513,7 +1525,7 @@ async def api_ads_performance():
                 if not mv or not (mv.startswith("2025") or mv.startswith("2026")): continue
                 monthly_trend.append({"month": mv, "contracts": _safe_val(row,mc["contracts"]),
                     "total": _safe_val(row,mc["revenue"]), "new_sales": _safe_val(row,mc["new"]),
-                    "renew_sales": _safe_val(row,mc["renew"]),
+                    "renew_sales": _safe_val(row,mc["renew"]), "ad_cost": _safe_val(row,mc["ad_cost"]),
                     "roas": _safe_float(row,mc["roas"]), "avg_price": _safe_val(row,mc["avg"])})
     except Exception as e:
         print(f"[ads-perf] 월별매출탭 error: {e}")
