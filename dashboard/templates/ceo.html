@@ -359,61 +359,100 @@ function renderAgents(suggestions, alerts) {
   var grid = document.getElementById('agentGrid');
   while(grid.firstChild) grid.removeChild(grid.firstChild);
 
-  ACTIVE_AGENTS.forEach(function(agent) {
-    var relatedAlert = null;
-    for (var i=0; i<alerts.length; i++) {
-      if (alerts[i].agent === agent.name && !alerts[i].resolved) { relatedAlert = alerts[i]; break; }
-    }
-    var card = document.createElement('div');
-    card.className = 'agent-card';
+  var sheetUrls={'카일':'https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit#gid=0','피치':'https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit#gid=0','루나':'https://docs.google.com/spreadsheets/d/1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs/edit#gid=0','소피':'https://docs.google.com/spreadsheets/d/1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU/edit#gid=0','레이':'https://docs.google.com/spreadsheets/d/1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q/edit#gid=0'};
 
-    /* Header */
-    var header = document.createElement('div');
-    header.className = 'agent-header';
-    var nameDiv = document.createElement('div');
-    var nm = document.createElement('div'); nm.className='agent-name'; nm.textContent=agent.name+' — '+agent.role; nameDiv.appendChild(nm);
-    var rl = document.createElement('div'); rl.className='agent-role'; rl.textContent=agent.desc; nameDiv.appendChild(rl);
-    header.appendChild(nameDiv);
-    var pill = document.createElement('span');
-    pill.className = 'status-pill ' + (relatedAlert && relatedAlert.severity==='critical' ? 'warn' : 'ok');
-    pill.textContent = relatedAlert && relatedAlert.severity==='critical' ? '주의' : '정상운영';
-    header.appendChild(pill);
-    card.appendChild(header);
+  var missions={
+    '카일':{mission:'전체 에이전트 KPI 모니터링\n매출 목표 달성률 감시 → 미달 시 즉시 액션 제안',target:'',email:'',result:'',cost:'카일 자체 모니터링 — 토큰 최소',sheetAgent:'피치'},
+    '피치':{mission:'LinkedIn/Instagram에서\nK-뷰티 브랜드 마케팅담당자 100명 DB 확보\n→ 4월 인플루언서 마케팅 프로모션 이메일 발송\n→ 비대면 미팅 10건 목표',target:'직함: 마케팅매니저/CMO\n산업: 뷰티/코스메틱\n국가: 한국→일본→동남아',email:'제목: [공팔리터글로벌] 4월 인플루언서 마케팅 협업 제안\n안녕하세요 {담당자명}님, 공팔리터글로벌 피치입니다...',result:'DB 100건 → 유효 70건 → 미팅 10건',cost:'Haiku / 120,000 토큰 / 약 294원',sheetAgent:'피치'},
+    '루나':{mission:'Instagram/YouTube에서\n뷰티 인플루언서 50명 DB 확보\n→ 밀리밀리 4월 협찬 제안 이메일 발송\n→ 협찬 확정 5건 목표',target:'팔로워: 1만~100만\n인게이지먼트: 3%+\n카테고리: 스킨케어/메이크업/K-뷰티\n국가: 한국 50%/일본 25%/동남아 25%',email:'제목: [밀리밀리] 4월 K-뷰티 협찬 제안드립니다\n안녕하세요 {인플루언서명}님, 밀리밀리 루나입니다...',result:'DB 50명 → 유효 35명 → 협찬확정 5건',cost:'Haiku / 80,000 토큰 / 약 196원',sheetAgent:'루나'},
+    '레이':{mission:'이번달 계약 세금계산서 발행 상태 점검\n미발행 건수 즉시 확인 → 발행 처리',target:'',email:'',result:'',cost:'',sheetAgent:'레이'},
+    '소피':{mission:'피치/루나 DB 확보 완료 후\nSNS 콘텐츠 제작 계획 수립 대기 중',target:'',email:'',result:'',cost:'',sheetAgent:'소피'},
+  };
 
-    var d1 = document.createElement('div'); d1.className='agent-divider'; card.appendChild(d1);
+  // 시트 데이터 로드
+  Promise.all([
+    fetch('/api/sheet-pipeline?agent=피치').then(function(r){return r.json()}).catch(function(){return {}}),
+    fetch('/api/sheet-pipeline?agent=루나').then(function(r){return r.json()}).catch(function(){return {}}),
+    fetch('/api/kpi-summary').then(function(r){return r.json()}).catch(function(){return {}})
+  ]).then(function(res){
+    var pitchData=res[0],lunaData=res[1],kpiData=res[2];
+    var sheetStats={
+      '카일':{revenue:(kpiData.month||{}).revenue||0,target:160000000},
+      '피치':{db:(pitchData.total||{}).db||0,email:(pitchData.total||{}).with_email||0,working:(pitchData.total||{}).working||0,meeting:(pitchData.total||{}).meeting||0},
+      '루나':{db:(lunaData.total||{}).total||0,proposed:(lunaData.total||{}).proposed||0,usable:(lunaData.total||{}).usable||0},
+    };
 
-    /* Rows */
-    var proposalText = relatedAlert ? relatedAlert.summary : '현재 이상 없음 — 정상 모니터링 중';
-    var resultText = relatedAlert ? (relatedAlert.detail||'—').substring(0,80) : '—';
-    addAgentRow(card, '자율 개선안', proposalText);
-    addAgentRow(card, '최근 실행', resultText);
-    addAgentRow(card, '다음 예정', '다음 사이클 (09시/18시) 자동 실행');
+    ACTIVE_AGENTS.forEach(function(agent) {
+      var m=missions[agent.name]||{mission:'정상 운영 중',target:'',email:'',result:'',cost:''};
+      var card = document.createElement('div');card.className='agent-card';
 
-    var d2 = document.createElement('div'); d2.className='agent-divider'; card.appendChild(d2);
+      // Header
+      var header=document.createElement('div');header.className='agent-header';
+      var nameDiv=document.createElement('div');
+      var nm=document.createElement('div');nm.className='agent-name';nm.textContent=agent.name+' — '+agent.role;nameDiv.appendChild(nm);
+      var rl=document.createElement('div');rl.className='agent-role';rl.textContent=agent.desc;nameDiv.appendChild(rl);
+      header.appendChild(nameDiv);
+      var pill=document.createElement('span');pill.className='status-pill ok';pill.textContent='정상운영';header.appendChild(pill);
+      card.appendChild(header);
+      card.appendChild(Object.assign(document.createElement('div'),{className:'agent-divider'}));
 
-    /* Actions */
-    var actions = document.createElement('div'); actions.className='agent-actions';
-    var b1 = document.createElement('button'); b1.className='btn btn-primary btn-sm'; b1.textContent='승인';
-    b1.setAttribute('data-agent', agent.name);
-    b1.addEventListener('click', function(){approveAgent(this.getAttribute('data-agent'))});
-    actions.appendChild(b1);
-    var b2 = document.createElement('button'); b2.className='btn btn-secondary btn-sm'; b2.textContent='수정요청';
-    b2.setAttribute('data-agent', agent.name);
-    b2.addEventListener('click', function(){openEditModal(this.getAttribute('data-agent'))});
-    actions.appendChild(b2);
-    var b3 = document.createElement('button'); b3.className='btn btn-secondary btn-sm'; b3.textContent='상세보기';
-    b3.setAttribute('data-agent', agent.name);
-    b3.addEventListener('click', function(){openDetail(this.getAttribute('data-agent'))});
-    actions.appendChild(b3);
-    card.appendChild(actions);
+      // 미션
+      var sec=function(icon,title,text){
+        var row=document.createElement('div');row.style.cssText='margin-bottom:10px';
+        var h=document.createElement('div');h.style.cssText='font-size:10px;font-weight:700;color:var(--text-secondary);margin-bottom:4px';h.textContent=icon+' '+title;row.appendChild(h);
+        var p=document.createElement('div');p.style.cssText='font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line';p.textContent=text;row.appendChild(p);
+        return row;
+      };
+      card.appendChild(sec('📌','오늘의 미션',m.mission));
+      if(m.target)card.appendChild(sec('📋','타겟 기준',m.target));
+      if(m.email){var emailSec=sec('📧','발송 이메일 미리보기',m.email);emailSec.style.cursor='pointer';card.appendChild(emailSec)}
+      if(m.result)card.appendChild(sec('📊','예상 결과',m.result));
+      if(m.cost)card.appendChild(sec('💰','예상 비용',m.cost));
 
-    // 시트 바로보기 링크
-    var sheetMap={'카일':'피치','루나':'루나','피치':'루나','레이':'레이','소피':'소피'};
-    var agentSheetUrls={'피치':'https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit#gid=0','루나':'https://docs.google.com/spreadsheets/d/1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs/edit#gid=0','소피':'https://docs.google.com/spreadsheets/d/1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU/edit#gid=0','레이':'https://docs.google.com/spreadsheets/d/1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q/edit#gid=0'};
-    var sUrl2=agentSheetUrls[sheetMap[agent.name]||agent.name]||'';
-    if(sUrl2){var sl2=document.createElement('a');sl2.href=sUrl2;sl2.target='_blank';sl2.rel='noopener';sl2.style.cssText='display:block;text-align:right;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border-light);font-size:10px;color:var(--text-muted);text-decoration:none';sl2.textContent='📊 결과 시트 바로보기 →';card.appendChild(sl2)}
+      // 진행 현황 (시트 데이터)
+      var stats=sheetStats[agent.name];
+      if(stats){
+        var progDiv=document.createElement('div');progDiv.style.cssText='margin-bottom:10px';
+        var progH=document.createElement('div');progH.style.cssText='font-size:10px;font-weight:700;color:var(--text-secondary);margin-bottom:6px';progH.textContent='📈 진행 현황 (시트 실데이터)';progDiv.appendChild(progH);
+        if(agent.name==='카일'){
+          var pct=Math.round(stats.revenue/Math.max(stats.target,1)*100);
+          var barWrap=document.createElement('div');barWrap.style.cssText='margin-bottom:4px';
+          var label=document.createElement('div');label.style.cssText='font-size:11px;color:var(--text);margin-bottom:2px';label.textContent='매출: '+stats.revenue.toLocaleString()+'원 / 목표 '+stats.target.toLocaleString()+'원 ('+pct+'%)';barWrap.appendChild(label);
+          var bar=document.createElement('div');bar.style.cssText='height:6px;background:var(--bg);border-radius:3px;overflow:hidden';
+          var fill=document.createElement('div');fill.style.cssText='height:100%;border-radius:3px;background:'+(pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)')+';width:'+Math.min(pct,100)+'%';bar.appendChild(fill);barWrap.appendChild(bar);
+          if(pct<80){var warn=document.createElement('div');warn.style.cssText='font-size:10px;color:var(--red);margin-top:2px';warn.textContent='⚠️ 목표 대비 '+(100-pct)+'% 부족';barWrap.appendChild(warn)}
+          progDiv.appendChild(barWrap);
+        }else if(agent.name==='피치'){
+          var items=[['DB수집',stats.db,100],['이메일보유',stats.email,100],['워킹중',stats.working,70],['미팅',stats.meeting,10]];
+          items.forEach(function(it){var r=document.createElement('div');r.style.cssText='display:flex;justify-content:space-between;font-size:11px;color:var(--text);margin-bottom:3px';
+          r.textContent=it[0]+' '+it[1]+'/'+it[2]+'건';var b=document.createElement('div');b.style.cssText='height:4px;background:var(--bg);border-radius:2px;margin-top:2px';
+          var f=document.createElement('div');f.style.cssText='height:100%;border-radius:2px;background:var(--accent);width:'+Math.min(100,Math.round(it[1]/Math.max(it[2],1)*100))+'%';b.appendChild(f);
+          progDiv.appendChild(r);progDiv.appendChild(b)});
+        }else if(agent.name==='루나'){
+          var items=[['DB수집',stats.db,50],['제안발송',stats.proposed,50],['사례활용',stats.usable,5]];
+          items.forEach(function(it){var r=document.createElement('div');r.style.cssText='font-size:11px;color:var(--text);margin-bottom:3px';
+          r.textContent=it[0]+' '+it[1]+'/'+it[2];var b=document.createElement('div');b.style.cssText='height:4px;background:var(--bg);border-radius:2px;margin-top:2px';
+          var f=document.createElement('div');f.style.cssText='height:100%;border-radius:2px;background:var(--accent);width:'+Math.min(100,Math.round(it[1]/Math.max(it[2],1)*100))+'%';b.appendChild(f);
+          progDiv.appendChild(r);progDiv.appendChild(b)});
+        }
+        card.appendChild(progDiv);
+      }
 
-    grid.appendChild(card);
+      card.appendChild(Object.assign(document.createElement('div'),{className:'agent-divider'}));
+
+      // Actions
+      var actions=document.createElement('div');actions.className='agent-actions';
+      var b1=document.createElement('button');b1.className='btn btn-primary btn-sm';b1.textContent='승인';b1.setAttribute('data-agent',agent.name);b1.addEventListener('click',function(){approveAgent(this.getAttribute('data-agent'))});actions.appendChild(b1);
+      var b2=document.createElement('button');b2.className='btn btn-secondary btn-sm';b2.textContent='수정요청';b2.setAttribute('data-agent',agent.name);b2.addEventListener('click',function(){openEditModal(this.getAttribute('data-agent'))});actions.appendChild(b2);
+      var b3=document.createElement('button');b3.className='btn btn-secondary btn-sm';b3.textContent='상세보기';b3.setAttribute('data-agent',agent.name);b3.addEventListener('click',function(){openDetail(this.getAttribute('data-agent'))});actions.appendChild(b3);
+      card.appendChild(actions);
+
+      // 시트 링크
+      var sUrl=sheetUrls[agent.name]||'';
+      if(sUrl){var sl=document.createElement('a');sl.href=sUrl;sl.target='_blank';sl.rel='noopener';sl.style.cssText='display:block;text-align:right;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border-light);font-size:10px;color:var(--text-muted);text-decoration:none';sl.textContent='📊 결과 시트 바로보기 →';card.appendChild(sl)}
+
+      grid.appendChild(card);
+    });
   });
 
   INACTIVE_AGENTS.forEach(function(agent) {
@@ -589,10 +628,15 @@ function renderProposalQueue(proposals) {
 
     if (p.expected_impact) {
       var impact = document.createElement('p');
-      impact.style.cssText = 'font-size:12px;color:var(--green);font-weight:500;margin-bottom:12px';
-      impact.textContent = '예상 효과: ' + p.expected_impact;
+      impact.style.cssText = 'font-size:12px;color:var(--green);font-weight:500;margin-bottom:8px';
+      impact.textContent = '📊 예상 결과: ' + p.expected_impact;
       card.appendChild(impact);
     }
+    // 예상 비용
+    var costInfo = document.createElement('p');
+    costInfo.style.cssText = 'font-size:11px;color:var(--text-muted);margin-bottom:12px';
+    costInfo.textContent = '💰 예상 비용: Haiku / ~120K 토큰 / 약 294원';
+    card.appendChild(costInfo);
 
     var actions = document.createElement('div');
     actions.style.cssText = 'display:flex;gap:8px';
