@@ -1900,7 +1900,7 @@ function loadApiStatus(){
 fetch('/health').then(function(r){return r.json()}).then(function(d){
 var el=document.getElementById('api-status-grid');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
 var svc=d.services||{};
-var labels={google_sheets:'Google Sheets',anthropic:'Anthropic AI',slack:'Slack',smtp_pitch:'SMTP 피치',smtp_luna:'SMTP 루나',meta_ads:'메타 광고 API',kakao_b2b:'카카오 B2B',kakao_b2c:'카카오 B2C',naver_works_smtp:'네이버 웍스 SMTP'};
+var labels={google_sheets:'Google Sheets',anthropic:'Anthropic AI',slack:'Slack',email_webhook:'이메일 웹훅',meta_ads:'메타 광고 API',kakao_b2b:'카카오 B2B',kakao_b2c:'카카오 B2C',naver_works_smtp:'네이버 웍스 SMTP'};
 Object.keys(labels).forEach(function(k){
 if(k==='meta_ads_note')return;var st=svc[k]||'not_configured';var isOn=st==='connected';var isWarn=st==='warning';var isPending=false;
 var card=document.createElement('div');card.style.cssText='background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid '+(isOn?'#22C55E':isWarn?'#F59E0B':isPending?'#4A5568':'#EF4444')+';border-radius:8px;padding:16px';

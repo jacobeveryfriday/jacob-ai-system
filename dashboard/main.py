@@ -59,8 +59,7 @@ async def health_check():
             "google_sheets": "connected" if GSHEETS_API_KEY else "not_configured",
             "anthropic": _chk("ANTHROPIC_API_KEY"),
             "slack": _chk("SLACK_WEBHOOK_URL"),
-            "smtp_pitch": "connected" if os.getenv("PITCH_SMTP_USER") else "not_configured",
-            "smtp_luna": "connected" if os.getenv("LUNA_SMTP_USER") else "not_configured",
+            "email_webhook": "connected" if os.getenv("EMAIL_WEBHOOK_URL") else "not_configured",
             "meta_ads": meta_status,
             "meta_ads_note": meta_note,
             "kakao_b2b": "connected" if os.getenv("KAKAO_B2B_API_KEY") or os.getenv("KAKAO_REST_API_KEY") else "not_configured",
@@ -1880,55 +1879,41 @@ def _get_from(agent_name: str):
     name = AGENT_FROM_NAMES.get(agent_name, f"{agent_name} | 공팔리터글로벌")
     return email, name
 
-def _get_smtp_creds(agent_name: str):
-    """에이전트별 SMTP 인증 정보. 전용 계정 우선 → 공용 폴백."""
-    agent_map = {
-        "피치": ("PITCH_SMTP_USER", "PITCH_SMTP_PASS"),
-        "루나": ("LUNA_SMTP_USER", "LUNA_SMTP_PASS"),
-    }
-    if agent_name in agent_map:
-        user_key, pass_key = agent_map[agent_name]
-        user = os.getenv(user_key, "")
-        pw = os.getenv(pass_key, "")
-        if user and pw:
-            return user, pw
-    # 공용 폴백
-    return os.getenv("NAVER_WORKS_SMTP_USER", ""), os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
+EMAIL_WEBHOOK_URL = os.getenv("EMAIL_WEBHOOK_URL", "")
 
-def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
-    """Naver Works SMTP(SSL 465)로 이메일 1건 발송. 에이전트별 계정 사용."""
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    smtp_host = "smtp.worksmobile.com"
-    smtp_port = 587  # STARTTLS
-    smtp_user, smtp_pass = _get_smtp_creds(agent_name)
-    if not smtp_user or not smtp_pass:
-        return {"status": "not_configured", "message": f"{agent_name} SMTP 미설정"}
-    from_email, sender_name = _get_from(agent_name)
+AGENT_ID_MAP = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle", "레이": "ray", "하나": "hana", "맥스": "max"}
+
+def _send_email_webhook(to_email: str, subject: str, body_text: str, agent_name: str = "루나") -> dict:
+    """Google Apps Script 웹훅으로 이메일 발송."""
+    webhook_url = EMAIL_WEBHOOK_URL
+    if not webhook_url:
+        return {"status": "not_configured", "message": "EMAIL_WEBHOOK_URL 미설정"}
+    agent_id = AGENT_ID_MAP.get(agent_name, "pitch")
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"{sender_name} <{smtp_user}>"
-        msg["To"] = to_email
-        msg.attach(MIMEText(html, "html", "utf-8"))
-        import ssl
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
-            server.ehlo()
-            server.starttls(context=context)
-            server.ehlo()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_user, [to_email], msg.as_string())
-        return {"status": "ok", "to": to_email, "from": f"{sender_name} <{smtp_user}>", "method": "smtp"}
+        resp = req_lib.post(webhook_url, json={
+            "agent": agent_id,
+            "to": to_email,
+            "subject": subject,
+            "body": body_text,
+        }, timeout=30, allow_redirects=True)
+        if resp.status_code == 200:
+            data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"message": resp.text[:200]}
+            return {"status": "ok", "to": to_email, "agent": agent_id, "method": "gas_webhook", "response": data}
+        return {"status": "error", "message": resp.text[:300], "code": resp.status_code, "method": "gas_webhook"}
     except Exception as e:
-        return {"status": "error", "message": str(e), "method": "smtp"}
+        return {"status": "error", "message": str(e), "method": "gas_webhook"}
+
+def _html_to_text(html: str) -> str:
+    """HTML에서 태그 제거하여 플레인 텍스트 추출."""
+    text = html.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    text = re.sub(r'<[^>]+>', '', text)
+    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
+    return text.strip()
 
 def _send_email(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
-    """이메일 발송: Naver Works SMTP 전용."""
-    result = _send_email_smtp(to_email, subject, html, agent_name)
+    """이메일 발송: Google Apps Script 웹훅."""
+    body_text = _html_to_text(html)
+    result = _send_email_webhook(to_email, subject, body_text, agent_name)
     if result["status"] == "ok":
         _record_perf(agent_name, "email_sent")
         _log_email(agent_name, to_email, subject, "sent")
@@ -1953,25 +1938,18 @@ async def api_send_email(request: Request):
 
 @app.get("/api/test-email")
 async def api_test_email(agent: str = "피치"):
-    """에이전트별 테스트 이메일 발송 (SMTP 직접)."""
+    """에이전트별 테스트 이메일 발송 (GAS 웹훅)."""
     from_email, sender_name = _get_from(agent)
-    smtp_user, smtp_pass = _get_smtp_creds(agent)
     to_email = "jacob@08liter.com"
-    html = _build_pitch_html(
-        "테스트",
-        f"안녕하세요!\n\n이 메일은 [{agent}] 에이전트 테스트 이메일입니다.\n"
-        f"발신: {sender_name} <{smtp_user or from_email}>\n"
-        f"SMTP 계정: {smtp_user or '미설정'}\n"
-        f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)\n\n"
-        f"이메일 연동이 정상적으로 작동하고 있습니다."
-    )
+    body_text = (f"안녕하세요!\n\n이 메일은 [{agent}] 에이전트 테스트 이메일입니다.\n"
+                 f"발신: {sender_name} <{from_email}>\n"
+                 f"발송 방식: Google Apps Script 웹훅\n"
+                 f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)\n\n"
+                 f"이메일 연동이 정상적으로 작동하고 있습니다.")
     subject = f"[테스트] {agent} 이메일 발송 확인"
-    # Naver Works SMTP 전용
-    result = _send_email_smtp(to_email, subject, html, agent)
-    result["smtp_user"] = smtp_user or "미설정"
-    result["smtp_host"] = "smtp.worksmobile.com"
-    result["smtp_port"] = 587
+    result = _send_email_webhook(to_email, subject, body_text, agent)
     result["to"] = to_email
+    result["webhook_url"] = EMAIL_WEBHOOK_URL[:50] + "..." if EMAIL_WEBHOOK_URL else "미설정"
     return result
 
 
@@ -2364,8 +2342,7 @@ async def _agent_auto_cycle():
             "Google Sheets": bool(GSHEETS_API_KEY),
             "Anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
             "Slack": bool(os.getenv("SLACK_WEBHOOK_URL")),
-            "SMTP 피치": bool(os.getenv("PITCH_SMTP_USER")),
-            "SMTP 루나": bool(os.getenv("LUNA_SMTP_USER")),
+            "이메일 웹훅": bool(os.getenv("EMAIL_WEBHOOK_URL")),
         }
         for svc, ok in api_checks.items():
             if not ok:
