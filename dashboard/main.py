@@ -1879,30 +1879,42 @@ def _get_from(agent_name: str):
     name = AGENT_FROM_NAMES.get(agent_name, f"{agent_name} | 공팔리터글로벌")
     return email, name
 
+def _get_smtp_creds(agent_name: str):
+    """에이전트별 SMTP 인증 정보. 전용 계정 우선 → 공용 폴백."""
+    agent_map = {
+        "피치": ("PITCH_SMTP_USER", "PITCH_SMTP_PASS"),
+        "루나": ("LUNA_SMTP_USER", "LUNA_SMTP_PASS"),
+    }
+    if agent_name in agent_map:
+        user_key, pass_key = agent_map[agent_name]
+        user = os.getenv(user_key, "")
+        pw = os.getenv(pass_key, "")
+        if user and pw:
+            return user, pw
+    # 공용 폴백
+    return os.getenv("NAVER_WORKS_SMTP_USER", ""), os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
+
 def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
-    """Naver Works SMTP로 이메일 1건 발송."""
+    """Naver Works SMTP(SSL 465)로 이메일 1건 발송. 에이전트별 계정 사용."""
     import smtplib
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
-    smtp_host = os.getenv("NAVER_WORKS_SMTP_HOST", "smtp.worksmobile.com")
-    smtp_port = int(os.getenv("NAVER_WORKS_SMTP_PORT", "587"))
-    smtp_user = os.getenv("NAVER_WORKS_SMTP_USER", "")
-    smtp_pass = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
+    smtp_host = "smtp.worksmobile.com"
+    smtp_port = 465  # SSL
+    smtp_user, smtp_pass = _get_smtp_creds(agent_name)
     if not smtp_user or not smtp_pass:
-        return {"status": "not_configured", "message": "NAVER_WORKS_SMTP 미설정"}
+        return {"status": "not_configured", "message": f"{agent_name} SMTP 미설정"}
     from_email, sender_name = _get_from(agent_name)
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"{sender_name} <{smtp_user}>"
-        msg["Reply-To"] = from_email
         msg["To"] = to_email
         msg.attach(MIMEText(html, "html", "utf-8"))
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
-            server.starttls()
+        with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15) as server:
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, [to_email], msg.as_string())
-        return {"status": "ok", "to": to_email, "from": from_email, "method": "smtp"}
+        return {"status": "ok", "to": to_email, "from": f"{sender_name} <{smtp_user}>", "method": "smtp"}
     except Exception as e:
         return {"status": "error", "message": str(e), "method": "smtp"}
 
@@ -1956,18 +1968,25 @@ async def api_send_email(request: Request):
 
 @app.get("/api/test-email")
 async def api_test_email(agent: str = "피치"):
-    """에이전트별 테스트 이메일 발송."""
+    """에이전트별 테스트 이메일 발송 (SMTP 직접)."""
     from_email, sender_name = _get_from(agent)
-    to_email = os.getenv("CEO_EMAIL", os.getenv("KYLE_EMAIL", "jacob@08liter.com"))
+    smtp_user, smtp_pass = _get_smtp_creds(agent)
+    to_email = "jacob@08liter.com"
     html = _build_pitch_html(
         "테스트",
         f"안녕하세요!\n\n이 메일은 [{agent}] 에이전트 테스트 이메일입니다.\n"
-        f"발신: {sender_name} <{from_email}>\n"
+        f"발신: {sender_name} <{smtp_user or from_email}>\n"
+        f"SMTP 계정: {smtp_user or '미설정'}\n"
         f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)\n\n"
         f"이메일 연동이 정상적으로 작동하고 있습니다."
     )
-    result = _send_email(to_email, f"[{agent}] 테스트 이메일 — {sender_name}", html, agent)
-    result["from"] = f"{sender_name} <{from_email}>"
+    subject = f"[테스트] {agent} 이메일 발송 확인"
+    # SMTP 우선 시도
+    result = _send_email_smtp(to_email, subject, html, agent)
+    if result["status"] != "ok":
+        # Resend 폴백
+        result = _send_email(to_email, subject, html, agent)
+    result["smtp_user"] = smtp_user or "미설정"
     result["to"] = to_email
     return result
 
