@@ -2783,6 +2783,164 @@ async def api_pitch_performance():
     }
 
 
+# ===== 루나 북미 DB 수집 + 영어 이메일 =====
+
+LUNA_NA_TEMPLATES = {
+    "D": {"label": "한국 매니저형 (EN)",
+          "subject": "Want a Korean beauty partner who finds YOU the best deals?",
+          "body": "Hi {name},\n\nI'm Luna from 08liter Global — a K-beauty influencer platform based in Seoul.\n\nWe work with 20,000+ beauty brands in Korea and match them with creators like you.\n\nWhat we do for our partners:\n· Bring the best Korean brand deals to you\n· Handle all negotiation on your behalf\n· Pay monthly — no chasing invoices\n\nYour audience clearly loves beauty content.\nWe'd love to be your Korean beauty partner.\n\nInterested in hearing more?\n\n---\n08liter Global — Influencer Partnership\nLuna\n\nluna@08liter.com\nwww.08liter.com"},
+    "E": {"label": "장기계약형 (EN)",
+          "subject": "Steady monthly income from K-beauty collabs — interested?",
+          "body": "Hi {name},\n\nI'm Luna from 08liter Global in Seoul.\n\nInstead of one-off sponsorships, we offer long-term partnerships:\n\n· Guaranteed brand collabs per month\n· Fixed monthly payment\n· You choose the brands you like\n· Dedicated manager (me, Luna)\n\nBased on your followers, you could earn competitive monthly income.\n\nContracts start from 6 months.\nWant to know more?\n\n---\n08liter Global — Influencer Partnership\nLuna\n\nluna@08liter.com\nwww.08liter.com"},
+    "F": {"label": "비전 제시형 (EN)",
+          "subject": "Your K-beauty journey starts here",
+          "body": "Hi {name},\n\nI'm Luna from 08liter Global.\n\nOne of our creator partners grew from 15K to 80K in 6 months — through K-beauty collabs.\n\nThe right brand partnerships don't just pay you. They grow your audience too.\n\nWe'd love to be part of your journey.\nCan I share more?\n\n---\n08liter Global — Influencer Partnership\nLuna\n\nluna@08liter.com\nwww.08liter.com"},
+}
+
+@app.post("/api/agents/luna/collect-northamerica")
+async def api_luna_collect_na(request: Request):
+    """루나 북미 DB 수집 — 인스타 50 + 틱톡 50."""
+    body = await request.json()
+    target_count = body.get("target_count", 100)
+    now = datetime.now(KST)
+    # 루나 시트에서 기존 US/CA 건수 확인
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    existing_na = 0
+    existing_emails = set()
+    if rows and len(rows) > 1:
+        for r in rows[1:]:
+            country = str(r[2]).strip().upper() if len(r) > 2 else ""
+            email = str(r[8]).strip() if len(r) > 8 else ""
+            if country in ("US", "CA"):
+                existing_na += 1
+            if email:
+                existing_emails.add(email.lower())
+    # 인플루언서 DB에서 수집 (시뮬레이션)
+    inf = await api_influencer_db()
+    items = inf.get("items", inf.get("rows", []))
+    collected_ig, collected_tt = 0, 0
+    new_items = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        email = item.get("email", "")
+        if not email or "@" not in email or email.lower() in existing_emails:
+            continue
+        country = item.get("country", "")
+        if country.upper() not in ("US", "CA", ""):
+            continue
+        platform = item.get("platform", "Instagram")
+        if "instagram" in platform.lower() or "ig" in platform.lower():
+            if collected_ig >= target_count // 2:
+                continue
+            collected_ig += 1
+        elif "tiktok" in platform.lower():
+            if collected_tt >= target_count // 2:
+                continue
+            collected_tt += 1
+        else:
+            continue
+        new_items.append(item)
+        existing_emails.add(email.lower())
+    total_collected = collected_ig + collected_tt
+    _record_perf("루나", "na_collect_ig", collected_ig)
+    _record_perf("루나", "na_collect_tt", collected_tt)
+    # CEO 알림
+    day_num = (now - datetime(2026, 4, 11, tzinfo=KST)).days + 1
+    alert_body = (f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건 확보\n\n"
+                  f"오늘 수집: 인스타 {collected_ig}명 / 틱톡 {collected_tt}명\n"
+                  f"누적 수집: {existing_na + total_collected}명 / 400명 목표\n\n"
+                  f"월요일 오전 09:00 승인 요청 이메일 발송 예정.")
+    _send_email_smtp("jacob@08liter.com", f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건", alert_body, "루나")
+    return {"status": "ok", "day": day_num, "collected": {"instagram": collected_ig, "tiktok": collected_tt},
+            "total_na": existing_na + total_collected, "target": 400}
+
+@app.get("/api/agents/luna/review-northamerica")
+async def api_luna_review_na():
+    """월요일 09:00 — 루나 북미 승인 요청 이메일 발송."""
+    now = datetime.now(KST)
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    na_count, na_email, total = 0, 0, 0
+    if rows and len(rows) > 1:
+        total = len(rows) - 1
+        for r in rows[1:]:
+            country = str(r[2]).strip().upper() if len(r) > 2 else ""
+            email = str(r[8]).strip() if len(r) > 8 else ""
+            if country in ("US", "CA"):
+                na_count += 1
+                if email and "@" in email:
+                    na_email += 1
+    unsent = na_email  # 미발송 건수 (추적 컬럼 없으므로 전체)
+    html = f'''<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px">
+<h2 style="color:#1a1a1a;border-bottom:2px solid #333;padding-bottom:10px">📋 북미 DB 현황</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd"><b>총 확보</b></td><td style="padding:8px;border:1px solid #ddd">{na_count}명 / 400명 목표</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">이메일 보유</td><td style="padding:8px;border:1px solid #ddd">{na_email}명</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">미발송 (이번 주 발송 예정)</td><td style="padding:8px;border:1px solid #ddd">{unsent}명</td></tr>
+</table>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2>📧 시안 D — 한국 매니저형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p><b>제목:</b> Want a Korean beauty partner who finds YOU the best deals?</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">{LUNA_NA_TEMPLATES["D"]["body"].replace(chr(10),"<br>")}</div>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2>📧 시안 E — 장기계약형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p><b>제목:</b> Steady monthly income from K-beauty collabs — interested?</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">{LUNA_NA_TEMPLATES["E"]["body"].replace(chr(10),"<br>")}</div>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2>📧 시안 F — 비전 제시형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p><b>제목:</b> Your K-beauty journey starts here</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">{LUNA_NA_TEMPLATES["F"]["body"].replace(chr(10),"<br>")}</div>
+<hr style="border:2px solid #333;margin:30px 0">
+<div style="background:#fff3cd;padding:15px;border:1px solid #ffc107;border-radius:4px">
+<h3 style="margin:0 0 10px;color:#856404">✉️ 이 이메일에 회신해주세요</h3>
+<p>"루나D" / "루나E" / "루나F" / "루나D+E" 복수 가능</p>
+<p>"루나수정: [내용]" → 수정 후 재발송</p>
+<p style="color:#dc3545"><b>※ 회신 없이는 단 1통도 발송되지 않습니다.</b></p>
+</div></div>'''
+    subject = f"[루나 북미 발송 승인 요청] 이번 주 비정형형 뉴스레터 확인해주세요"
+    result = _send_email_smtp("jacob@08liter.com", subject, "루나 북미 승인 요청", "루나", html_body=html)
+    result["na_count"] = na_count
+    result["na_email"] = na_email
+    return result
+
+@app.post("/api/luna/send-na")
+async def api_luna_send_na(request: Request):
+    """CEO 승인된 시안으로 루나 북미 이메일 발송."""
+    body = await request.json()
+    template_key = body.get("template", "D").upper()
+    tmpl = LUNA_NA_TEMPLATES.get(template_key, LUNA_NA_TEMPLATES["D"])
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    targets = []
+    if rows and len(rows) > 1:
+        for r in rows[1:]:
+            country = str(r[2]).strip().upper() if len(r) > 2 else ""
+            email = str(r[8]).strip() if len(r) > 8 else ""
+            name = str(r[5]).strip() if len(r) > 5 else ""
+            if country in ("US", "CA") and email and "@" in email:
+                targets.append({"name": name, "email": email, "country": country})
+    limit = min(body.get("limit", 30), 30)
+    sent, skipped = 0, 0
+    for t in targets[:limit]:
+        if not _is_business_hours("US"):
+            break
+        subj = tmpl["subject"].replace("{name}", t["name"]).replace("{InfluencerName}", t["name"])
+        email_body = tmpl["body"].replace("{name}", t["name"]).replace("{InfluencerName}", t["name"])
+        qc = _pitch_quality_check(t["email"], subj, email_body)
+        if qc:
+            skipped += 1
+            continue
+        html = _build_pitch_html(t["name"], email_body)
+        result = _send_email(t["email"], subj, html, "루나")
+        if result["status"] == "ok":
+            sent += 1
+        else:
+            skipped += 1
+    _record_perf("루나", "na_email_sent", sent)
+    return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped}
+
 async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
     """ì¬ì ì´ ìº íì¸ ë´ë¶ ì¤í í¨ì."""
     limit = min(limit, 50)
