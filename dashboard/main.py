@@ -1435,6 +1435,7 @@ async def api_ads_performance():
             mr_revenue = _find_col(mr_headers, "매출합계")
             mr_new = _find_col(mr_headers, "매출(신규)", "신규")
             mr_renew = _find_col(mr_headers, "매출(재계약)", "재계약")
+            mr_ad_cost = _find_col(mr_headers, "고비", "광고비", "ad_cost")
             mr_roas = _find_col(mr_headers, "ROAS", "로하스")
             mr_avg = _find_col(mr_headers, "평균단가", "월별계약")
             # 폴백
@@ -1443,6 +1444,7 @@ async def api_ads_performance():
             if mr_revenue is None: mr_revenue = 2
             if mr_new is None: mr_new = 3
             if mr_renew is None: mr_renew = 4
+            if mr_ad_cost is None: mr_ad_cost = 5
             if mr_roas is None: mr_roas = 6
             if mr_avg is None: mr_avg = 7
             print(f"[ads-perf] 월별매출탭 헤더(row{mr_hdr_idx}): {mr_headers}")
@@ -1450,20 +1452,15 @@ async def api_ads_performance():
                 if not row or len(row) < 2: continue
                 month_val = str(row[mr_month]).strip() if mr_month < len(row) else ""
                 if not month_val or not (month_val.startswith("2025") or month_val.startswith("2026")): continue
-                rev = _safe_val(row, mr_revenue)
-                contracts = _safe_val(row, mr_contracts)
-                new_rev = _safe_val(row, mr_new)
-                renew_rev = _safe_val(row, mr_renew)
-                roas_val = _safe_float(row, mr_roas)
-                avg_price = _safe_val(row, mr_avg)
                 monthly_trend.append({
                     "month": month_val,
-                    "contracts": contracts,
-                    "revenue": rev,
-                    "new_revenue": new_rev,
-                    "renew_revenue": renew_rev,
-                    "roas": roas_val,
-                    "avg_price": avg_price,
+                    "contracts": _safe_val(row, mr_contracts),
+                    "total": _safe_val(row, mr_revenue),
+                    "new_sales": _safe_val(row, mr_new),
+                    "renew_sales": _safe_val(row, mr_renew),
+                    "ad_cost": _safe_val(row, mr_ad_cost),
+                    "roas": _safe_float(row, mr_roas),
+                    "avg_price": _safe_val(row, mr_avg),
                 })
             print(f"[ads-perf] 월별 추이 {len(monthly_trend)}개월 로드")
     except Exception as e:
