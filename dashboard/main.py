@@ -2213,8 +2213,25 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: st
         msg.attach(MIMEText(body_text, "plain", "utf-8"))
         if html_body:
             msg.attach(MIMEText(html_body, "html", "utf-8"))
-        with smtplib.SMTP_SSL("smtp.worksmobile.com", 465, timeout=30) as server:
-            server.login(smtp_user, smtp_pass)
+        # 587 STARTTLS 우선 → 465 SSL 폴백
+        connected = False
+        for port, use_ssl in [(587, False), (465, True)]:
+            try:
+                if use_ssl:
+                    server = smtplib.SMTP_SSL("smtp.worksmobile.com", port, timeout=15)
+                else:
+                    server = smtplib.SMTP("smtp.worksmobile.com", port, timeout=15)
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                server.login(smtp_user, smtp_pass)
+                connected = True
+                break
+            except Exception:
+                continue
+        if not connected:
+            return {"status": "error", "message": "SMTP 연결 실패 (587/465 모두 타임아웃)", "method": "smtp"}
+        with server:
             server.sendmail(smtp_user, [to_email], msg.as_string())
         return {"status": "ok", "to": to_email, "from": f"{sender_name} <{smtp_user}>", "method": "smtp"}
     except Exception as e:
