@@ -72,6 +72,17 @@
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="tokenAgentCards"></div>
   </div>
+  <!-- CEO 데일리 브리핑 -->
+  <div style="background:var(--bg-card);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:20px;border-left:3px solid var(--red)" id="ceoBriefingCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">📋 CEO 데일리 브리핑</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--text-muted)" id="briefing-date"></span>
+        <button class="btn btn-secondary btn-sm" onclick="loadCeoBriefing()">새로고침</button>
+      </div>
+    </div>
+    <div id="briefing-content" style="font-size:12px;color:var(--text);line-height:1.8">로딩중...</div>
+  </div>
   <div class="grid-2 mt-6">
     <div class="chart-card">
       <div class="chart-title">월별 매출 추이 (신규 + 재계약)</div>
@@ -804,6 +815,55 @@ Promise.all([
   s('ceo-pitch-db',pf.db||p.db||0);s('ceo-pitch-email',pf.email||p.with_email||0);s('ceo-pitch-working',pf.working||p.working||0);
   s('ceo-luna-db',lf.crawled||l.total||0);s('ceo-luna-proposed',lf.proposed||l.proposed||0);s('ceo-luna-usable',lf.usable||l.usable||0);
 }).catch(function(){});
+
+// CEO 브리핑 로드
+function loadCeoBriefing(){
+var el=document.getElementById('briefing-content');if(!el)return;
+var dateEl=document.getElementById('briefing-date');if(dateEl)dateEl.textContent=new Date().toLocaleDateString('ko-KR');
+Promise.all([
+  fetch('/api/kpi-summary').then(function(r){return r.json()}),
+  fetch('/api/sheet-pipeline?agent=피치').then(function(r){return r.json()}),
+  fetch('/api/sheet-pipeline?agent=루나').then(function(r){return r.json()}),
+  fetch('/api/proposals?status=pending_approval').then(function(r){return r.json()})
+]).then(function(res){
+  var kpi=res[0],pitch=res[1],luna=res[2],proposals=res[3];
+  var m=kpi.month||{},t=kpi.today||{};
+  var rev=m.revenue||0,target=160000000;
+  var pct=Math.round(rev/target*100);
+  var unhandled=t.unhandled_db||0;
+  var pendingCount=(proposals.proposals||[]).length;
+  var lines=[];
+  // 즉시 조치
+  lines.push('<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#C4332B;margin-bottom:6px">🔴 즉시 조치 필요</div>');
+  lines.push('<div style="margin-left:12px">• 매출 달성률 '+pct+'% — 목표 '+target.toLocaleString()+'원 대비 '+(target-rev).toLocaleString()+'원 부족</div>');
+  if(unhandled>0)lines.push('<div style="margin-left:12px">• 인바운드 무대응 '+unhandled+'건 — 잠재 매출 위험</div>');
+  lines.push('</div>');
+  // 핵심 액션
+  lines.push('<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#B8860B;margin-bottom:6px">🟡 오늘의 핵심 액션</div>');
+  lines.push('<div style="margin-left:12px">• 피치: 브랜드 DB '+((pitch.total||{}).db||0)+'건 보유 → 수집 승인 대기</div>');
+  lines.push('<div style="margin-left:12px">• 루나: 인플루언서 '+((luna.total||{}).total||0)+'명 보유 → 수집 승인 대기</div>');
+  lines.push('<div style="margin-left:12px">• 레이: 계약 '+(m.contract||0)+'건 세금계산서 점검 필요</div>');
+  lines.push('</div>');
+  // 승인 대기
+  if(pendingCount>0){lines.push('<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:6px">💡 CEO 승인 대기 '+pendingCount+'건</div>');
+  (proposals.proposals||[]).slice(0,3).forEach(function(p){lines.push('<div style="margin-left:12px;margin-bottom:4px">• ['+p.agent+'] '+p.proposal+'</div>')});
+  lines.push('</div>')}
+  el.textContent='';
+  var div=document.createElement('div');
+  div.style.cssText='line-height:1.8';
+  // safe DOM construction
+  var wrapper=document.createElement('div');
+  var sections=[
+    {title:'🔴 즉시 조치 필요',color:'#C4332B',items:['매출 달성률 '+pct+'% — 목표 대비 '+(target-rev).toLocaleString()+'원 부족'].concat(unhandled>0?['인바운드 무대응 '+unhandled+'건']:[])},
+    {title:'🟡 오늘의 핵심 액션',color:'#B8860B',items:['피치: DB '+((pitch.total||{}).db||0)+'건 보유','루나: 인플루언서 '+((luna.total||{}).total||0)+'명 보유','레이: 계약 '+(m.contract||0)+'건 점검']},
+  ];
+  sections.forEach(function(s){
+    var sh=document.createElement('div');sh.style.cssText='font-size:12px;font-weight:700;color:'+s.color+';margin-bottom:6px;margin-top:12px';sh.textContent=s.title;wrapper.appendChild(sh);
+    s.items.forEach(function(item){var li=document.createElement('div');li.style.cssText='margin-left:12px;font-size:12px;color:#1B2A4A';li.textContent='• '+item;wrapper.appendChild(li)});
+  });
+  el.appendChild(wrapper);
+}).catch(function(){el.textContent='브리핑 데이터 로드 실패'})}
+loadCeoBriefing();
 
 loadAll();
 loadPerformance();

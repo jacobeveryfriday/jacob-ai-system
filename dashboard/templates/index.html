@@ -150,8 +150,9 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <div class="nav-group"><div class="sb-section"><div class="sb-section-left"><span class="sb-dot"></span> 공팔리터 글로벌</div><div class="sb-section-right">08Liter</div></div>
 <div class="sb-items">
 <a href="#" class="nav-item" style="font-weight:600;color:#1B2A4A" data-page="kpi"><i data-lucide="bar-chart-2"></i> 총괄 KPI</a>
-<a href="#" class="nav-item" data-page="brand"><i data-lucide="building-2"></i> 브랜드</a>
-<a href="#" class="nav-item" data-page="influencer"><i data-lucide="users"></i> 맞춤 인플루언서</a>
+<!-- 브랜드/인플루언서 메뉴 → 피치/루나 에이전트 페이지로 통합 -->
+<a href="#" class="nav-item" data-page="brand"><i data-lucide="building-2"></i> 피치 (브랜드영업)</a>
+<a href="#" class="nav-item" data-page="influencer"><i data-lucide="users"></i> 루나 (인플루언서)</a>
 <a href="#" class="nav-item" data-page="ads"><i data-lucide="megaphone"></i> 광고센터 운영</a>
 <a href="#" class="nav-item" data-page="sns"><i data-lucide="share-2"></i> 공식 SNS 운영</a>
 <a href="#" class="nav-item" data-page="management"><i data-lucide="briefcase"></i> 경영지원</a>
@@ -245,6 +246,21 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-brand">
+  <!-- 즉시 실행 배너 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-left:3px solid #1B2A4A;border-radius:8px;padding:16px;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:10px">⚡ 피치 — 지금 바로 시작하세요</div>
+    <div style="font-size:12px;color:#6B6B6B;line-height:1.8;margin-bottom:12px">
+      1단계: 아래 [DB 수집 승인 요청] 클릭 → 타겟·비용 확인 → 승인<br>
+      2단계: Haiku가 자동으로 DB 수집 (약 20분)<br>
+      3단계: 이메일 초안 자동 생성 → CEO 검토<br>
+      4단계: [발송 승인] 클릭 → 즉시 발송
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#9B9B9B">예상 비용: 294원</span>
+      <span style="font-size:11px;color:#9B9B9B">예상 결과: DB 100건 / 미팅 10건</span>
+    </div>
+    <button onclick="requestPitchDB()" style="padding:10px 24px;background:#1B2A4A;border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer;font-weight:700">▶ DB 수집 승인 요청 올리기</button>
+  </div>
   <!-- 1. 최상단 5개 KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="brand-top-kpi">
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">주요 타겟</p><p id="bd-target" style="font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">—</p></div>
@@ -392,6 +408,21 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-influencer">
+  <!-- 즉시 실행 배너 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-left:3px solid #2D4A7A;border-radius:8px;padding:16px;margin-bottom:16px">
+    <div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:10px">⚡ 루나 — 지금 바로 시작하세요</div>
+    <div style="font-size:12px;color:#6B6B6B;line-height:1.8;margin-bottom:12px">
+      1단계: 아래 [DB 수집 승인 요청] 클릭 → 타겟·비용 확인 → 승인<br>
+      2단계: 인플루언서 DB 50명 자동 수집 (약 15분)<br>
+      3단계: 협찬 제안 이메일 자동 생성 → CEO 검토<br>
+      4단계: [발송 승인] 클릭 → 즉시 발송
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+      <span style="font-size:11px;color:#9B9B9B">예상 비용: 196원</span>
+      <span style="font-size:11px;color:#9B9B9B">예상 결과: DB 50명 / 협찬확정 5건</span>
+    </div>
+    <button onclick="requestLunaDB()" style="padding:10px 24px;background:#2D4A7A;border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer;font-weight:700">▶ DB 수집 승인 요청 올리기</button>
+  </div>
   <!-- 1. 최상단 5개 KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="inf-top-kpi">
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">주요 타겟</p><p id="inf-target" style="font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">—</p></div>
@@ -1713,6 +1744,21 @@ if(agent==='소피'){
   s('sns-b2c-leads',(t.b2c||0)+' / 500');
 }
 }).catch(function(){})}
+// DB 수집 승인 요청
+function requestPitchDB(){
+fetch('/api/proposals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+agent:'피치',proposal:'브랜드 DB 100건 수집 + 이메일 발송',
+detail:'타겟: K-뷰티 브랜드 마케팅담당자/CMO\n채널: LinkedIn/Instagram/올리브영\n국가: 한국→일본→동남아\n\n수집 후 4월 프로모션 이메일 자동 생성 → CEO 검수 큐 등록',
+expected_impact:'DB 100건 → 유효 70건 → 미팅 10건 → 계약 3건 예상',
+action_type:'pitch_db_collect'
+})}).then(function(r){return r.json()}).then(function(){alert('승인 요청이 CEO 큐에 등록되었습니다.')}).catch(function(){alert('오류')})}
+function requestLunaDB(){
+fetch('/api/proposals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+agent:'루나',proposal:'인플루언서 DB 50명 수집 + 협찬 제안 발송',
+detail:'타겟: 뷰티 인플루언서 (팔로워 1만~100만)\n채널: Instagram/TikTok/YouTube\n국가: 한국 50%/일본 25%/동남아 25%\n인게이지먼트: 3%+\n\n수집 후 밀리밀리 협찬 제안 이메일 자동 생성 → CEO 검수 큐 등록',
+expected_impact:'DB 50명 → 유효 35명 → 협찬확정 5건 예상',
+action_type:'luna_db_collect'
+})}).then(function(r){return r.json()}).then(function(){alert('승인 요청이 CEO 큐에 등록되었습니다.')}).catch(function(){alert('오류')})}
 function loadKakaoStatus(){
 fetch('/health').then(function(r){return r.json()}).then(function(d){
 var svc=d.services||{};var isOn=svc.kakao_b2b==='connected'||svc.kakao_b2c==='connected';
@@ -1872,20 +1918,20 @@ el.appendChild(card)})}).catch(function(){})}
 
 // ===== 카일 에이전트 대시보드 =====
 function loadKylePanel(){
-fetch('/api/agent-performance').then(function(r){return r.json()}).then(function(d){
-var avgEl=document.getElementById('kyle-avg-kpi');if(avgEl)avgEl.textContent=d.avg_kpi+'%';
+fetch('/api/agent-kpi-dashboard').then(function(r){return r.json()}).then(function(d){
+var avgEl=document.getElementById('kyle-avg-kpi');if(avgEl)avgEl.textContent=(d.avg_kpi||0)+'%';
 var barsEl=document.getElementById('kyle-agent-bars');if(!barsEl)return;
 while(barsEl.firstChild)barsEl.removeChild(barsEl.firstChild);
-var colors={'카일':'#7C3AED','루나':'#F97316','피치':'#0EA5E9','맥스':'#EF4444','소피':'#E1306C','레이':'#22C55E','하나':'#F59E0B'};
+var colors={'카일':'#1B2A4A','루나':'#2D4A7A','피치':'#3D6A9A','맥스':'#C4332B','소피':'#7A5C3A','레이':'#1A7A4C','하나':'#B8860B'};
 Object.entries(d.agents||{}).forEach(function(e){
 var name=e[0],info=e[1];
 var col=document.createElement('div');col.style.cssText='text-align:center';
 var nm=document.createElement('p');nm.style.cssText='font-size:10px;color:#6B6B6B;margin-bottom:4px';nm.textContent=name;col.appendChild(nm);
-var barBg=document.createElement('div');barBg.style.cssText='height:6px;background:#1E2433;border-radius:3px;overflow:hidden;margin-bottom:4px';
-var barFill=document.createElement('div');barFill.style.cssText='height:100%;border-radius:3px;background:'+(colors[name]||'#F97316')+';width:'+Math.min(info.kpi,100)+'%';barBg.appendChild(barFill);col.appendChild(barBg);
-var pct=document.createElement('p');pct.style.cssText='font-family:monospace;font-size:11px;font-weight:700;color:'+(info.kpi>=80?colors[name]||'#F97316':'#EF4444');pct.textContent=info.kpi+'%';col.appendChild(pct);
-var met=document.createElement('p');met.style.cssText='font-size:8px;color:#9B9B9B';met.textContent=info.metric;col.appendChild(met);
-barsEl.appendChild(col)})}).catch(function(){});
+var barBg=document.createElement('div');barBg.style.cssText='height:6px;background:#EDEBE7;border-radius:3px;overflow:hidden;margin-bottom:4px';
+var barFill=document.createElement('div');barFill.style.cssText='height:100%;border-radius:3px;background:'+(colors[name]||'#1B2A4A')+';width:'+Math.min(info.kpi||0,100)+'%';barBg.appendChild(barFill);col.appendChild(barBg);
+var pct=document.createElement('p');pct.style.cssText='font-family:monospace;font-size:11px;font-weight:700;color:'+(info.kpi>=80?'#1A7A4C':'#C4332B');pct.textContent=(info.kpi||0)+'%';col.appendChild(pct);
+var met=document.createElement('p');met.style.cssText='font-size:8px;color:#9B9B9B';met.textContent=info.metric||'';col.appendChild(met);
+barsEl.appendChild(col)})}).catch(function(){var avgEl=document.getElementById('kyle-avg-kpi');if(avgEl)avgEl.textContent='0%'});
 // 카일 개선제안
 fetch('/api/kyle-suggestions').then(function(r){return r.json()}).then(function(d){
 var el=document.getElementById('kyle-suggestions');if(!el)return;
