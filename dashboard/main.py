@@ -1250,15 +1250,25 @@ async def api_ads_performance():
     prev_ib_total, prev_ib_valid = 0, 0
     channel_raw_values = set()  # 디버그: J열 unique 값 수집
     _ch_col_debug = None
+    _ib_headers_debug = []
+    _ib_hdr_idx_debug = None
+    _sample_ch_values = []  # 첫 5행 채널값 샘플
     try:
         ib_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
         if ib_rows and len(ib_rows) > 2:
             hdr_idx = _find_header_row(ib_rows, "국가", "컨택현황", "컨텍현황", "담당자")
             headers = [str(h).replace("\n", " ").strip() for h in ib_rows[hdr_idx]]
+            _ib_headers_debug = headers[:]
+            _ib_hdr_idx_debug = hdr_idx
             month_col = _find_col(headers, "월")
             date_col = _auto_detect_date_col(headers, ib_rows[hdr_idx+1:hdr_idx+6])
-            ch_col = _find_col(headers, "유입채널")
+            # 유입채널: 정확히 "유입채널" 또는 "유입 채널" 또는 "채널" 로 찾기
+            ch_col = _find_col(headers, "유입채널", "유입 채널", "채널")
             _ch_col_debug = ch_col
+            # 채널 컬럼 첫 5행 샘플
+            for sr in ib_rows[hdr_idx+1:hdr_idx+6]:
+                sv = str(sr[ch_col]).strip() if ch_col is not None and ch_col < len(sr) else "(col=None)"
+                _sample_ch_values.append(sv)
             status_col = _find_col(headers, "컨텍현황", "컨택현황")
             staff_col = _find_col(headers, "팀담당자", "담당자")
             print(f"[ads-perf] 인바운드 헤더({hdr_idx}행): {headers}")
@@ -1521,7 +1531,10 @@ async def api_ads_performance():
         # 디버그
         "meta_debug": meta_debug,
         "channel_debug": {
+            "hdr_row_index": _ib_hdr_idx_debug,
+            "headers": _ib_headers_debug,
             "ch_col_index": _ch_col_debug,
+            "sample_ch_5rows": _sample_ch_values,
             "raw_unique_values": sorted(channel_raw_values) if channel_raw_values else [],
             "mapped_result": dict(ib_by_ch),
         },
