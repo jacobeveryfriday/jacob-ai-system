@@ -2516,12 +2516,29 @@ def _pitch_quality_check(email: str, subject: str, body: str) -> list:
 
 @app.post("/api/pitch/send")
 async def api_pitch_send(request: Request):
-    """CEO 승인된 시안으로 피치 이메일 발송. 품질 점검 포함."""
+    """CEO 승인된 시안으로 피치 이메일 발송. DB 소스: 오직 피치_클로드 탭."""
     body = await request.json()
-    template_key = body.get("template", "A").upper()
+    template_key = body.get("template", body.get("variant", "A")).upper()
+    if template_key == "AB":
+        template_key = "A"  # 복수 선택 시 A 우선
     tmpl = PITCH_TEMPLATES.get(template_key, PITCH_TEMPLATES["A"])
-    leads_data = await api_recontact_leads()
-    leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
+    # DB 소스: 오직 피치 시트 "피치_클로드" 탭 (다른 시트 혼용 금지)
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클로드", ttl_key="inbound")
+    leads = []
+    if rows and len(rows) > 1:
+        # 헤더 확인 (A:No B:DB확보날짜 ... E:브랜드명 ... H:이메일 ... N:발송상태)
+        for row in rows[1:]:
+            if len(row) < 8:
+                continue
+            email = str(row[7]).strip() if len(row) > 7 else ""  # H열 = 이메일
+            brand = str(row[4]).strip() if len(row) > 4 else ""  # E열 = 브랜드명
+            sent_status = str(row[13]).strip() if len(row) > 13 else ""  # N열 = 발송상태
+            if email and "@" in email and not sent_status:  # 발송일자 비어있는 건만
+                leads.append({"name": brand, "email": email})
+    if not leads:
+        # 피치_클로드 탭이 비었으면 파센문의 폴백 (경고 포함)
+        leads_data = await api_recontact_leads()
+        leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
     limit = min(body.get("limit", 30), 30)
     targets = leads[:limit]
     sent, skipped, errors_list = 0, 0, []
@@ -2546,6 +2563,18 @@ async def api_pitch_send(request: Request):
             errors_list.append({"brand": brand, "errors": [result.get("message", "발송 실패")]})
     _record_perf("피치", "email_sent_batch", sent)
     return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped, "errors": errors_list[:10]}
+
+@app.post("/api/pitch/revise")
+async def api_pitch_revise(request: Request):
+    """CEO 수정 요청 접수 → 수정 후 재검수 이메일 발송."""
+    body = await request.json()
+    instruction = body.get("instruction", "")
+    # 수정 요청 기록
+    _record_perf("피치", "revise_request")
+    # 재검수 이메일 발송
+    result = await api_send_review_email()
+    result["revise_instruction"] = instruction[:200]
+    return result
 
 @app.post("/api/pitch/reply")
 async def api_pitch_reply(request: Request):
