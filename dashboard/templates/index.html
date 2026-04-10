@@ -857,25 +857,28 @@ var sc=stColors[p.status]||stColors['미달'];
 var statusBdg='<span style="background:'+sc[0]+';color:'+sc[1]+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+(p.status||'미달')+'</span>';
 pH+='<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><p style="font-size:13px;font-weight:700;color:#1B2A4A;margin:0">'+p.name+'</p>'+statusBdg+'</div><p style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A;margin:0 0 8px">'+fmtM(p.revenue)+'원</p><div style="display:flex;gap:12px;font-size:11px;color:#6B6B6B;margin-bottom:10px;flex-wrap:wrap"><span>계약 '+p.contracts+'건</span><span>전환율 '+(p.conversion||0)+'%</span><span>DB '+(p.db_count||0)+'건</span><span>ROAS '+(p.roas||0)+'%</span></div><div><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px"><span style="color:#6B6B6B">목표 2,000만원</span><span style="font-weight:700;color:'+barColor+'">'+Math.round(pct)+'%</span></div><div style="background:#EDEBE7;border-radius:6px;height:8px;overflow:hidden"><div style="background:'+barColor+';height:100%;width:'+Math.min(pct,100)+'%;border-radius:6px;transition:width .4s ease"></div></div></div></div>'});
 pH+='</div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">출처: 세금계산서시트 "담당자별 계약전환율" 탭 / KPI 목표: 2,000만원</p></div>';pE.innerHTML=pH;
-// === 6. 월별 추이 — 표 + 그래프 (시트 그대로) ===
+// === 6. 월별 추이 — 25/26 좌우비교 표 + 그래프 ===
 var thisM=new Date().getFullYear()+'.'+(new Date().getMonth()+1<10?'0':'')+(new Date().getMonth()+1);
-function V(v){return v!=null?v:null}
+var thisMn=new Date().getMonth()+1;
 function cell(v,suffix){return v!=null?'<span style="font-family:monospace">'+fmtM(v)+(suffix||'')+'</span>':'<span style="color:#9B9B9B">-</span>'}
-// --- 표 ---
+// 25/26 데이터 슬롯
+var y25={},y26={};
+trend.forEach(function(t){if(t.month.startsWith('2025'))y25[t.month]=t;if(t.month.startsWith('2026'))y26[t.month]=t});
+// --- 25/26 좌우비교 표 ---
 var tE=document.getElementById('ads-trend-table');
-var tH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월별 매출 & ROAS</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>계약건수</th><th>매출합계</th><th>신규</th><th>재계약</th><th>ROAS</th></tr></thead><tbody>';
-trend.forEach(function(t,i){
-var isCur=t.month===thisM;
-var is26=t.month.startsWith('2026');
-var bg=isCur?'background:#DBEAFE;font-weight:700':(is26?'background:#EFF6FF':'');
-tH+='<tr style="'+bg+'">';
-tH+='<td style="font-weight:'+(isCur?'700':'400')+'">'+t.month+'</td>';
-tH+='<td>'+cell(t.contracts,'건')+'</td>';
-tH+='<td>'+cell(t.total,'원')+'</td>';
-tH+='<td>'+cell(t.new_sales,'원')+'</td>';
-tH+='<td>'+cell(t.renew_sales,'원')+'</td>';
-tH+='<td>'+(t.roas!=null?'<span style="font-family:monospace;font-weight:600;color:'+(t.roas>=500?'#16A34A':'#1B2A4A')+'">'+t.roas+'%</span>':'<span style="color:#9B9B9B">-</span>')+'</td>';
-tH+='</tr>'});
+var tH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월별 매출 & ROAS</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th style="width:50px">월</th><th style="background:#FAFAFA">2025</th><th style="background:#EFF6FF">2026</th></tr></thead><tbody>';
+for(var mi=1;mi<=12;mi++){
+var mk25='2025.'+(mi<10?'0':'')+mi,mk26='2026.'+(mi<10?'0':'')+mi;
+var d25=y25[mk25],d26=y26[mk26];
+var isCur=mi===thisMn;
+var rowBg=isCur?'background:#DBEAFE;font-weight:700':'';
+function fmtCell(d){if(!d)return'<span style="color:#9B9B9B">-</span>';
+var parts=[];
+if(d.contracts!=null)parts.push('계약 '+d.contracts+'건');
+if(d.total!=null)parts.push('매출 '+fmtM(d.total)+'원');
+if(d.roas!=null)parts.push('ROAS '+d.roas+'%');
+return parts.length?'<span style="font-family:monospace;font-size:11px">'+parts.join(' / ')+'</span>':'<span style="color:#9B9B9B">-</span>'}
+tH+='<tr style="'+rowBg+'"><td style="font-weight:'+(isCur?'700':'500')+'">'+mi+'월'+(isCur?' *':'')+'</td><td style="background:#FAFAFA">'+fmtCell(d25)+'</td><td style="background:'+(isCur?'#DBEAFE':'#EFF6FF')+'">'+fmtCell(d26)+'</td></tr>'}
 tH+='</tbody></table></div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">출처: 세금계산서시트 "월별매출&로하스" 탭 / 시트 수식값 그대로 표시</p></div>';
 tE.innerHTML=tH;
 // --- 그래프 (전체 기간: 2025~2026) ---
