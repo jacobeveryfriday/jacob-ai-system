@@ -2180,137 +2180,122 @@ async def api_test_email(agent: str = "피치"):
     return result
 
 @app.get("/api/send-review-email")
-async def api_send_review_email(agent: str = "피치"):
-    """CEO 검수 이메일 발송 — 실제 DB 기반 샘플 3건 포함."""
+async def api_send_review_email():
+    """CEO 검수 이메일 — 피치+루나 4가지 시안 통합 발송."""
     now = datetime.now(KST)
     ceo_email = "jacob@08liter.com"
+    # 피치 DB 건수
+    leads_data = await api_recontact_leads()
+    pitch_valid = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
+    pitch_total = len(pitch_valid)
+    # 루나 DB 건수
+    inf = await api_influencer_db()
+    inf_items = inf.get("items", inf.get("rows", []))
+    luna_valid = [i for i in inf_items if isinstance(i, dict) and i.get("email") and "@" in i.get("email", "")]
+    luna_total = len(luna_valid)
+    cost_est = int((pitch_total + luna_total) * 2.45)
+    pitch_reply = max(1, int(pitch_total * 0.042))
+    pitch_meeting = max(1, int(pitch_total * 0.013))
+    luna_reply = max(1, int(luna_total * 0.10))
+    luna_secured = max(1, int(luna_total * 0.05))
 
-    if agent == "피치":
-        # 실제 인바운드 DB에서 유효 리드 추출
-        leads_data = await api_recontact_leads()
-        leads = leads_data.get("leads", [])
-        valid = [l for l in leads if l.get("email") and "@" in l.get("email", "")]
-        excluded = len(leads) - len(valid)
-        total = len(valid)
-
-        # 샘플 3건
-        samples = valid[:3]
-        sample_text = ""
-        for i, s in enumerate(samples):
-            sample_text += f"\n[샘플 {i+1}/{min(3,total)}]\n"
-            sample_text += f"수신자: {s.get('name','')}\n"
-            sample_text += f"이메일: {s.get('email','')}\n"
-            sample_text += f"상태: {s.get('status','')}\n"
-            sample_text += f"─────────────────────────\n"
-            sample_text += f"제목: [공팔리터글로벌] {s.get('name','')} 인플루언서 마케팅 협업 제안\n"
-            sample_text += f"─────────────────────────\n"
-            sample_text += f"안녕하세요 {s.get('name','')} 담당자님,\n\n"
-            sample_text += f"공팔리터글로벌 피치입니다.\n"
-            sample_text += f"저희는 국내외 1,000명 이상의 K-뷰티 인플루언서 네트워크를\n"
-            sample_text += f"보유하고 있으며, 4월 특별 프로모션을 진행 중입니다:\n"
-            sample_text += f"✅ 인플루언서 매칭 수수료 20% 할인\n"
-            sample_text += f"✅ 첫 캠페인 성과 보장제 적용\n\n"
-            sample_text += f"5분짜리 비대면 미팅으로 구체적인 제안을 드리고 싶습니다.\n"
-            sample_text += f"📅 미팅 예약: {MEETING_LINK}\n\n"
-
-        open_est = max(1, int(total * 0.20))
-        reply_est = max(1, int(total * 0.042))
-        meeting_est = max(1, int(total * 0.013))
-        cost_est = int(total * 2.45)
-
-        body = f"""━━━━━━━━━━━━━━━━━━━━━━━
+    body = f"""━━━━━━━━━━━━━━━━━━━━━━━
 📊 발송 개요
 ━━━━━━━━━━━━━━━━━━━━━━━
-에이전트: 피치 (브랜드영업)
-발송 예정: 총 {total}건
-타겟: K-뷰티 브랜드 (유효DB 중 미계약)
-수집 출처: 인바운드 구글시트 (워킹중 상태)
-수집일: {now.strftime('%Y-%m-%d')}
-유효 DB: {total}건 (기준통과) / 제외 {excluded}건 (이메일 미보유)
-
-예상 결과 (업계 평균 기준):
-- 오픈율 예상: 약 {open_est}건 (20% 기준)
-- 답변 예상: 약 {reply_est}건 (4.2% 기준)
-- 미팅 예상: 약 {meeting_est}건
-
-발송 비용: Haiku 기준 약 {cost_est}원
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📧 발송 이메일 샘플 {min(3,total)}건
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{sample_text}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✉️ 승인 방법 (이 이메일에 회신해주세요)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✅ 전체 승인:  "승인" 이라고 회신
-✏️ 수정 요청: "수정: [수정내용]" 이라고 회신
-❌ 취소:       "취소" 라고 회신
-
-※ 회신 없이는 이메일이 절대 발송되지 않습니다.
-"""
-        subject = f"[피치 발송 검수 요청] 총 {total}건 | 오늘 발송 예정"
-
-    elif agent == "루나":
-        inf = await api_influencer_db()
-        items = inf.get("items", inf.get("rows", []))
-        valid = [i for i in items if isinstance(i, dict) and i.get("email") and "@" in i.get("email", "")]
-        excluded = (inf.get("total", 0) if isinstance(inf.get("total"), int) else len(items)) - len(valid)
-        total = len(valid)
-
-        sample_text = ""
-        for i, s in enumerate(valid[:3]):
-            sample_text += f"\n[샘플 {i+1}/{min(3,total)}]\n"
-            sample_text += f"인플루언서: {s.get('account', s.get('name',''))}\n"
-            sample_text += f"플랫폼: {s.get('platform','')} | 팔로워: {s.get('followers','')}\n"
-            sample_text += f"국가: {s.get('country','')} | 카테고리: {s.get('category','')}\n"
-            sample_text += f"이메일: {s.get('email','')}\n"
-            sample_text += f"─────────────────────────\n"
-            sample_text += f"제목: [밀리밀리] {s.get('account','')}님 K-뷰티 협찬 제안\n"
-            sample_text += f"─────────────────────────\n"
-            sample_text += f"안녕하세요 {s.get('account','')}님!\n"
-            sample_text += f"밀리밀리 루나입니다. 콘텐츠 인상 깊게 봤어요.\n"
-            sample_text += f"4월 협찬 제안드립니다. 제품 무상제공 + 수익쉐어 가능해요.\n"
-            sample_text += f"관심 있으시면 편하게 답장 주세요!\n\n"
-
-        reply_est = max(1, int(total * 0.10))
-        secured_est = max(1, int(total * 0.05))
-
-        body = f"""━━━━━━━━━━━━━━━━━━━━━━━
-📊 발송 개요
-━━━━━━━━━━━━━━━━━━━━━━━
-에이전트: 루나 (인플루언서영업)
-발송 예정: 총 {total}건
-타겟: 뷰티 인플루언서 (이메일 보유)
-수집 출처: 인플루언서 구글시트
-수집일: {now.strftime('%Y-%m-%d')}
-유효 DB: {total}건 (이메일 보유) / 제외 {excluded}건
+피치 발송 예정: {pitch_total}건 / K-뷰티 브랜드 마케팅담당자
+루나 발송 예정: {luna_total}건 / 뷰티 인플루언서
+총 비용: 약 {cost_est}원
 
 예상 결과:
-- 답변 예상: 약 {reply_est}건 (10% 기준)
-- 협찬확정 예상: 약 {secured_est}건
+피치 — 오픈 약 {max(1,int(pitch_total*0.20))}건 / 답변 약 {pitch_reply}건 / 미팅 약 {pitch_meeting}건
+루나 — 답변 약 {luna_reply}건 / 협찬확정 약 {luna_secured}건
+━━━━━━━━━━━━━━━━━━━━━━━
+
+[피치 시안 A — 성과 후킹형]
+발신: Pitch | 공팔리터(0.8L) <pitch@08liter.com>
+제목: 숏폼 1개로 매출 8억 — {{브랜드명}}도 가능한 이유
+
+안녕하세요 {{담당자명}}님,
+공팔리터(0.8L) 피치입니다.
+
+저희 파트너의 실제 성과입니다:
+숏폼 1개 → 조회 287만 → 매출 8억 달성
+리뷰 200건 → 올리브영 검색량 +340%
+말레이시아 KOL 라이브 → 2분 30초에 1억 매출
+
+10년간 8개국, 2만여 브랜드와 함께한
+글로벌 최대 인플루언서 마케팅 플랫폼입니다.
+
+4월 한정 — 숏폼 100건 기준 60% 할인 중입니다. (유효기간 4월 30일)
+
+상품소개서: https://buly.kr/AF24dn7
+5분 비대면 상담: https://buly.kr/1c9NOdW
+
+---
+
+[피치 시안 B — 프로모션 긴급형]
+발신: Pitch | 공팔리터(0.8L) <pitch@08liter.com>
+제목: 4월 30일 마감 — 숏폼 100건 200만원 (정가 500만원)
+
+안녕하세요 {{담당자명}}님,
+공팔리터(0.8L) 피치입니다.
+
+국내: 숏폼 100건 200만원(60% 할인) / 릴스 무제한 300만원 / 구매평 100건+ 건당 3,000원
+해외: 글로벌 숏폼 100건 500만원(50% 할인) / 글로벌 구매평 100건+ 건당 3만원(40% 할인)
+
+생성 콘텐츠는 3개월간 광고 소재 무료 활용 가능합니다.
+
+상품소개서: https://buly.kr/AF24dn7
+5분 비대면 상담: https://buly.kr/1c9NOdW
+
+---
+
+[루나 시안 A — 성과+수익 제안형]
+발신: Luna | 밀리밀리 x 공팔리터(0.8L) <luna@08liter.com>
+제목: {{인플루언서명}}님 팔로워가 사고 싶어할 K-뷰티, 협찬 제안드립니다
+
+안녕하세요 {{인플루언서명}}님!
+밀리밀리 x 공팔리터(0.8L) 루나입니다.
+
+저희 협업 인플루언서들의 실제 결과:
+숏폼 1개 → 조회 287만, 매출 직결
+KOL 라이브 → 2분 30초에 1억 매출
+리뷰 콘텐츠 → 플랫폼 검색량 3배 상승
+
+제품 무상 제공 / 콘텐츠 방향 100% 자유 / 성과 수익 쉐어
+
+브랜드 소개: https://buly.kr/AF24dn7
+협업 미팅: https://buly.kr/1c9NOdW
+
+---
+
+[루나 시안 B — 단도직입형]
+발신: Luna | 밀리밀리 x 공팔리터(0.8L) <luna@08liter.com>
+제목: K-뷰티 협찬 — 밀리밀리가 {{인플루언서명}}님을 선택했습니다
+
+안녕하세요 {{인플루언서명}}님,
+밀리밀리 루나입니다.
+제품 무상제공 + 수익 쉐어로 진행하며 콘텐츠 방향 100% 자유입니다.
+부담 없이 샘플부터 먼저 받아보실 수 있어요.
+
+브랜드 소개: https://buly.kr/AF24dn7
+협업 미팅: https://buly.kr/1c9NOdW
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📧 발송 이메일 샘플 {min(3,total)}건
+✉️ 이 이메일에 회신해주세요
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{sample_text}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✉️ 승인 방법 (이 이메일에 회신해주세요)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+피치: "피치A" 또는 "피치B" 또는 "피치수정: [내용]"
+루나: "루나A" 또는 "루나B" 또는 "루나수정: [내용]"
+예시: "피치A, 루나B"
+전체취소: "취소"
 
-✅ 전체 승인:  "승인" 이라고 회신
-✏️ 수정 요청: "수정: [수정내용]" 이라고 회신
-❌ 취소:       "취소" 라고 회신
-
-※ 회신 없이는 이메일이 절대 발송되지 않습니다.
+※ 회신 없이는 단 1통도 발송되지 않습니다.
 """
-        subject = f"[루나 발송 검수 요청] 총 {total}건 | 오늘 발송 예정"
-    else:
-        return {"status": "error", "message": "agent는 피치 또는 루나만 가능"}
 
-    result = _send_email_webhook(ceo_email, subject, body, agent)
-    result["total_emails"] = total
-    result["samples"] = [s.get("name", s.get("account", "")) for s in (valid[:3] if agent == "피치" else valid[:3])]
+    subject = f"[피치+루나 검수 요청] 4가지 시안 확인해주세요 — 4/30 마감"
+    result = _send_email_webhook(ceo_email, subject, body, "피치")
+    result["pitch_total"] = pitch_total
+    result["luna_total"] = luna_total
     return result
 
 

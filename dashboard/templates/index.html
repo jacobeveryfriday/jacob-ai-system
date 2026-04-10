@@ -246,22 +246,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-brand">
-  <!-- 즉시 실행 배너 -->
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-left:3px solid #1B2A4A;border-radius:8px;padding:16px;margin-bottom:16px">
-    <div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:10px">⚡ 피치 — 지금 바로 시작하세요</div>
-    <div style="font-size:12px;color:#6B6B6B;line-height:1.8;margin-bottom:12px">
-      1단계: 아래 [DB 수집 승인 요청] 클릭 → 타겟·비용 확인 → 승인<br>
-      2단계: Haiku가 자동으로 DB 수집 (약 20분)<br>
-      3단계: 이메일 초안 자동 생성 → CEO 검토<br>
-      4단계: [발송 승인] 클릭 → 즉시 발송
-    </div>
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
-      <span style="font-size:11px;color:#9B9B9B">예상 비용: 294원</span>
-      <span style="font-size:11px;color:#9B9B9B">예상 결과: DB 100건 / 미팅 10건</span>
-    </div>
-    <button onclick="requestPitchDB()" style="padding:10px 24px;background:#1B2A4A;border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer;font-weight:700">▶ DB 수집 승인 요청 올리기</button>
-  </div>
-  <!-- 1. 최상단 5개 KPI 카드 -->
+  <!-- KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="brand-top-kpi">
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">주요 타겟</p><p id="bd-target" style="font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">—</p></div>
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">발송 현황</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">발송 <span id="bd-sent">0</span> / 대기 <span id="bd-pending">0</span></p></div>
@@ -269,20 +254,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">목표 — 비대면 미팅</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px"><span id="bd-meeting-today">0</span> / <span id="bd-meeting-target">3</span>건</p><div style="height:3px;background:#EDEBE7;border-radius:2px;margin-top:6px"><div id="bd-meeting-bar" style="height:100%;background:#1A7A4C;border-radius:2px;width:0%"></div></div></div>
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="bd-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="bd-token-month">0</span></p></div>
   </div>
-  <!-- 2. CEO 승인 큐 -->
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:13px;font-weight:700;color:#1B2A4A">발송 대기 이메일 — CEO 승인 필요</span>
-        <span id="bd-queue-badge" style="background:#C4332B;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">0</span>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button onclick="approveAllEmails('피치')" style="padding:5px 12px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer;font-weight:600">전체 승인</button>
-        <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:4px;cursor:pointer">자동<input type="checkbox" id="pitch-auto-send" onchange="toggleAutoSend('피치',this.checked)" style="width:13px;height:13px;accent-color:#1B2A4A"></label>
-      </div>
-    </div>
-    <div id="pitch-email-queue" style="font-size:11px;color:#9B9B9B">로딩중...</div>
-  </div>
+  <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
   <!-- 3. 아웃바운드 퍼널 -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
     <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">아웃바운드 파이프라인</p>
@@ -296,53 +268,8 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
     </div>
     <div id="bd-bench-compare" style="font-size:9px;color:#9B9B9B;margin-top:8px"></div>
   </div>
-  <!-- 4. 인바운드 현황 -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">금일 문의</p><p id="pitch-ib-today" style="font-family:monospace;font-size:18px;font-weight:700;color:#1B2A4A">—</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">자동 응대</p><p id="pitch-ib-month" style="font-family:monospace;font-size:18px;font-weight:700;color:#2D4A7A">—</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">미팅 예약</p><p id="pitch-ib-meetings" style="font-family:monospace;font-size:18px;font-weight:700;color:#1A7A4C">—</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:12px;text-align:center"><p style="font-size:9px;color:#6B6B6B">미응대</p><p id="pitch-ib-unhandled" style="font-family:monospace;font-size:18px;font-weight:700;color:#C4332B">—</p></div>
-  </div>
-  <!-- 5. 크롤링/타겟 설정 -->
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">타겟 설정 + 크롤링</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">인바운드DB</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">올리브영</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">쿠팡</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">스마트스토어</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">LinkedIn</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">와디즈</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">IG 브랜드</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">정부지원사업</label>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <input id="crawl-keyword" placeholder="키워드 (예: 비건 화장품)" style="flex:1;padding:6px 10px;background:#F8F7F5;border:0.5px solid #E8E6E1;border-radius:6px;font-size:11px;color:#1B2A4A">
-      <button onclick="startCrawlBrands()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap">크롤링 시작</button>
-      <button onclick="generatePitchEmails()" style="padding:6px 14px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer;white-space:nowrap">이메일 생성</button>
-    </div>
-  </div>
-  <!-- 프로모션 설정 카드 -->
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">이메일 제안 내용 설정</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
-      <div>
-        <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">프로모션 선택</p>
-        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="4월 앵콜 — 숏폼 무제한 300만원" checked style="width:12px;height:12px"> 숏폼 무제한 300만원</label>
-        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="구매평 체험단 — 100건 이상 3천원/건" style="width:12px;height:12px"> 구매평 체험단 3천원/건</label>
-        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="글로벌 구매평 — 100건 이상 3만원/건" style="width:12px;height:12px"> 글로벌 구매평 3만원/건</label>
-        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-promo" value="맞춤형 키 인플루언서 — 최소 10만원/인" style="width:12px;height:12px"> 키 인플루언서 10만원/인</label>
-      </div>
-      <div>
-        <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">강조 포인트</p>
-        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-highlight" value="리뷰 없으면 구매 없다" checked style="width:12px;height:12px"> 리뷰 없으면 구매 없다</label>
-        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-highlight" value="무제한 숏폼" style="width:12px;height:12px"> 무제한 숏폼</label>
-        <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="pitch-highlight" value="매출 전환 보장" style="width:12px;height:12px"> 매출 전환 보장</label>
-      </div>
-    </div>
-    <button onclick="generatePromoEmails()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer">이 설정으로 이메일 생성</button>
-  </div>
-  <div id="pitch-gauge" style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
+  <!-- 인바운드 현황은 파이프라인에 통합 -->
+  <!-- KPI + 파이프라인만 표시 (승인은 이메일로) -->
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">일간</button>
     <button id="brand-tab-monthly" onclick="setBrandTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">누적</button>
@@ -408,22 +335,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-influencer">
-  <!-- 즉시 실행 배너 -->
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-left:3px solid #2D4A7A;border-radius:8px;padding:16px;margin-bottom:16px">
-    <div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:10px">⚡ 루나 — 지금 바로 시작하세요</div>
-    <div style="font-size:12px;color:#6B6B6B;line-height:1.8;margin-bottom:12px">
-      1단계: 아래 [DB 수집 승인 요청] 클릭 → 타겟·비용 확인 → 승인<br>
-      2단계: 인플루언서 DB 50명 자동 수집 (약 15분)<br>
-      3단계: 협찬 제안 이메일 자동 생성 → CEO 검토<br>
-      4단계: [발송 승인] 클릭 → 즉시 발송
-    </div>
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
-      <span style="font-size:11px;color:#9B9B9B">예상 비용: 196원</span>
-      <span style="font-size:11px;color:#9B9B9B">예상 결과: DB 50명 / 협찬확정 5건</span>
-    </div>
-    <button onclick="requestLunaDB()" style="padding:10px 24px;background:#2D4A7A;border:none;border-radius:8px;color:#fff;font-size:13px;cursor:pointer;font-weight:700">▶ DB 수집 승인 요청 올리기</button>
-  </div>
-  <!-- 1. 최상단 5개 KPI 카드 -->
+  <!-- KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px" id="inf-top-kpi">
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">주요 타겟</p><p id="inf-target" style="font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">—</p></div>
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">발송 현황</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">발송 <span id="inf-sent">0</span> / 대기 <span id="inf-pending">0</span></p></div>
@@ -431,20 +343,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">목표 — 인플루언서 확보</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px"><span id="inf-acq-today">0</span> / <span id="inf-acq-target">15</span>명</p><div style="height:3px;background:#EDEBE7;border-radius:2px;margin-top:6px"><div id="inf-acq-bar" style="height:100%;background:#1A7A4C;border-radius:2px;width:0%"></div></div></div>
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="inf-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="inf-token-month">0</span></p></div>
   </div>
-  <!-- 2. CEO 승인 큐 -->
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:13px;font-weight:700;color:#1B2A4A">발송 대기 이메일 — CEO 승인 필요</span>
-        <span id="inf-queue-badge" style="background:#C4332B;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">0</span>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button onclick="approveAllEmails('루나')" style="padding:5px 12px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer;font-weight:600">전체 승인</button>
-        <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:4px;cursor:pointer">자동<input type="checkbox" id="luna-auto-send" onchange="toggleAutoSend('루나',this.checked)" style="width:13px;height:13px;accent-color:#1B2A4A"></label>
-      </div>
-    </div>
-    <div id="luna-email-queue" style="font-size:11px;color:#9B9B9B">로딩중...</div>
-  </div>
+  <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
   <!-- 3. 인플루언서 확보 퍼널 -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
     <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">인플루언서 확보 파이프라인</p>
@@ -457,53 +356,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
       <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">확보</p><p id="lp-secured" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
     </div>
   </div>
-  <!-- 4. 타겟 설정 + 크롤링 -->
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">인플루언서 타겟 설정</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">KR</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">US</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">JP</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">VN</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">ID</label>
-      <span style="color:#E8E6E1">|</span>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" checked style="width:12px;height:12px">Instagram</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">TikTok</label>
-      <label style="font-size:10px;color:#6B6B6B;display:flex;align-items:center;gap:3px"><input type="checkbox" style="width:12px;height:12px">YouTube</label>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <input placeholder="해시태그 (kbeauty, skincare)" style="flex:1;padding:6px 10px;background:#F8F7F5;border:0.5px solid #E8E6E1;border-radius:6px;font-size:11px;color:#1B2A4A">
-      <button onclick="startCrawlInfluencers()" style="padding:6px 14px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap">크롤링 시작</button>
-      <button onclick="generateLunaEmails()" style="padding:6px 14px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:11px;cursor:pointer;white-space:nowrap">이메일 생성</button>
-    </div>
-  </div>
-  <div id="luna-gauge" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
-  <!-- 루나 에이전트 — 당일+누적+인바운드 -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
-      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">당일 아웃바운드</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">발송</p><p id="pitch-agent-sent" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">답변</p><p id="pitch-agent-replied" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">매칭</p><p id="pitch-agent-matched" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">—</p></div>
-      </div>
-    </div>
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
-      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">이번달 누적</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">총 발송</p><p id="luna-month-sent" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">총 답변</p><p id="luna-month-replied" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">총 매칭</p><p id="luna-month-matched" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">—</p></div>
-      </div>
-    </div>
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px">
-      <p style="font-size:11px;font-weight:700;color:#1B2A4A;margin-bottom:10px">인바운드 (신규 지원)</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">신규 지원</p><p id="luna-ib-new" style="font-family:monospace;font-size:20px;font-weight:700;color:#B8860B">—</p></div>
-        <div style="text-align:center"><p style="font-size:9px;color:#6B6B6B">캠페인 배정</p><p id="luna-ib-assigned" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">—</p></div>
-      </div>
-    </div>
-  </div>
+  <!-- KPI + 파이프라인만 (승인은 이메일로) -->
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
     <button onclick="setInfMainTab('members')" id="inf-main-tab-members" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">플랫폼 회원현황</button>
     <button onclick="setInfMainTab('list')" id="inf-main-tab-list" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">키인플루언서 현황</button>
