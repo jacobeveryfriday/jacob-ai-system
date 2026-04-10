@@ -1232,16 +1232,24 @@ async def api_ads_performance():
         return None
 
     def _classify_channel(ch_raw):
-        """유입채널 값 → Meta/네이버/구글/기타 분류 (대소문자 무관)"""
+        """유입채널 값 → Meta/네이버/구글/기타 분류. 실제 시트값 패턴 모두 커버."""
         ch = ch_raw.strip().lower() if ch_raw else ""
-        if "sns" in ch: return "Meta"
-        if "cpc" in ch or ch == "na" or "naver" in ch: return "네이버"
-        if "google_sa" in ch or "google" in ch: return "구글"
+        # Meta: sns, 메타, meta, 페이스북, 인스타, facebook, instagram, fb, ig
+        if any(k in ch for k in ["sns", "메타", "meta", "페이스", "인스타", "facebook", "instagram", "fb", "ig"]):
+            return "Meta"
+        # 네이버: cpc, naver, 네이버, na, 블로그, blog
+        if any(k in ch for k in ["cpc", "naver", "네이버", "블로그", "blog"]) or ch == "na":
+            return "네이버"
+        # 구글: google, 구글, gsa, google_sa
+        if any(k in ch for k in ["google", "구글", "gsa"]):
+            return "구글"
         return "기타"
 
     # ========== 1. 인바운드시트 [파센문의] → DB수 / 채널별 / 미팅전환율 ==========
     ib_total, ib_by_ch, ib_valid, ib_by_ch_valid, ib_by_staff = 0, {}, 0, {}, {}
     prev_ib_total, prev_ib_valid = 0, 0
+    channel_raw_values = set()  # 디버그: J열 unique 값 수집
+    _ch_col_debug = None
     try:
         ib_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
         if ib_rows and len(ib_rows) > 2:
@@ -1250,22 +1258,27 @@ async def api_ads_performance():
             month_col = _find_col(headers, "월")
             date_col = _auto_detect_date_col(headers, ib_rows[hdr_idx+1:hdr_idx+6])
             ch_col = _find_col(headers, "유입채널")
+            _ch_col_debug = ch_col
             status_col = _find_col(headers, "컨텍현황", "컨택현황")
             staff_col = _find_col(headers, "팀담당자", "담당자")
+            print(f"[ads-perf] 인바운드 헤더({hdr_idx}행): {headers}")
             print(f"[ads-perf] 인바운드 cols: month={month_col} date={date_col} ch={ch_col} status={status_col} staff={staff_col}")
+            # 헤더가 없으면 전체 헤더 덤프
+            if ch_col is None:
+                print(f"[ads-perf] WARNING: '유입채널' 컬럼 못 찾음! 헤더 전체: {headers}")
             for row in ib_rows[hdr_idx+1:]:
                 if len(row) < 3: continue
                 month_val = str(row[month_col]).strip() if month_col is not None and month_col < len(row) else ""
                 date_val = str(row[date_col]).strip() if date_col is not None and date_col < len(row) else ""
                 row_date = _parse_row_date(date_val, month_val)
-                # 이번달: 1일 ~ 어제
                 is_this = row_date is not None and month_start.date() <= row_date <= yesterday.date()
                 is_prev = row_date is not None and prev_month_start.date() <= row_date <= prev_month_end.date()
-                # 날짜 파싱 실패 시 월 컬럼 폴백
                 if row_date is None and month_val:
                     is_this = this_month_dot in month_val
                     is_prev = f"{prev_month_end.year}.{prev_month_end.month:02d}" in month_val
                 ch_raw = str(row[ch_col]).strip() if ch_col is not None and ch_col < len(row) else ""
+                if is_this and ch_raw:
+                    channel_raw_values.add(ch_raw)
                 ch_key = _classify_channel(ch_raw)
                 st = str(row[status_col]).strip() if status_col is not None and status_col < len(row) else ""
                 is_valid = "부적합" not in st and "정보누락" not in st
@@ -1280,7 +1293,9 @@ async def api_ads_performance():
                 if is_prev:
                     prev_ib_total += 1
                     if is_valid: prev_ib_valid += 1
-            print(f"[ads-perf] DB: this={ib_total}(valid={ib_valid}) prev={prev_ib_total} ch={ib_by_ch}")
+            print(f"[ads-perf] DB: this={ib_total}(valid={ib_valid}) prev={prev_ib_total}")
+            print(f"[ads-perf] 채널별: {ib_by_ch}")
+            print(f"[ads-perf] J열 유입채널 unique값: {sorted(channel_raw_values)}")
     except Exception as e:
         print(f"[ads-perf] inbound error: {e}")
 
@@ -1505,6 +1520,11 @@ async def api_ads_performance():
         "monthly_trend": monthly_trend,
         # 디버그
         "meta_debug": meta_debug,
+        "channel_debug": {
+            "ch_col_index": _ch_col_debug,
+            "raw_unique_values": sorted(channel_raw_values) if channel_raw_values else [],
+            "mapped_result": dict(ib_by_ch),
+        },
     }
 
 
