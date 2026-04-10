@@ -2470,6 +2470,18 @@ async def api_send_luna_db_request():
     result = _send_email_smtp(ceo_email, subject, "루나 DB 수집 승인 요청", "루나", html_body=html)
     return result
 
+# ===== 업무시간 체크 =====
+def _is_business_hours(country: str = "KR") -> bool:
+    """현지 업무시간(평일 09~18시) 여부 확인."""
+    offsets = {"KR": 9, "JP": 9, "US": -4, "TH": 7, "ID": 7, "VN": 7, "MY": 8, "SG": 8}
+    offset = offsets.get(country[:2].upper(), 9)
+    now_utc = datetime.utcnow()
+    local_hour = (now_utc.hour + offset) % 24
+    local_weekday = ((now_utc.weekday() * 24 + now_utc.hour + offset) // 24) % 7
+    # 0=월 ~ 4=금 = 평일, 5=토 6=일 = 주말
+    is_weekend = local_weekday >= 5
+    return not is_weekend and 9 <= local_hour < 18
+
 # ===== 피치 자율 실행 + 품질 점검 + 2차 이메일 =====
 
 PITCH_TEMPLATES = {
@@ -2482,6 +2494,12 @@ PITCH_TEMPLATES = {
     "C": {"label": "후킹형",
           "subject": "{brand}, 지금 가장 고민하시는 게 뭔가요?",
           "body": "안녕하세요 {contact}님,\n\n리뷰가 없어서, 숏폼이 안 터져서, 해외 진출이 막막해서.\n브랜드마다 고민이 다릅니다.\n\n진출하려는 국가나 채널을 알려주시면\n10년간 8개국 2만여 브랜드와 함께한 경험으로\n딱 맞는 사례를 찾아 30분 비대면으로 설명드리겠습니다.\n\n📎 상품소개서 및 프로모션: https://buly.kr/AF24dn7\n📅 30분 비대면 미팅 예약: https://buly.kr/1c9NOdW\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+    "A_EN": {"label": "Success Story (EN)",
+             "subject": "287M views from 1 short video — {brand} could be next",
+             "body": "Hi {contact},\n\nOne of our partners hit 1B KRW in sales from a 2.5-minute live stream in Malaysia.\nAnother drove 287M views and +180% revenue from a single short-form video.\n\nLet us know which market or channel you're focusing on, and we'll share the most relevant case study.\n\nHappy to explain in a 30-min virtual call.\n\n📎 Deck + Promotions: https://buly.kr/AF24dn7\n📅 Book a call: https://buly.kr/1c9NOdW\n\n---\nPitch\nJunior Consultant, 08liter Global\n\npitch@08liter.com\nwww.08liter.com"},
+    "B_EN": {"label": "Promo Urgent (EN)",
+             "subject": "April only — 100 short videos for 2M KRW ({brand} eligible)",
+             "body": "Hi {contact},\n\nThis month only, we're offering 100 short-form videos (Reels/TikTok) for 2M KRW — regular price 5M KRW.\n\nFor global markets (Amazon, Shopee, TikTok Shop): 100 videos for 5M KRW (regular 10M KRW).\n\nAll content is yours to reuse as ad creative for 3 months at no extra cost.\n\n📎 Full details: https://buly.kr/AF24dn7\n📅 30-min call: https://buly.kr/1c9NOdW\n\n---\nPitch\nJunior Consultant, 08liter Global\n\npitch@08liter.com\nwww.08liter.com"},
 }
 
 PITCH_REPLY_TEMPLATES = {
@@ -2541,11 +2559,19 @@ async def api_pitch_send(request: Request):
         leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
     limit = min(body.get("limit", 30), 30)
     targets = leads[:limit]
-    sent, skipped, errors_list = 0, 0, []
+    sent, skipped, deferred, errors_list = 0, 0, 0, []
     for t in targets:
         brand = t.get("name", "")
         contact = brand
         email = t.get("email", "")
+        country = t.get("country", "KR")[:2].upper() if t.get("country") else "KR"
+        # 업무시간 체크
+        if not _is_business_hours(country):
+            deferred += 1
+            continue
+        # 언어 자동 선택: 한국/일본 → 한국어, 그 외 → 영어
+        if country not in ("KR", "JP") and template_key + "_EN" in PITCH_TEMPLATES:
+            tmpl = PITCH_TEMPLATES[template_key + "_EN"]
         subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact)
         email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact)
         qc = _pitch_quality_check(email, subj, email_body)
@@ -2562,7 +2588,52 @@ async def api_pitch_send(request: Request):
             skipped += 1
             errors_list.append({"brand": brand, "errors": [result.get("message", "발송 실패")]})
     _record_perf("피치", "email_sent_batch", sent)
-    return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped, "errors": errors_list[:10]}
+    return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped, "deferred": deferred, "errors": errors_list[:10]}
+
+@app.post("/api/agents/pitch/daily")
+async def api_pitch_daily(request: Request):
+    """피치 매일 자율 실행. trigger=immediate/scheduled, action=collect_only/full."""
+    body = await request.json()
+    action = body.get("action", "full")
+    now = datetime.now(KST)
+    result = {"timestamp": now.isoformat(), "steps": []}
+
+    # STEP 1: 피치_클로드 탭 신규 DB 건수 확인
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클로드", ttl_key="inbound")
+    unsent = 0
+    if rows and len(rows) > 1:
+        for row in rows[1:]:
+            email = str(row[7]).strip() if len(row) > 7 else ""
+            sent_status = str(row[13]).strip() if len(row) > 13 else ""
+            if email and "@" in email and not sent_status:
+                unsent += 1
+    result["steps"].append({"step": "DB 확인", "unsent": unsent})
+
+    # STEP 2: 부족하면 DB 수집 (현재는 인바운드 시트 기반)
+    collected = 0
+    if unsent < 10:
+        leads_data = await api_recontact_leads()
+        leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
+        collected = len(leads)
+        _record_perf("피치", "crawl_brands", collected)
+    result["steps"].append({"step": "DB 수집", "collected": collected, "needed": unsent < 10})
+
+    if action == "collect_only":
+        # DB 수집만 (발송은 월요일 09:00)
+        notify_body = f"[피치] DB {unsent + collected}건 확인 완료.\n신규 미발송: {unsent}건\n추가 수집: {collected}건\n\n월요일 08:30에 검수 이메일 발송 예정입니다."
+        _send_email_smtp("jacob@08liter.com", "[피치] DB 수집 완료 — 월요일 발송 예정", notify_body, "피치")
+        result["steps"].append({"step": "CEO 알림", "message": "월요일 발송 예정"})
+        return result
+
+    # STEP 3: 업무시간 체크
+    if not _is_business_hours("KR"):
+        result["steps"].append({"step": "발송 보류", "reason": "업무시간 외 (월~금 09~18시만)"})
+        return result
+
+    # STEP 3: CEO 검수 이메일 발송
+    review_result = await api_send_review_email()
+    result["steps"].append({"step": "CEO 검수 발송", "status": review_result.get("status"), "total": review_result.get("pitch_total", 0)})
+    return result
 
 @app.post("/api/pitch/revise")
 async def api_pitch_revise(request: Request):
