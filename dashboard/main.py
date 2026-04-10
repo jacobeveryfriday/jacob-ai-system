@@ -2470,6 +2470,135 @@ async def api_send_luna_db_request():
     result = _send_email_smtp(ceo_email, subject, "루나 DB 수집 승인 요청", "루나", html_body=html)
     return result
 
+# ===== 피치 자율 실행 + 품질 점검 + 2차 이메일 =====
+
+PITCH_TEMPLATES = {
+    "A": {"label": "성공사례형",
+          "subject": "2분 30초에 1억, 숏폼 1개로 287만 조회 — {brand}의 다음 사례가 될 수 있습니다",
+          "body": "안녕하세요 {contact}님,\n\n저희 파트너가 말레이시아 라이브 2분 30초 만에 1억 매출,\n국내 파트너는 숏폼 1개로 287만 조회·매출 +180%를 만들었습니다.\n\n{brand}이 진출하려는 국가나 채널, 고민하시는 부분을\n알려주시면 관련 성공 사례를 바로 보내드리겠습니다.\n편하신 시간에 30분 비대면으로 직접 설명드릴 수도 있습니다.\n\n📎 상품소개서 및 프로모션: https://buly.kr/AF24dn7\n📅 30분 비대면 미팅 예약: https://buly.kr/1c9NOdW\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+    "B": {"label": "프로모션형",
+          "subject": "4/30 마감 — 숏폼 100건 200만원, {brand} 신청 가능합니다",
+          "body": "안녕하세요 {contact}님,\n\n4월 한 달만 진행하는 프로모션입니다.\n\n국내: 숏폼 100건 200만원 (정가 500만원 / 60% 할인)\n해외(아마존·쇼피·틱톡샵): 글로벌 숏폼 100건 500만원 (정가 1,000만원 / 50% 할인)\n\n생성된 콘텐츠는 3개월간 광고 소재로 무료 활용 가능합니다.\n{brand}에 맞는 활용 방법을 30분 비대면으로 설명드릴 수 있습니다.\n\n📎 전체 프로모션 상세: https://buly.kr/AF24dn7\n📅 30분 비대면 미팅 예약: https://buly.kr/1c9NOdW\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+    "C": {"label": "후킹형",
+          "subject": "{brand}, 지금 가장 고민하시는 게 뭔가요?",
+          "body": "안녕하세요 {contact}님,\n\n리뷰가 없어서, 숏폼이 안 터져서, 해외 진출이 막막해서.\n브랜드마다 고민이 다릅니다.\n\n진출하려는 국가나 채널을 알려주시면\n10년간 8개국 2만여 브랜드와 함께한 경험으로\n딱 맞는 사례를 찾아 30분 비대면으로 설명드리겠습니다.\n\n📎 상품소개서 및 프로모션: https://buly.kr/AF24dn7\n📅 30분 비대면 미팅 예약: https://buly.kr/1c9NOdW\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+}
+
+PITCH_REPLY_TEMPLATES = {
+    "meeting": {"subject": "RE: 미팅 예약 링크 보내드립니다",
+                "body": "안녕하세요 {contact}님,\n\n시간 내주셔서 감사합니다.\n아래 링크에서 편하신 시간 선택해 주세요.\n\n📅 https://buly.kr/1c9NOdW\n\n미팅 전에 아래 내용 미리 알려주시면 더 알차게 준비하겠습니다.\n\n· 주력 판매 채널\n· 관심 있는 마케팅 방식\n· 진출하려는 국가\n\n기다리겠습니다.\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+    "info": {"subject": "RE: 공팔리터 서비스 안내드립니다",
+             "body": "안녕하세요 {contact}님,\n\n저희는 세 가지 서비스를 운영합니다.\n\n① 구매평 — 쿠팡·올리브영·아마존 등 실구매 리뷰\n② 숏폼 체험단 — 인스타·틱톡·쇼츠 영상 콘텐츠 제작\n③ 맞춤 인플루언서 — 브랜드 핏에 맞는 KOL 협업\n\n4월 한정 최대 60% 할인 중입니다.\n\n📎 자세한 내용: https://buly.kr/AF24dn7\n📅 30분 비대면 미팅: https://buly.kr/1c9NOdW\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+    "later": {"subject": "{brand}, 4월 30일이 마지막입니다",
+              "body": "안녕하세요 {contact}님,\n\n지난번 연락드렸던 공팔리터 피치입니다.\n\n4월 한정 60% 할인 프로모션이 이번 달 말 마감됩니다.\n바쁘신 건 충분히 이해합니다.\n5월 일정으로 미리 날짜만 잡아두셔도 됩니다.\n\n📅 https://buly.kr/1c9NOdW\n📎 상품소개서: https://buly.kr/AF24dn7\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+    "reject": {"subject": "RE: 말씀 감사합니다",
+               "body": "안녕하세요 {contact}님,\n\n말씀 감사합니다.\n리뷰·숏폼·해외 진출 관련해서\n고민이 생기실 때 편하게 연락 주세요.\n\n---\n공팔리터 주니어 컨설턴트\n피치 드림\n\npitch@08liter.com\nwww.08liter.com"},
+}
+
+def _pitch_quality_check(email: str, subject: str, body: str) -> list:
+    """발송 전 품질 점검. 실패 사유 리스트 반환 (빈 리스트 = 통과)."""
+    errors = []
+    if not email or "@" not in email:
+        errors.append("이메일 주소 무효")
+    if not subject:
+        errors.append("제목 비어있음")
+    if not body:
+        errors.append("본문 비어있음")
+    if "{" in subject or "{" in body:
+        errors.append("개인화 미치환 ({} 잔존)")
+    if "buly.kr/AF24dn7" not in body:
+        errors.append("소개서 링크 누락")
+    if "buly.kr/1c9NOdW" not in body:
+        errors.append("미팅 링크 누락")
+    if "공팔리터" not in body and "피치 드림" not in body:
+        errors.append("서명 누락")
+    return errors
+
+@app.post("/api/pitch/send")
+async def api_pitch_send(request: Request):
+    """CEO 승인된 시안으로 피치 이메일 발송. 품질 점검 포함."""
+    body = await request.json()
+    template_key = body.get("template", "A").upper()
+    tmpl = PITCH_TEMPLATES.get(template_key, PITCH_TEMPLATES["A"])
+    leads_data = await api_recontact_leads()
+    leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
+    limit = min(body.get("limit", 30), 30)
+    targets = leads[:limit]
+    sent, skipped, errors_list = 0, 0, []
+    for t in targets:
+        brand = t.get("name", "")
+        contact = brand
+        email = t.get("email", "")
+        subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact)
+        email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact)
+        qc = _pitch_quality_check(email, subj, email_body)
+        if qc:
+            skipped += 1
+            errors_list.append({"brand": brand, "errors": qc})
+            _record_perf("피치", "quality_fail")
+            continue
+        html = _build_pitch_html(brand, email_body)
+        result = _send_email(email, subj, html, "피치")
+        if result["status"] == "ok":
+            sent += 1
+        else:
+            skipped += 1
+            errors_list.append({"brand": brand, "errors": [result.get("message", "발송 실패")]})
+    _record_perf("피치", "email_sent_batch", sent)
+    return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped, "errors": errors_list[:10]}
+
+@app.post("/api/pitch/reply")
+async def api_pitch_reply(request: Request):
+    """브랜드 답변 유형별 2차 이메일 자동 발송."""
+    body = await request.json()
+    reply_type = body.get("type", "info")
+    brand = body.get("brand", "")
+    contact = body.get("contact", brand)
+    email = body.get("email", "")
+    tmpl = PITCH_REPLY_TEMPLATES.get(reply_type, PITCH_REPLY_TEMPLATES["info"])
+    subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact)
+    email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact)
+    html = _build_pitch_html(brand, email_body)
+    result = _send_email(email, subj, html, "피치")
+    _record_perf("피치", f"reply_{reply_type}")
+    return {"status": result["status"], "type": reply_type, "to": email}
+
+@app.get("/api/pitch/performance")
+async def api_pitch_performance():
+    """피치 성과 대시보드 — 시트 실데이터 기반."""
+    pipeline = await api_sheet_pipeline(agent="피치")
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    month_prefix = now.strftime("%Y-%m")
+    today_p = perf.get(today, {}).get("피치", {})
+    monthly_p = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix) and "피치" in ad:
+            for mk, mv in ad["피치"].items():
+                monthly_p[mk] = monthly_p.get(mk, 0) + mv
+    total = pipeline.get("total", {})
+    funnel = pipeline.get("funnel", {})
+    return {
+        "kpi": {
+            "total_db": total.get("db", 0),
+            "with_email": total.get("with_email", 0),
+            "sent_today": today_p.get("email_sent", 0) + today_p.get("email_sent_batch", 0),
+            "sent_month": monthly_p.get("email_sent", 0) + monthly_p.get("email_sent_batch", 0),
+            "quality_fail": monthly_p.get("quality_fail", 0),
+            "working": total.get("working", 0),
+            "meeting": total.get("meeting", 0),
+        },
+        "funnel": funnel,
+        "reply_types": {
+            "meeting": monthly_p.get("reply_meeting", 0),
+            "info": monthly_p.get("reply_info", 0),
+            "later": monthly_p.get("reply_later", 0),
+            "reject": monthly_p.get("reply_reject", 0),
+        },
+        "sheet_url": SHEET_URLS.get("피치", ""),
+    }
+
 
 async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
     """재접촉 캠페인 내부 실행 함수."""

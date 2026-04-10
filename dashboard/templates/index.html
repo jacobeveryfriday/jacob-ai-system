@@ -268,8 +268,25 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
     </div>
     <div id="bd-bench-compare" style="font-size:9px;color:#9B9B9B;margin-top:8px"></div>
   </div>
-  <!-- 인바운드 현황은 파이프라인에 통합 -->
-  <!-- KPI + 파이프라인만 표시 (승인은 이메일로) -->
+  <!-- 피치 성과 보고 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">이번 달 성과</p>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px" id="pitch-perf-cards">
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">총 DB</p><p id="perf-db" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">발송</p><p id="perf-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">오픈율</p><p id="perf-open" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—%</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">답변율</p><p id="perf-reply" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—%</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">미팅</p><p id="perf-meeting" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">품질실패</p><p id="perf-qfail" style="font-family:monospace;font-size:16px;font-weight:700;color:#C4332B">—</p></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:6px"><p style="font-size:8px;color:#6B6B6B">미팅수락</p><p id="perf-t-meeting" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C">0</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:6px"><p style="font-size:8px;color:#6B6B6B">정보요청</p><p id="perf-t-info" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A">0</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:6px"><p style="font-size:8px;color:#6B6B6B">나중에</p><p id="perf-t-later" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B">0</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:6px"><p style="font-size:8px;color:#6B6B6B">거절</p><p id="perf-t-reject" style="font-family:monospace;font-size:14px;font-weight:700;color:#C4332B">0</p></div>
+    </div>
+    <p style="font-size:9px;color:#9B9B9B;margin-top:8px">피치 시트 실데이터 기반 · 5분마다 갱신</p>
+  </div>
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:20px">
     <button id="brand-tab-daily" onclick="setBrandTab('daily')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">일간</button>
     <button id="brand-tab-monthly" onclick="setBrandTab('monthly')" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">누적</button>
@@ -1633,6 +1650,17 @@ detail:'타겟: 뷰티 인플루언서 (팔로워 1만~100만)\n채널: Instagra
 expected_impact:'DB 50명 → 유효 35명 → 협찬확정 5건 예상',
 action_type:'luna_db_collect'
 })}).then(function(r){return r.json()}).then(function(){alert('승인 요청이 CEO 큐에 등록되었습니다.')}).catch(function(){alert('오류')})}
+function loadPitchPerf(){
+fetch('/api/pitch/performance').then(function(r){return r.json()}).then(function(d){
+var k=d.kpi||{},rt=d.reply_types||{};
+var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
+s('perf-db',k.total_db||0);s('perf-sent',k.sent_month||0);
+s('perf-open',(k.sent_month>0?Math.round(k.working/Math.max(k.sent_month,1)*100):0)+'%');
+s('perf-reply',(k.sent_month>0?Math.round(k.meeting/Math.max(k.sent_month,1)*100):0)+'%');
+s('perf-meeting',k.meeting||0);s('perf-qfail',k.quality_fail||0);
+s('perf-t-meeting',rt.meeting||0);s('perf-t-info',rt.info||0);
+s('perf-t-later',rt.later||0);s('perf-t-reject',rt.reject||0);
+}).catch(function(){})}
 function loadKakaoStatus(){
 fetch('/health').then(function(r){return r.json()}).then(function(d){
 var svc=d.services||{};var isOn=svc.kakao_b2b==='connected'||svc.kakao_b2c==='connected';
@@ -1695,7 +1723,7 @@ if(pageId==='alerts')loadAlertBoard();
 if(pageId==='settings')loadGoals();
 if(pageId==='api-status')loadApiStatus();
 if(pageId==='cs'){initCsCharts('brand');loadKakaoStatus()}
-if(pageId==='brand'){loadOutboundDashboard('피치','bd');loadSheetPipeline('피치')}
+if(pageId==='brand'){loadOutboundDashboard('피치','bd');loadSheetPipeline('피치');loadPitchPerf()}
 if(pageId==='influencer'){loadOutboundDashboard('루나','inf');loadSheetPipeline('루나')}
 if(pageId==='sns')loadSheetPipeline('소피');
 loadAgentPerf()};
