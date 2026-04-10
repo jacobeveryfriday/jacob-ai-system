@@ -1241,10 +1241,9 @@ async def api_ads_performance():
     except Exception as e:
         print(f"ads-perf inbound error: {e}")
 
-    # ---------- 2. 계약 시트 → 매출합계 / 담당자별 매출·계약 ----------
+    # ---------- 2. 계약 시트 → 매출합계 ----------
     month_revenue, prev_month_revenue = 0, 0
     month_contracts, prev_month_contracts = 0, 0
-    person_map = {}
     monthly_trend = []
     try:
         ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
@@ -1253,10 +1252,8 @@ async def api_ads_performance():
             headers = [str(h).replace("\n", " ").strip() for h in ct_rows[hdr_idx]]
             ct_date_idx = _find_col(headers, "계산서 작성일자", "작성일자", "등록기준일", "발행일")
             ct_amount_idx = _find_col(headers, "총합계", "공급가액")
-            ct_staff_idx = _find_col(headers, "요청담당자명", "요청담당자", "담당자")
             if ct_date_idx is None: ct_date_idx = 1
             if ct_amount_idx is None and len(headers) > 19: ct_amount_idx = 19
-            # 월별 집계용
             monthly_map = {}
             for row in ct_rows[hdr_idx+1:]:
                 if not row or len(row) < 3: continue
@@ -1270,21 +1267,14 @@ async def api_ads_performance():
                 if ym_dot not in monthly_map: monthly_map[ym_dot] = {"revenue": 0, "contracts": 0}
                 monthly_map[ym_dot]["revenue"] += rev
                 monthly_map[ym_dot]["contracts"] += 1
-                staff = str(row[ct_staff_idx]).strip() if ct_staff_idx is not None and ct_staff_idx < len(row) else ""
                 if ym == this_ym:
                     month_revenue += rev
                     month_contracts += 1
-                    if staff:
-                        if staff not in person_map: person_map[staff] = {"revenue": 0, "contracts": 0}
-                        person_map[staff]["revenue"] += rev
-                        person_map[staff]["contracts"] += 1
                 elif ym == prev_ym:
                     prev_month_revenue += rev
                     prev_month_contracts += 1
-            # 월별 추이 (최근 6개월)
             for ym_dot in sorted(monthly_map.keys())[-6:]:
                 d = monthly_map[ym_dot]
-                spend = d["revenue"]  # 광고비는 별도, 여기선 매출만
                 monthly_trend.append({"month": ym_dot, "contracts": d["contracts"],
                                       "revenue": d["revenue"], "spend": 0, "roas": 0, "avg_price": round(d["revenue"]/max(d["contracts"],1))})
     except Exception as e:
@@ -1327,16 +1317,63 @@ async def api_ads_performance():
         ch_spend = meta_spend if ch_key == "Meta" else (naver_spend if ch_key == "네이버" else google_spend)
         channel_data[ch_key] = {"db": ch_db, "spend": ch_spend, "cpa": round(ch_spend / max(ch_db, 1)) if ch_spend else 0}
 
-    # 담당자별 KPI
+    # ---------- 담당자별 KPI — "담당자별 계약전환율" 탭 직접 연동 ----------
     by_person = []
-    for name, vals in person_map.items():
-        staff_db = ib_by_staff.get(name, 0)
-        staff_ad_cost = staff_db * 30000
-        staff_roas = round(vals["revenue"] / max(staff_ad_cost, 1) * 100, 1) if staff_ad_cost > 0 else 0
-        by_person.append({"name": name, "revenue": vals["revenue"], "contracts": vals["contracts"],
-                          "db_count": staff_db, "roas": staff_roas,
-                          "conversion": round(vals["contracts"] / max(staff_db, 1) * 100, 1) if staff_db else 0})
-    by_person.sort(key=lambda x: x["revenue"], reverse=True)
+    try:
+        staff_rows = fetch_sheet(SHEET_CONTRACT, "A:J", "담당자별 계약전환율", ttl_key="contract")
+        if staff_rows and len(staff_rows) > 1:
+            # 헤더 찾기 (3번째 행 부근에 헤더가 있을 수 있음)
+            sh_hdr_idx = 0
+            for ri, row in enumerate(staff_rows[:5]):
+                row_text = " ".join(str(c).replace("\n", " ") for c in row)
+                if "담당자" in row_text or "DB건수" in row_text or "계약건수" in row_text:
+                    sh_hdr_idx = ri
+                    break
+            sh_headers = [str(h).replace("\n", " ").strip() for h in staff_rows[sh_hdr_idx]]
+            col_month = _find_col(sh_headers, "월구분", "월")
+            col_name_kr = _find_col(sh_headers, "국문담당자명", "국문", "담당자명")
+            col_name_en = _find_col(sh_headers, "담당자명")  # 영문 폴백
+            col_db = _find_col(sh_headers, "DB건수", "DB수")
+            col_contracts = _find_col(sh_headers, "계약건수")
+            col_revenue = _find_col(sh_headers, "계약매출")
+            col_conv = _find_col(sh_headers, "계약전환율", "전환율")
+            col_lead_time = _find_col(sh_headers, "리드타임")
+            col_db_cost = _find_col(sh_headers, "db비용", "DB비용")
+            col_roas = _find_col(sh_headers, "로하스", "ROAS", "roas")
+            if col_month is None: col_month = 0
+            if col_name_kr is None: col_name_kr = col_name_en if col_name_en is not None else 2
+            if col_db is None: col_db = 3
+            if col_contracts is None: col_contracts = 4
+            if col_revenue is None: col_revenue = 5
+            print(f"[ads-perf] 담당자탭 헤더: {sh_headers}, month_col={col_month}, name={col_name_kr}, db={col_db}, rev={col_revenue}")
+            for row in staff_rows[sh_hdr_idx + 1:]:
+                if not row or len(row) < 3: continue
+                month_val = str(row[col_month]).strip() if col_month < len(row) else ""
+                if this_month_dot not in month_val: continue
+                name = str(row[col_name_kr]).strip() if col_name_kr < len(row) else ""
+                if not name or name == "-": continue
+                db_count = _pint(row[col_db]) if col_db < len(row) else 0
+                contracts = _pint(row[col_contracts]) if col_contracts < len(row) else 0
+                revenue = _pint(row[col_revenue]) if col_revenue < len(row) else 0
+                # 시트 수식값 그대로 가져오기
+                conv_raw = str(row[col_conv]).replace("%", "").strip() if col_conv is not None and col_conv < len(row) and row[col_conv] else ""
+                conversion = float(conv_raw) if conv_raw else (round(contracts / max(db_count, 1) * 100, 1) if db_count else 0)
+                if conversion > 1 and conversion <= 100: pass  # 이미 % 단위
+                elif 0 < conversion <= 1: conversion = round(conversion * 100, 1)  # 소수 → %
+                db_cost = _pint(row[col_db_cost]) if col_db_cost is not None and col_db_cost < len(row) else db_count * 30000
+                roas_raw = str(row[col_roas]).replace("%", "").strip() if col_roas is not None and col_roas < len(row) and row[col_roas] else ""
+                staff_roas = float(roas_raw) if roas_raw else (round(revenue / max(db_cost, 1) * 100, 1) if db_cost else 0)
+                if 0 < staff_roas <= 1: staff_roas = round(staff_roas * 100, 1)
+                kpi_pct = round(revenue / 20000000 * 100, 1) if revenue > 0 else 0
+                status = "달성" if revenue >= 20000000 else ("진행중" if revenue >= 10000000 else "미달")
+                by_person.append({"name": name, "revenue": revenue, "contracts": contracts,
+                                  "db_count": db_count, "conversion": round(conversion, 1),
+                                  "db_cost": db_cost, "roas": round(staff_roas, 1),
+                                  "kpi_pct": round(kpi_pct, 1), "status": status})
+            by_person.sort(key=lambda x: x["revenue"], reverse=True)
+            print(f"[ads-perf] 담당자 {len(by_person)}명 로드: {[p['name'] for p in by_person]}")
+    except Exception as e:
+        print(f"ads-perf 담당자탭 error: {e}")
 
     # 광고시트 월별 추이 (광고비/ROAS 보강)
     try:
