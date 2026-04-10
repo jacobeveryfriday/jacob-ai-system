@@ -1496,29 +1496,15 @@ async def api_ads_performance():
     try:
         mr_rows = fetch_sheet(SHEET_CONTRACT, "A:H", "월별매출&로하스", ttl_key="contract")
         if mr_rows and len(mr_rows) > 2:
+            # 3행(인덱스 2)이 헤더 — 고정 (시트 구조 확인됨)
             mr_hdr_idx = 2
-            for ri, row in enumerate(mr_rows[:5]):
-                rt = " ".join(str(c).replace("\n"," ") for c in row)
-                if ("계약" in rt or "매출" in rt) and "월" in rt: mr_hdr_idx = ri; break
             mh = [str(h).replace("\n"," ").strip() for h in mr_rows[mr_hdr_idx]]
             print(f"[ads-perf] 월별매출 헤더(row{mr_hdr_idx}): {mh}")
-            # 시트 구조: A=월, B=당월계약건수, C=매출합계, D=매출(신규), E=매출(재계약), F=광고비, G=ROAS, H=평균단가
-            # exact match로 "월" 컬럼 찾기 (부분매칭 시 "월별계약" 등에 오매칭 방지)
-            mc_month = None
-            for i, h in enumerate(mh):
-                if h == "월": mc_month = i; break
-            if mc_month is None: mc_month = 0
-            mc = {
-                "month": mc_month,
-                "contracts": _find_col(mh, "당월계약건수") or _find_col(mh, "계약건수") or 1,
-                "revenue": _find_col(mh, "매출합계") or 2,
-                "new": _find_col(mh, "매출(신규)") or _find_col(mh, "신규") or 3,
-                "renew": _find_col(mh, "매출(재계약)") or _find_col(mh, "재계약") or 4,
-                "ad_cost": _find_col(mh, "고비") or _find_col(mh, "광고비") or 5,
-                "roas": _find_col(mh, "ROAS") or _find_col(mh, "로하스") or 6,
-                "avg": _find_col(mh, "평균단가") or 7,
-            }
-            print(f"[ads-perf] 월별매출 컬럼: {mc}")
+            # 시트 고정 구조: A(0)=월, B(1)=당월계약건수, C(2)=매출합계, D(3)=매출(신규),
+            #                 E(4)=매출(재계약), F(5)=광고비, G(6)=ROAS, H(7)=평균단가
+            mc = {"month": 0, "contracts": 1, "revenue": 2, "new": 3,
+                  "renew": 4, "ad_cost": 5, "roas": 6, "avg": 7}
+            print(f"[ads-perf] 월별매출 컬럼(고정): {mc}")
             for row in mr_rows[mr_hdr_idx+1:]:
                 if not row or len(row) < 2: continue
                 mv = str(row[mc["month"]]).strip() if mc["month"] < len(row) else ""
