@@ -691,8 +691,18 @@ function renderProposalQueue(proposals) {
 }
 
 function approveProposal(pid) {
+  var btn=event.target;btn.textContent='⚡ 실행중...';btn.disabled=true;btn.style.background='var(--amber)';
   fetch('/api/proposals/approve', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:pid})})
-    .then(function(){ loadAll(); });
+    .then(function(r){return r.json()}).then(function(d){
+      btn.textContent='✅ 완료';btn.style.background='var(--green)';
+      if(d.pipeline){
+        var result=d.pipeline;
+        var info=document.createElement('div');info.style.cssText='margin-top:8px;padding:10px;background:var(--green-bg);border-radius:var(--radius);font-size:11px;color:var(--green)';
+        info.textContent='✅ 파이프라인 완료: '+(result.sent||0)+'건 이메일 → 검수 큐';
+        btn.parentElement.appendChild(info);
+      }
+      setTimeout(function(){loadAll()},2000);
+    }).catch(function(){btn.textContent='오류';btn.style.background='var(--red)'});
 }
 function rejectProposal(pid) {
   fetch('/api/proposals/reject', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:pid, comment:'CEO 거절'})})

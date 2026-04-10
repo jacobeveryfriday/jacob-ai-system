@@ -886,32 +886,49 @@ def save_checklist(data: List[Dict]):
 
 
 # ===== Routes =====
+DAILY_AGENT_CARDS = [
+    {"agent": "피치", "action_type": "pitch_db_collect",
+     "proposal": "브랜드 DB 수집 + 이메일 발송",
+     "detail": "📦 ① DB 수집 계획\n출처: LinkedIn + Instagram 브랜드\n타겟: K-뷰티 브랜드 마케팅매니저/CMO\n목표: 100명\n기간: 오늘 중\n비용: Haiku / 120,000토큰 / 약 294원\n제외: 대기업계열 / 이메일없는곳\n\n📧 ② 발송할 이메일\n제목: [공팔리터글로벌] 4월 인플루언서 마케팅 협업 제안\n안녕하세요 {담당자명}님, 공팔리터글로벌 피치입니다.\n저희 1,000명+ K-뷰티 인플루언서 네트워크로 협업 제안드립니다.\n5분 비대면 미팅 가능하실까요?",
+     "expected_impact": "DB 100건 → 유효 70건 → 미팅 10건 → 계약 3건"},
+    {"agent": "루나", "action_type": "luna_db_collect",
+     "proposal": "인플루언서 DB 수집 + 협찬 제안 발송",
+     "detail": "📦 ① DB 수집 계획\n출처: Instagram (#kbeauty 해시태그)\n타겟: 뷰티 인플루언서 (팔로워 1만~100만, 인게이지먼트 3%↑)\n목표: 50명\n기간: 오늘 중\n비용: Haiku / 80,000토큰 / 약 196원\n제외: 인게이지먼트 3%미만 / 비활성\n\n📧 ② 발송할 이메일\n제목: [밀리밀리] 4월 K-뷰티 협찬 제안드립니다\n안녕하세요 {인플루언서명}님! 밀리밀리 루나입니다.\n4월 협찬 제안드립니다. 제품 무상제공 + 수익쉐어 가능해요.",
+     "expected_impact": "DB 50명 → 유효 35명 → 협찬확정 5건"},
+    {"agent": "맥스", "action_type": "max_ads_optimize",
+     "proposal": "메타광고 캠페인 최적화",
+     "detail": "📦 ① 실행 계획\n내용: 메타광고 캠페인 성과 분석 + 타겟팅 최적화\n목표: 월 광고 ROAS 3.0 이상 / CPA 2만원 이하\n기간: 오늘 중\n비용: 광고비 별도 / 분석 토큰 무료\n\n📧 ② 실행 액션\n광고 캠페인 자동 모니터링 시작\n성과 미달 시 즉시 CEO 알림\nA/B 테스트 소재 변경 제안",
+     "expected_impact": "광고 정상화 → 인바운드 +30% → CPA 2만원 달성"},
+    {"agent": "소피", "action_type": "sophie_content_plan",
+     "proposal": "이번주 SNS 콘텐츠 캘린더 수립",
+     "detail": "📦 ① 실행 계획\n내용: 이번주 SNS 콘텐츠 캘린더 수립\n플랫폼: 인스타그램 / 틱톡\n목표: 주 3회 게시, 도달 5만 목표\n비용: Haiku / 50,000토큰 / 약 122원\n\n📧 ② 콘텐츠 방향\n밀리밀리 K-뷰티 스킨케어 루틴\n#kbeauty #skincare 해시태그 활용\nB2B: 브랜드 성공사례 / B2C: 협찬 모집",
+     "expected_impact": "팔로워 +500 / B2B 리드 10건 / B2C 리드 15건"},
+    {"agent": "레이", "action_type": "ray_tax_check",
+     "proposal": "세금계산서 발행상태 전수점검",
+     "detail": "📦 ① 실행 계획\n내용: 이번달 계약 건 세금계산서 발행상태 전수점검\n미발행 건수 파악 → 즉시 발행처리\n기간: 오늘 중\n비용: Haiku / 30,000토큰 / 약 73원\n\n📧 ② 보고 형식\n총 N건 중 발행 N건 / 미발행 N건\n미발행 목록: [브랜드명, 금액, 계약일]",
+     "expected_impact": "미수금 리스크 사전 차단"},
+    {"agent": "하나", "action_type": "hana_cs_analysis",
+     "proposal": "CS 문의 분류 + 패턴 분석",
+     "detail": "📦 ① 실행 계획\n내용: 오늘 CS 문의 분류 + 반복 패턴 분석\n목표: 반복 문의 유형 파악 → 근본해결 제안\n기간: 오늘 중\n비용: Haiku / 20,000토큰 / 약 49원\n\n📧 ② 보고 형식\n문의유형 TOP3: [유형, 건수, 해결방법]\n반복문의 근본해결 제안: [제안내용]",
+     "expected_impact": "CS 재문의율 20% 감소"},
+]
+
 def _ensure_daily_proposals():
-    """오늘자 피치·루나 승인 카드가 없으면 자동 생성."""
+    """오늘자 전 에이전트 승인 카드가 없으면 자동 생성."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
     proposals = load_proposals()
-    today_agents = {p["agent"] for p in proposals if p.get("created_at", "").startswith(today) and p.get("action_type") in ("pitch_db_collect", "luna_db_collect")}
+    today_types = {p.get("action_type") for p in proposals if p.get("created_at", "").startswith(today)}
     new_props = []
-    if "피치" not in today_agents:
-        new_props.append({
-            "id": int(time.time() * 1000) % 10000000,
-            "agent": "피치", "status": "pending_approval",
-            "proposal": "브랜드 DB 수집 + 이메일 발송",
-            "detail": "📦 ① DB 수집 계획\n출처: LinkedIn (마케팅담당자 검색) + Instagram 브랜드\n타겟: K-뷰티 브랜드 마케팅매니저/CMO\n목표: 100명\n기간: 오늘 중 완료\n비용: Haiku / 120,000토큰 / 약 294원\n제외: 대기업계열 / 이메일없는곳\n\n📧 ② 발송할 이메일\n제목: [공팔리터글로벌] 4월 인플루언서 마케팅 협업 제안\n\n안녕하세요 {담당자명}님,\n공팔리터글로벌 피치입니다.\n저희는 1,000명+ K-뷰티 인플루언서 네트워크를 보유하고 있습니다.\n4월 특별 프로모션으로 협업 제안드립니다.\n5분 비대면 미팅 가능하실까요?\n📅 미팅 예약하기",
-            "expected_impact": "DB 100건 → 유효 70건 → 미팅 10건 → 계약 3건",
-            "action_type": "pitch_db_collect",
-            "ceo_comment": "", "created_at": datetime.now(KST).isoformat(),
-        })
-    if "루나" not in today_agents:
-        new_props.append({
-            "id": int(time.time() * 1000) % 10000000 + 1,
-            "agent": "루나", "status": "pending_approval",
-            "proposal": "인플루언서 DB 수집 + 협찬 제안 발송",
-            "detail": "📦 ① DB 수집 계획\n출처: Instagram (#kbeauty 해시태그)\n타겟: 뷰티 인플루언서 (팔로워 1만~100만, 인게이지먼트 3%↑)\n목표: 50명\n기간: 오늘 중 완료\n비용: Haiku / 80,000토큰 / 약 196원\n제외: 인게이지먼트 3%미만 / 비활성\n\n📧 ② 발송할 이메일\n제목: [밀리밀리] 4월 K-뷰티 협찬 제안드립니다 🌿\n\n안녕하세요 {인플루언서명}님!\n밀리밀리 루나입니다.\n{플랫폼} 콘텐츠 인상 깊게 봤어요.\n4월 협찬 제안드립니다.\n제품 무상제공 + 수익쉐어 가능해요.\n관심 있으시면 편하게 답장 주세요!",
-            "expected_impact": "DB 50명 → 유효 35명 → 협찬확정 5건",
-            "action_type": "luna_db_collect",
-            "ceo_comment": "", "created_at": datetime.now(KST).isoformat(),
-        })
+    for card in DAILY_AGENT_CARDS:
+        if card["action_type"] not in today_types:
+            new_props.append({
+                "id": int(time.time() * 1000) % 10000000 + len(new_props),
+                "agent": card["agent"], "status": "pending_approval",
+                "proposal": card["proposal"], "detail": card["detail"],
+                "expected_impact": card["expected_impact"],
+                "action_type": card["action_type"],
+                "ceo_comment": "", "created_at": datetime.now(KST).isoformat(),
+            })
     if new_props:
         proposals.extend(new_props)
         save_proposals(proposals[-200:])
