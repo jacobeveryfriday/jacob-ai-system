@@ -575,10 +575,9 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-ads">
-<!-- 광고 성과 — JS에서 렌더링 -->
 <div id="ads-kpi-cards"></div>
 <div id="ads-funnel-table"></div>
-<div id="ads-divider" style="border-top:1px solid #E8E6E1;margin:24px 0;position:relative"><span style="position:absolute;top:-10px;left:16px;background:#F8F7F4;padding:0 8px;font-size:11px;font-weight:700;color:#6B6B6B">세부내역</span></div>
+<div id="ads-divider" style="display:flex;align-items:center;gap:12px;margin:28px 0"><span style="flex:1;height:1px;background:#D5D3CE"></span><span style="background:#1A7A4C;color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px">세부내역</span><span style="flex:1;height:1px;background:#D5D3CE"></span></div>
 <div id="ads-detail-table"></div>
 <div id="ads-person-grid"></div>
 <div id="ads-trend-table"></div>
@@ -956,68 +955,62 @@ mkPanels(el,[['총 인플루언서 풀',total>10000?(total/10000).toFixed(0)+'�
 ads:function(el){
 var PERSON_KPI_TARGET=20000000;
 fetch('/api/ads-performance').then(function(r){return r.json()}).then(function(d){
-var mt=d.month||{},pm=d.prev_month||{},fn=d.funnel||{},bp=d.by_person||[],trend=d.monthly_trend||[];
-var total=mt.total||{},ptotal=pm.total||{};
-var channels=[{key:'meta',name:'Meta'},{key:'naver',name:'네이버'},{key:'google',name:'구글'}];
-function badge(cur,prev){if(!prev)return'';var diff=cur-prev;var pct=prev>0?Math.round(diff/prev*100):0;var up=diff>=0;return' <span style="font-size:10px;font-weight:700;color:'+(up?'#22C55E':'#EF4444')+'">'+(up?'▲':'▼')+Math.abs(pct)+'%</span>'}
-function fmtW(v){return v>=10000?(v/10000).toFixed(0)+'만':v>=1000?Math.round(v/1000)+'천':v.toLocaleString()}
-function fmtM(v){if(v>=100000000)return(v/100000000).toFixed(1)+'억';if(v>=10000)return Math.round(v/10000)+'만';return v.toLocaleString()}
+var bp=d.by_person||[],trend=d.monthly_trend||[],chData=d.channel_data||{};
+var totalSpend=d.total_spend||0,pSpend=d.prev_total_spend||0;
+var totalDb=d.db_count||0,pDb=d.prev_db_count||0;
+var dbCpa=d.db_cpa||0,pCpa=d.prev_db_cpa||0;
+var totalRev=d.month_revenue||0,pRev=d.prev_month_revenue||0;
+var roas=d.roas||0,pRoas=d.prev_roas||0;
+var meetRate=d.meeting_rate||0;
+function bdg(cur,prev){if(!prev&&!cur)return'';var diff=cur-prev;var pct=prev>0?Math.round(diff/prev*100):(cur>0?100:0);var up=diff>=0;return'<span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-top:4px;background:'+(up?'rgba(34,197,94,0.12)':'rgba(239,68,68,0.12)')+';color:'+(up?'#16A34A':'#DC2626')+'">'+(up?'▲ +':'▼ ')+Math.abs(pct)+'%</span>'}
+function fmtM(v){if(v>=100000000)return(v/100000000).toFixed(1)+'억';if(v>=10000)return Math.round(v/10000).toLocaleString()+'만';return v.toLocaleString()}
+var CS='background:#FFF;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:20px;margin-bottom:20px';
 // === 1. KPI 5카드 ===
-var kpiEl=document.getElementById('ads-kpi-cards');
-var totalSpend=total.spend||0,pSpend=ptotal.spend||0;
-var totalDb=total.db||0,pDb=ptotal.db||0;
-var dbCpa=totalDb>0?Math.round(totalSpend/totalDb):0,pCpa=pDb>0?Math.round(pSpend/pDb):0;
-var totalRev=trend.length?trend[trend.length-1].revenue||0:0;
-var pRev=d.prev_month_revenue||0;
-var roas=total.roas||0,pRoas=ptotal.roas||0;
-var kpiHtml='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">';
-[['총 광고비',fmtM(totalSpend)+'원',badge(totalSpend,pSpend),'#1B2A4A'],
-['DB 수',totalDb+'건',badge(totalDb,pDb),'#2D4A7A'],
-['DB 단가',fmtM(dbCpa)+'원',badge(-dbCpa,-pCpa),'#8B5E3C'],
-['매출 합계',fmtM(totalRev),badge(totalRev,pRev),'#1A7A4C'],
-['ROAS',roas.toFixed(1)+'x',badge(roas,pRoas),'#B8860B']
-].forEach(function(k){kpiHtml+='<div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:3px solid '+k[3]+';border-radius:8px;padding:16px;text-align:center"><p style="font-size:10px;color:#6B6B6B;margin:0">'+k[0]+'</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#1B2A4A;margin:6px 0 2px">'+k[1]+'</p><div>'+k[2]+'</div></div>'});
-kpiHtml+='</div>';kpiEl.innerHTML=kpiHtml;
+var kE=document.getElementById('ads-kpi-cards');
+var bases=[
+['총 광고비',fmtM(totalSpend)+'원',bdg(totalSpend,pSpend),'#2563EB','출처: 광고 API / 이번달 1일~오늘 누적'],
+['DB 수',totalDb+'건',bdg(totalDb,pDb),'#7C3AED','출처: 인바운드시트 / 이번달 전체 (컨택현황 무관)'],
+['DB 단가',fmtM(dbCpa)+'원',bdg(-dbCpa,-pCpa),'#EA580C','= 총광고비 ÷ 전체 DB수'],
+['매출 합계',fmtM(totalRev)+'원',bdg(totalRev,pRev),'#16A34A','출처: 세금계산서시트 / 계약일 기준 합산'],
+['ROAS',roas.toFixed(1)+'%',bdg(roas,pRoas),'#CA8A04','= 이번달 누적매출 ÷ 총광고비 × 100%']
+];
+var kH='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px">';
+bases.forEach(function(k,i){
+var isRev=i===3;
+kH+='<div style="background:#FFF;border:0.5px solid '+(isRev?'#16A34A':'#E8E6E1')+';border-top:4px solid '+k[3]+';border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:16px 14px 12px;text-align:center'+(isRev?';box-shadow:0 2px 12px rgba(22,163,74,0.15)':'')+'"><p style="font-size:12px;color:#6B6B6B;margin:0 0 6px">'+k[0]+'</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#1B2A4A;margin:0 0 4px">'+k[1]+'</p><div>'+k[2]+'</div><p style="font-size:10px;color:#9B9B9B;font-style:italic;margin:8px 0 0;line-height:1.3">'+k[4]+'</p></div>'});
+kH+='</div>';kE.innerHTML=kH;
 // === 2. 채널별 퍼널 테이블 ===
-var funEl=document.getElementById('ads-funnel-table');
-var funHtml='<div class="card" style="margin-bottom:20px"><div class="card-title">채널별 퍼널</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>채널</th><th>광고비</th><th>DB수</th><th>DB단가</th><th>미팅전환</th><th>계약전환</th><th>ROAS</th></tr></thead><tbody>';
-channels.forEach(function(ch){
-var m=mt[ch.key]||{},f=fn[ch.key]||{};
-var cDb=m.db||0,cSpend=m.spend||0,cCpa=cDb>0?Math.round(cSpend/cDb):0;
-var cMeet=f.meeting||0,cContract=f.contract||0;
-var meetRate=cDb>0?Math.round(cMeet/cDb*100):0;
-var conRate=cMeet>0?Math.round(cContract/cMeet*100):0;
-var cRoas=m.roas||0;
-funHtml+='<tr><td style="font-weight:600">'+ch.name+'</td><td style="font-family:monospace">'+fmtM(cSpend)+'</td><td style="font-family:monospace">'+cDb+'</td><td style="font-family:monospace">'+fmtM(cCpa)+'</td><td style="font-family:monospace">'+cMeet+'건 ('+meetRate+'%)</td><td style="font-family:monospace">'+cContract+'건 ('+conRate+'%)</td><td style="font-family:monospace">'+cRoas.toFixed(1)+'x</td></tr>'});
-var ft=fn.total||{},fDb=ft.db||totalDb,fMeet=ft.meeting||0,fCon=ft.contract||0;
-funHtml+='<tr style="font-weight:700;background:#F5F4F0"><td>합계</td><td style="font-family:monospace">'+fmtM(totalSpend)+'</td><td style="font-family:monospace">'+totalDb+'</td><td style="font-family:monospace">'+fmtM(dbCpa)+'</td><td style="font-family:monospace">'+fMeet+'건 ('+(fDb>0?Math.round(fMeet/fDb*100):0)+'%)</td><td style="font-family:monospace">'+fCon+'건 ('+(fMeet>0?Math.round(fCon/fMeet*100):0)+'%)</td><td style="font-family:monospace">'+roas.toFixed(1)+'x</td></tr>';
-funHtml+='</tbody></table></div></div>';funEl.innerHTML=funHtml;
-// === 4. 세부내역 — 채널별 상세 테이블 ===
-var detEl=document.getElementById('ads-detail-table');
-var detHtml='<div class="card" style="margin-bottom:20px"><div class="card-title">채널별 상세</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>채널</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전월DB</th><th>DB증감</th></tr></thead><tbody>';
-channels.forEach(function(ch){
-var m=mt[ch.key]||{},p=pm[ch.key]||{};
-var imp=m.impressions||0,clk=m.clicks||0,ctr=m.ctr||0,cpc=m.cpc||0;
-var pDb2=p.db||0,mDb2=m.db||0,dbDiff=mDb2-pDb2;
-detHtml+='<tr><td style="font-weight:600">'+ch.name+'</td><td style="font-family:monospace">'+imp.toLocaleString()+'</td><td style="font-family:monospace">'+clk.toLocaleString()+'</td><td style="font-family:monospace">'+ctr.toFixed(1)+'%</td><td style="font-family:monospace">'+fmtM(cpc)+'</td><td style="font-family:monospace">'+pDb2+'</td><td style="font-family:monospace;color:'+(dbDiff>=0?'#22C55E':'#EF4444')+'">'+(dbDiff>=0?'+':'')+dbDiff+'</td></tr>'});
-detHtml+='</tbody></table></div></div>';detEl.innerHTML=detHtml;
-// === 5. 담당자별 카드 그리드 ===
-var perEl=document.getElementById('ads-person-grid');
-var perHtml='<div class="card" style="margin-bottom:20px"><div class="card-title">담당자별 월 실적</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
-if(bp.length===0)bp=[{name:'데이터 없음',revenue:0,contracts:0,conversion:0}];
+var fE=document.getElementById('ads-funnel-table');
+var pills={'Meta':'background:#2563EB;color:#fff','네이버':'background:#03C75A;color:#fff','구글':'background:#EA580C;color:#fff'};
+var fH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">채널별 퍼널</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>채널</th><th>광고비</th><th>DB수</th><th>DB단가</th><th>미팅전환율</th><th>ROAS</th></tr></thead><tbody>';
+['Meta','네이버','구글'].forEach(function(ch){
+var c=chData[ch]||{};var cDb=c.db||0,cSp=c.spend||0,cCpa=c.cpa||0;
+var pill='<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;'+(pills[ch]||'')+'">'+ch+'</span>';
+var cRoas=cSp>0?((totalRev*(cDb/Math.max(totalDb,1)))/cSp*100).toFixed(1):'-';
+fH+='<tr><td>'+pill+'</td><td style="font-family:monospace">'+fmtM(cSp)+'</td><td style="font-family:monospace;font-weight:600">'+cDb+'</td><td style="font-family:monospace">'+fmtM(cCpa)+'</td><td style="font-family:monospace">'+meetRate+'%</td><td style="font-family:monospace">'+cRoas+'%</td></tr>'});
+fH+='<tr style="font-weight:700;background:#F5F4F0"><td>합계</td><td style="font-family:monospace">'+fmtM(totalSpend)+'</td><td style="font-family:monospace">'+totalDb+'</td><td style="font-family:monospace">'+fmtM(dbCpa)+'</td><td style="font-family:monospace">'+meetRate+'%</td><td style="font-family:monospace;font-weight:700;color:'+(roas>=100?'#16A34A':'#DC2626')+'">'+roas.toFixed(1)+'%</td></tr>';
+fH+='</tbody></table></div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">DB수: 컨택현황 무관 전체 포함 / 미팅전환율: 부적합·정보누락 제외</p></div>';fE.innerHTML=fH;
+// === 4. 채널별 상세 (세부내역 아래) — 현재 API에 노출/클릭 없으므로 숨김 ===
+var detEl=document.getElementById('ads-detail-table');detEl.innerHTML='';
+// === 5. 담당자별 KPI 카드 ===
+var pE=document.getElementById('ads-person-grid');
+var pH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">담당자별 월 실적</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">';
+if(bp.length===0)bp=[{name:'데이터 없음',revenue:0,contracts:0,conversion:0,db_count:0,roas:0}];
 bp.forEach(function(p){
 var pct=Math.min(Math.round(p.revenue/PERSON_KPI_TARGET*100),100);
-var barColor=pct>=100?'#1A7A4C':pct>=50?'#B8860B':'#EF4444';
-perHtml+='<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin:0 0 8px">'+p.name+'</p><p style="font-family:monospace;font-size:24px;font-weight:700;color:#1B2A4A;margin:0 0 6px">'+fmtM(p.revenue)+'원</p><div style="display:flex;gap:16px;font-size:11px;color:#6B6B6B;margin-bottom:8px"><span>계약 '+p.contracts+'건</span><span>전환율 '+p.conversion+'%</span></div><div style="margin-top:4px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px"><span style="color:#6B6B6B">목표 2,000만원</span><span style="font-weight:700;color:'+barColor+'">'+pct+'%</span></div><div style="background:#EDEBE7;border-radius:4px;height:6px;overflow:hidden"><div style="background:'+barColor+';height:100%;width:'+pct+'%;border-radius:4px;transition:width .3s"></div></div></div></div>'});
-perHtml+='</div></div>';perEl.innerHTML=perHtml;
-// === 6. 월별 추이 테이블 (최근 6개월) ===
-var trdEl=document.getElementById('ads-trend-table');
-var last6=trend.slice(-6);
-var trdHtml='<div class="card"><div class="card-title">월별 추이 (최근 6개월)</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>계약건수</th><th>매출합계</th><th>ROAS%</th><th>평균단가</th></tr></thead><tbody>';
-last6.forEach(function(t){
-trdHtml+='<tr><td>'+t.month+'</td><td style="font-family:monospace">'+t.contracts+'건</td><td style="font-family:monospace">'+fmtM(t.revenue)+'원</td><td style="font-family:monospace">'+(t.roas*100).toFixed(0)+'%</td><td style="font-family:monospace">'+fmtM(t.avg_price)+'원</td></tr>'});
-trdHtml+='</tbody></table></div></div>';trdEl.innerHTML=trdHtml;
-}).catch(function(){var k=document.getElementById('ads-kpi-cards');if(k)k.innerHTML='<div class="card" style="padding:20px;color:#EF4444">데이터 로딩 실패 — API 연결을 확인하세요</div>'})},
+var barColor=pct>=100?'#16A34A':pct>=50?'#CA8A04':'#DC2626';
+var statusBdg=pct>=100?'<span style="background:rgba(22,163,74,0.12);color:#16A34A;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">달성</span>':pct>=50?'<span style="background:rgba(202,138,4,0.12);color:#CA8A04;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">진행중</span>':'<span style="background:rgba(220,38,38,0.12);color:#DC2626;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">미달</span>';
+pH+='<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><p style="font-size:13px;font-weight:700;color:#1B2A4A;margin:0">'+p.name+'</p>'+statusBdg+'</div><p style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A;margin:0 0 8px">'+fmtM(p.revenue)+'원</p><div style="display:flex;gap:14px;font-size:11px;color:#6B6B6B;margin-bottom:10px"><span>계약 '+p.contracts+'건</span><span>전환율 '+(p.conversion||0)+'%</span><span>DB '+(p.db_count||0)+'건</span></div><div><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px"><span style="color:#6B6B6B">목표 2,000만원</span><span style="font-weight:700;color:'+barColor+'">'+pct+'%</span></div><div style="background:#EDEBE7;border-radius:6px;height:8px;overflow:hidden"><div style="background:'+barColor+';height:100%;width:'+pct+'%;border-radius:6px;transition:width .4s ease"></div></div></div></div>'});
+pH+='</div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">매출·계약: 세발시트 요청담당자명 기준 / ROAS: 담당자DB수×3만원 광고비 환산</p></div>';pE.innerHTML=pH;
+// === 6. 월별 추이 테이블 ===
+var tE=document.getElementById('ads-trend-table');
+var last6=trend.slice(-6);var thisM=new Date().getFullYear()+'.'+(new Date().getMonth()+1<10?'0':'')+(new Date().getMonth()+1);
+var tH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월별 추이 (최근 6개월)</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>계약건수</th><th>매출합계</th><th>ROAS%</th><th>평균단가</th></tr></thead><tbody>';
+last6.forEach(function(t,i){
+var isCur=t.month===thisM;var bg=isCur?'background:#F0FDF4;font-weight:700':(i%2===1?'background:#FAFAF8':'');
+tH+='<tr style="'+bg+'"><td'+(isCur?' style="font-weight:700"':'')+'>'+(isCur?t.month+' *':t.month)+'</td><td style="font-family:monospace">'+t.contracts+'건</td><td style="font-family:monospace">'+fmtM(t.revenue)+'원</td><td style="font-family:monospace">'+(t.roas>0?(t.roas*100).toFixed(0):'-')+'%</td><td style="font-family:monospace">'+fmtM(t.avg_price||0)+'원</td></tr>'});
+tH+='</tbody></table></div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">출처: 세금계산서시트 월별매출&ROAS 탭</p></div>';tE.innerHTML=tH;
+}).catch(function(){var k=document.getElementById('ads-kpi-cards');if(k)k.innerHTML='<div style="background:#FFF;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:24px;color:#DC2626;font-weight:600">데이터 로딩 실패 — API 연결을 확인하세요</div>'})},
 
 sns:function(el){
 // B2B / B2C tabs
