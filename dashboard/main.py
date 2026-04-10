@@ -59,8 +59,7 @@ async def health_check():
             "google_sheets": "connected" if GSHEETS_API_KEY else "not_configured",
             "anthropic": _chk("ANTHROPIC_API_KEY"),
             "slack": _chk("SLACK_WEBHOOK_URL"),
-            "smtp_pitch": "connected" if os.getenv("PITCH_SMTP_USER") and os.getenv("PITCH_SMTP_PASS") else "not_configured",
-            "smtp_luna": "connected" if os.getenv("LUNA_SMTP_USER") and os.getenv("LUNA_SMTP_PASS") else "not_configured",
+            "email": "connected" if os.getenv("EMAIL_WEBHOOK_URL") else "not_configured",
             "meta_ads": meta_status,
             "meta_ads_note": meta_note,
             "kakao_b2b": "connected" if os.getenv("KAKAO_B2B_API_KEY") or os.getenv("KAKAO_REST_API_KEY") else "not_configured",
@@ -2196,46 +2195,29 @@ def _get_smtp_creds(agent_name: str):
             return user, pw
     return os.getenv("NAVER_WORKS_SMTP_USER", ""), os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
 
+EMAIL_WEBHOOK_URL = os.getenv("EMAIL_WEBHOOK_URL", "")
+
 def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: str = "루나", html_body: str = "") -> dict:
-    """Naver Works SMTP(SSL 465) 직접 발송."""
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    smtp_user, smtp_pass = _get_smtp_creds(agent_name)
-    if not smtp_user or not smtp_pass:
-        return {"status": "not_configured", "message": f"{agent_name} SMTP 미설정"}
+    """이메일 발송: GAS 웹훅 (Railway SMTP 차단으로 웹훅 사용)."""
+    webhook_url = EMAIL_WEBHOOK_URL
     from_email, sender_name = _get_from(agent_name)
+    if not webhook_url:
+        return {"status": "not_configured", "message": "EMAIL_WEBHOOK_URL 미설정 (Railway SMTP 차단으로 GAS 웹훅 필요)"}
+    agent_id = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle"}.get(agent_name, "pitch")
+    payload = {"agent": agent_id, "to": to_email, "subject": subject, "body": body_text}
+    if html_body:
+        payload["htmlBody"] = html_body
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"{sender_name} <{smtp_user}>"
-        msg["To"] = to_email
-        msg.attach(MIMEText(body_text, "plain", "utf-8"))
-        if html_body:
-            msg.attach(MIMEText(html_body, "html", "utf-8"))
-        # 587 STARTTLS 우선 → 465 SSL 폴백
-        connected = False
-        for port, use_ssl in [(587, False), (465, True)]:
+        resp = req_lib.post(webhook_url, json=payload, timeout=30, allow_redirects=True)
+        if resp.status_code == 200:
             try:
-                if use_ssl:
-                    server = smtplib.SMTP_SSL("smtp.worksmobile.com", port, timeout=15)
-                else:
-                    server = smtplib.SMTP("smtp.worksmobile.com", port, timeout=15)
-                    server.ehlo()
-                    server.starttls()
-                    server.ehlo()
-                server.login(smtp_user, smtp_pass)
-                connected = True
-                break
+                data = resp.json()
             except Exception:
-                continue
-        if not connected:
-            return {"status": "error", "message": "SMTP 연결 실패 (587/465 모두 타임아웃)", "method": "smtp"}
-        with server:
-            server.sendmail(smtp_user, [to_email], msg.as_string())
-        return {"status": "ok", "to": to_email, "from": f"{sender_name} <{smtp_user}>", "method": "smtp"}
+                data = {"message": resp.text[:200]}
+            return {"status": "ok", "to": to_email, "from": f"{sender_name} <{from_email}>", "method": "gas_webhook", "response": data}
+        return {"status": "error", "message": resp.text[:300], "code": resp.status_code, "method": "gas_webhook"}
     except Exception as e:
-        return {"status": "error", "message": str(e), "method": "smtp"}
+        return {"status": "error", "message": str(e), "method": "gas_webhook"}
 
 def _html_to_text(html: str) -> str:
     """HTML에서 태그 제거하여 플레인 텍스트 추출."""
@@ -2272,19 +2254,17 @@ async def api_send_email(request: Request):
 
 @app.get("/api/test-email")
 async def api_test_email(agent: str = "피치"):
-    """에이전트별 테스트 이메일 — Naver Works SMTP 직접."""
+    """에이전트별 테스트 이메일 — GAS 웹훅."""
     from_email, sender_name = _get_from(agent)
-    smtp_user, _ = _get_smtp_creds(agent)
     to_email = "jacob@08liter.com"
     body_text = (f"안녕하세요!\n\n이 메일은 [{agent}] 에이전트 테스트 이메일입니다.\n"
-                 f"발신: {sender_name} <{smtp_user}>\n"
-                 f"발송 방식: Naver Works SMTP (SSL 465)\n"
+                 f"발신: {sender_name} <{from_email}>\n"
+                 f"발송 방식: GAS 웹훅 → Naver Works\n"
                  f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)\n\n"
                  f"이메일 연동이 정상적으로 작동하고 있습니다.")
     subject = f"[테스트] {agent} 이메일 발송 확인"
     result = _send_email_smtp(to_email, subject, body_text, agent)
     result["to"] = to_email
-    result["smtp_user"] = smtp_user or "미설정"
     return result
 
 @app.get("/api/send-review-email")
@@ -2880,8 +2860,7 @@ async def _agent_auto_cycle():
             "Google Sheets": bool(GSHEETS_API_KEY),
             "Anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
             "Slack": bool(os.getenv("SLACK_WEBHOOK_URL")),
-            "SMTP 피치": bool(os.getenv("PITCH_SMTP_PASS")),
-            "SMTP 루나": bool(os.getenv("LUNA_SMTP_PASS")),
+            "이메일": bool(os.getenv("EMAIL_WEBHOOK_URL")),
         }
         for svc, ok in api_checks.items():
             if not ok:
