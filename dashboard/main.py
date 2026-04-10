@@ -1401,24 +1401,57 @@ async def api_ads_performance():
     except Exception as e:
         print(f"ads-perf 담당자탭 error: {e}")
 
-    # 광고시트 월별 추이 (광고비/ROAS 보강)
+    # ---------- 월별 추이 — "월별매출&로하스" 탭 직접 연동 ----------
+    monthly_trend = []
     try:
-        ads_rows = fetch_sheet(SHEET_ADS, "A1:O", "공팔리터B2B", ttl_key="ads")
-        if ads_rows:
-            for row in ads_rows:
-                if not row or len(row) < 8: continue
-                ms = str(row[5]).strip() if len(row) > 5 else ""
-                if "20" not in ms or "." not in ms: continue
+        mr_rows = fetch_sheet(SHEET_CONTRACT, "A:H", "월별매출&로하스", ttl_key="contract")
+        if mr_rows and len(mr_rows) > 1:
+            mr_hdr_idx = 0
+            for ri, row in enumerate(mr_rows[:5]):
+                row_text = " ".join(str(c).replace("\n", " ") for c in row)
+                if "월" in row_text and ("매출" in row_text or "계약" in row_text or "ROAS" in row_text or "로하스" in row_text):
+                    mr_hdr_idx = ri
+                    break
+            mr_headers = [str(h).replace("\n", " ").strip() for h in mr_rows[mr_hdr_idx]]
+            mr_month = _find_col(mr_headers, "월")
+            mr_contracts = _find_col(mr_headers, "당월계약건수", "계약건수")
+            mr_revenue = _find_col(mr_headers, "매출합계")
+            mr_new = _find_col(mr_headers, "매출(신규)", "신규")
+            mr_renew = _find_col(mr_headers, "매출(재계약)", "재계약")
+            mr_spend = _find_col(mr_headers, "고비", "광고비")
+            mr_roas = _find_col(mr_headers, "ROAS", "로하스")
+            mr_avg = _find_col(mr_headers, "평균단가", "월별계약")
+            if mr_month is None: mr_month = 0
+            if mr_contracts is None: mr_contracts = 1
+            if mr_revenue is None: mr_revenue = 2
+            if mr_new is None: mr_new = 3
+            if mr_renew is None: mr_renew = 4
+            print(f"[ads-perf] 월별매출탭 헤더: {mr_headers}")
+            for row in mr_rows[mr_hdr_idx + 1:]:
+                if not row or len(row) < 2: continue
+                month_val = str(row[mr_month]).strip() if mr_month < len(row) else ""
+                if not month_val or "20" not in month_val: continue
+                # 2025, 2026 데이터만
+                if not (month_val.startswith("2025") or month_val.startswith("2026")): continue
+                rev = _pint(row[mr_revenue]) if mr_revenue < len(row) else 0
+                contracts = _pint(row[mr_contracts]) if mr_contracts < len(row) else 0
+                new_rev = _pint(row[mr_new]) if mr_new is not None and mr_new < len(row) else 0
+                renew_rev = _pint(row[mr_renew]) if mr_renew is not None and mr_renew < len(row) else 0
+                spend_raw = _pint(row[mr_spend]) if mr_spend is not None and mr_spend < len(row) else 0
+                roas_raw = str(row[mr_roas]).replace("%", "").strip() if mr_roas is not None and mr_roas < len(row) and row[mr_roas] else ""
                 try:
-                    sp = _pint(row[10]) if len(row) > 10 else 0
-                    rs = str(row[11]).replace("%","").strip() if len(row) > 11 and row[11] else "0"
-                    rv = float(rs)/100 if float(rs)>1 else float(rs)
-                    for t in monthly_trend:
-                        if t["month"] == ms:
-                            t["spend"] = sp
-                            t["roas"] = round(rv, 2)
-                except: pass
-    except: pass
+                    roas_val = float(roas_raw) if roas_raw else 0
+                    if 0 < roas_val < 1: roas_val = round(roas_val * 100, 1)
+                except: roas_val = 0
+                avg_raw = _pint(row[mr_avg]) if mr_avg is not None and mr_avg < len(row) else 0
+                monthly_trend.append({
+                    "month": month_val, "contracts": contracts, "revenue": rev,
+                    "new_revenue": new_rev, "renew_revenue": renew_rev,
+                    "spend": spend_raw, "roas": round(roas_val, 1), "avg_price": avg_raw
+                })
+            print(f"[ads-perf] 월별 추이 {len(monthly_trend)}개월 로드")
+    except Exception as e:
+        print(f"ads-perf 월별매출탭 error: {e}")
 
     is_live = bool(GSHEETS_API_KEY)
     return {
@@ -1433,7 +1466,7 @@ async def api_ads_performance():
         "month_contracts": month_contracts, "prev_month_contracts": prev_month_contracts,
         "channel_data": channel_data,
         "by_person": by_person,
-        "monthly_trend": monthly_trend[-6:],
+        "monthly_trend": monthly_trend,
         "meta_spend": meta_spend,
         "naver_spend": naver_spend,
         "google_spend": google_spend,
