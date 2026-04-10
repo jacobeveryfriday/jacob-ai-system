@@ -1465,11 +1465,13 @@ async def api_ads_performance():
                 else:
                     google_debug["error"] = ads_resp.text[:200]
             else:
-                google_debug["error"] = f"토큰 발급 실패: {token_resp.text[:100]}"
+                google_debug["error"] = "토큰 발급 실패: " + token_resp.text[:100]
         else:
             google_debug["error"] = "GOOGLE_ADS_* 환경변수 미설정"
     except Exception as e:
         google_debug["error"] = str(e)
+
+    # ========== 4. 광고비 합산 ==========
     total_spend = meta_spend + naver_spend + google_spend
     prev_total_spend = 0  # ì ì ê´ê³ ë¹ë API ìì¼ë©´ 0
 
