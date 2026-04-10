@@ -632,8 +632,8 @@ function renderProposalQueue(proposals) {
     top.appendChild(time);
     card.appendChild(top);
 
-    var detail = document.createElement('p');
-    detail.style.cssText = 'font-size:13px;color:var(--text-secondary);margin-bottom:8px;line-height:1.6';
+    var detail = document.createElement('div');
+    detail.style.cssText = 'font-size:12px;color:var(--text-secondary);margin-bottom:8px;line-height:1.8;white-space:pre-line;background:var(--bg);border-radius:var(--radius);padding:12px';
     detail.textContent = p.detail;
     card.appendChild(detail);
 

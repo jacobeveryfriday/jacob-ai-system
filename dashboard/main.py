@@ -870,11 +870,42 @@ def save_checklist(data: List[Dict]):
 
 
 # ===== Routes =====
+def _ensure_daily_proposals():
+    """오늘자 피치·루나 승인 카드가 없으면 자동 생성."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    proposals = load_proposals()
+    today_agents = {p["agent"] for p in proposals if p.get("created_at", "").startswith(today) and p.get("action_type") in ("pitch_db_collect", "luna_db_collect")}
+    new_props = []
+    if "피치" not in today_agents:
+        new_props.append({
+            "id": int(time.time() * 1000) % 10000000,
+            "agent": "피치", "status": "pending_approval",
+            "proposal": "브랜드 DB 수집 + 이메일 발송",
+            "detail": "📦 ① DB 수집 계획\n출처: LinkedIn (마케팅담당자 검색) + Instagram 브랜드\n타겟: K-뷰티 브랜드 마케팅매니저/CMO\n목표: 100명\n기간: 오늘 중 완료\n비용: Haiku / 120,000토큰 / 약 294원\n제외: 대기업계열 / 이메일없는곳\n\n📧 ② 발송할 이메일\n제목: [공팔리터글로벌] 4월 인플루언서 마케팅 협업 제안\n\n안녕하세요 {담당자명}님,\n공팔리터글로벌 피치입니다.\n저희는 1,000명+ K-뷰티 인플루언서 네트워크를 보유하고 있습니다.\n4월 특별 프로모션으로 협업 제안드립니다.\n5분 비대면 미팅 가능하실까요?\n📅 미팅 예약하기",
+            "expected_impact": "DB 100건 → 유효 70건 → 미팅 10건 → 계약 3건",
+            "action_type": "pitch_db_collect",
+            "ceo_comment": "", "created_at": datetime.now(KST).isoformat(),
+        })
+    if "루나" not in today_agents:
+        new_props.append({
+            "id": int(time.time() * 1000) % 10000000 + 1,
+            "agent": "루나", "status": "pending_approval",
+            "proposal": "인플루언서 DB 수집 + 협찬 제안 발송",
+            "detail": "📦 ① DB 수집 계획\n출처: Instagram (#kbeauty 해시태그)\n타겟: 뷰티 인플루언서 (팔로워 1만~100만, 인게이지먼트 3%↑)\n목표: 50명\n기간: 오늘 중 완료\n비용: Haiku / 80,000토큰 / 약 196원\n제외: 인게이지먼트 3%미만 / 비활성\n\n📧 ② 발송할 이메일\n제목: [밀리밀리] 4월 K-뷰티 협찬 제안드립니다 🌿\n\n안녕하세요 {인플루언서명}님!\n밀리밀리 루나입니다.\n{플랫폼} 콘텐츠 인상 깊게 봤어요.\n4월 협찬 제안드립니다.\n제품 무상제공 + 수익쉐어 가능해요.\n관심 있으시면 편하게 답장 주세요!",
+            "expected_impact": "DB 50명 → 유효 35명 → 협찬확정 5건",
+            "action_type": "luna_db_collect",
+            "ceo_comment": "", "created_at": datetime.now(KST).isoformat(),
+        })
+    if new_props:
+        proposals.extend(new_props)
+        save_proposals(proposals[-200:])
+
 @app.get("/", response_class=HTMLResponse)
 async def ceo_dashboard(request: Request):
     """새 CEO 대시보드 — McKinsey 스타일 3섹션 레이아웃."""
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=302)
+    _ensure_daily_proposals()
     return templates.TemplateResponse("ceo.html", {"request": request})
 
 
@@ -2837,9 +2868,26 @@ async def api_approve_proposal(request: Request):
         if p.get("id") == pid:
             p["status"] = "approved"
             p["approved_at"] = datetime.now(KST).isoformat()
-            # 승인 즉시 Slack 알림
+            # DB 수집 파이프라인 자동 시작
+            action_type = p.get("action_type", "")
+            pipeline_result = None
+            if action_type in ("pitch_db_collect", "luna_db_collect"):
+                try:
+                    agent_name = "피치" if "pitch" in action_type else "루나"
+                    if agent_name == "피치":
+                        pitch_result = await _pitch_outbound_crm()
+                        pipeline_result = {"step": "이메일 생성+큐 등록", "sent": pitch_result.get("sent", 0)}
+                    else:
+                        luna_result = await _luna_outbound_pitch()
+                        pipeline_result = {"step": "이메일 생성+큐 등록", "sent": luna_result.get("sent", 0)}
+                    p["result"] = f"파이프라인 실행: {pipeline_result.get('sent',0)}건 이메일 → 검수 큐"
+                    p["status"] = "executed"
+                    p["executed_at"] = datetime.now(KST).isoformat()
+                except Exception as ex:
+                    pipeline_result = {"error": str(ex)}
+            # Slack 알림
             slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
-            if slack_url:
+            if slack_url and _slack_enabled():
                 try:
                     req_lib.post(slack_url, json={"text": f"✅ CEO 승인: [{p['agent']}] {p['proposal']}"}, timeout=5)
                 except Exception:
@@ -2847,7 +2895,7 @@ async def api_approve_proposal(request: Request):
             break
     save_proposals(proposals)
     _log_cycle("approve", pid, f"CEO가 제안 승인")
-    return {"status": "ok"}
+    return {"status": "ok", "pipeline": pipeline_result}
 
 
 @app.post("/api/proposals/reject")
@@ -3465,6 +3513,84 @@ async def api_sheet_pipeline(agent: str = "피치"):
                     cnt["with_result"] += 1
             result["total"] = cnt
     return result
+
+@app.post("/api/pipeline/start")
+async def api_pipeline_start(request: Request):
+    """CEO 승인 후 DB 수집 + 이메일 생성 파이프라인 실행."""
+    body = await request.json()
+    agent = body.get("agent", "피치")
+    pid = body.get("proposal_id")
+    now = datetime.now(KST)
+    result = {"agent": agent, "steps": []}
+
+    # STEP 1: DB 수집
+    if agent == "피치":
+        crawl = await api_crawl_brands(Request(scope={"type": "http"}, receive=None))
+        # 시뮬레이션이지만 실데이터 기반
+        leads = await api_recontact_leads()
+        count = leads.get("count", 0)
+        result["steps"].append({"step": "DB 수집", "status": "완료", "count": count})
+        _record_perf("피치", "crawl_brands", count)
+    elif agent == "루나":
+        inf = await api_influencer_db()
+        count = inf.get("total", 0) if isinstance(inf.get("total"), int) else len(inf.get("items", inf.get("rows", [])))
+        result["steps"].append({"step": "DB 수집", "status": "완료", "count": count})
+        _record_perf("루나", "crawl_influencers", count)
+
+    # STEP 2: 이메일 개인화 생성 → 검수 큐
+    if agent == "피치":
+        leads_data = await api_recontact_leads()
+        targets = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")][:20]
+        tmpl = EMAIL_TEMPLATES.get("pitch_outbound")
+        queued = 0
+        for t in targets:
+            name = t.get("name", "담당자")
+            email = t.get("email", "")
+            subject = tmpl["subject"].format(brand=name, contact="담당자", name=name, fee="200")
+            email_body = tmpl["body"].format(brand=name, contact="담당자", product="제품", name=name, fee="200", **{"미팅링크": MEETING_LINK})
+            html = _build_pitch_html(name, email_body + f"\n\n[미팅 예약하기]({MEETING_LINK})")
+            _queue_or_send_email("피치", email, subject, html, {"target": name, "pipeline": True})
+            queued += 1
+        result["steps"].append({"step": "이메일 생성", "status": "완료", "queued": queued})
+    elif agent == "루나":
+        inf = await api_influencer_db()
+        items = inf.get("items", inf.get("rows", []))
+        targets = [i for i in items if isinstance(i, dict) and i.get("email") and "@" in i.get("email", "")][:20]
+        tmpl = EMAIL_TEMPLATES.get("luna_kr")
+        queued = 0
+        for t in targets:
+            name = t.get("account", t.get("name", ""))
+            email = t.get("email", "")
+            subject = tmpl["subject"].format(name=name, fee="200000")
+            email_body = tmpl["body"].format(name=name, fee="200000")
+            html = _build_pitch_html(name, email_body)
+            _queue_or_send_email("루나", email, subject, html, {"target": name, "pipeline": True})
+            queued += 1
+        result["steps"].append({"step": "이메일 생성", "status": "완료", "queued": queued})
+
+    # STEP 3: proposal 상태 업데이트
+    if pid:
+        proposals = load_proposals()
+        for p in proposals:
+            if p.get("id") == pid:
+                p["status"] = "executed"
+                p["executed_at"] = now.isoformat()
+                p["result"] = f"DB {result['steps'][0].get('count',0)}건 수집 → 이메일 {result['steps'][-1].get('queued',0)}건 생성"
+                break
+        save_proposals(proposals)
+
+    # STEP 4: Slack 알림
+    if _slack_enabled() and SLACK_WEBHOOK_URL:
+        try:
+            text = f"🤖 [{agent}] 파이프라인 실행 완료\n"
+            for s in result["steps"]:
+                text += f"• {s['step']}: {s['status']} ({s.get('count', s.get('queued', 0))}건)\n"
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.post(SLACK_WEBHOOK_URL, json={"text": text})
+        except Exception:
+            pass
+
+    return {"status": "ok", "result": result}
 
 @app.get("/api/outbound-dashboard")
 async def api_outbound_dashboard(agent: str = "피치"):
