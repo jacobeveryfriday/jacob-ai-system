@@ -1901,7 +1901,7 @@ def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     smtp_host = "smtp.worksmobile.com"
-    smtp_port = 465  # SSL
+    smtp_port = 587  # STARTTLS
     smtp_user, smtp_pass = _get_smtp_creds(agent_name)
     if not smtp_user or not smtp_pass:
         return {"status": "not_configured", "message": f"{agent_name} SMTP 미설정"}
@@ -1912,7 +1912,14 @@ def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "
         msg["From"] = f"{sender_name} <{smtp_user}>"
         msg["To"] = to_email
         msg.attach(MIMEText(html, "html", "utf-8"))
-        with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15) as server:
+        import ssl
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, [to_email], msg.as_string())
         return {"status": "ok", "to": to_email, "from": f"{sender_name} <{smtp_user}>", "method": "smtp"}
@@ -1963,7 +1970,7 @@ async def api_test_email(agent: str = "피치"):
     result = _send_email_smtp(to_email, subject, html, agent)
     result["smtp_user"] = smtp_user or "미설정"
     result["smtp_host"] = "smtp.worksmobile.com"
-    result["smtp_port"] = 465
+    result["smtp_port"] = 587
     result["to"] = to_email
     return result
 
