@@ -234,7 +234,7 @@ document.getElementById('topDate').textContent = new Date().toLocaleDateString('
 /* ===== Stale-While-Revalidate Cache ===== */
 var _dataCache = {};
 function cachedFetch(url) {
-  return fetch(url).then(function(r){return r.json()}).then(function(d){_dataCache[url]=d;return d});
+  return fetch(url).then(function(r){return r.text()}).then(function(t){var d=JSON.parse(t);_dataCache[url]=d;return d});
 }
 function getCached(url) { return _dataCache[url] || null; }
 

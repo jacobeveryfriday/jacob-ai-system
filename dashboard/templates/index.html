@@ -1023,10 +1023,10 @@ showPage('overview');lucide.createIcons();
 // ===== API Auto-Load (작업 5) =====
 async function loadKpiData(){
 try{
-var kpiResp=await fetch('/api/kpi-summary');var kpiData=await kpiResp.json();
-var brandResp=await fetch('/api/brand-pipeline');var brandData=await brandResp.json();
-var infResp=await fetch('/api/influencer-db');var infData=await infResp.json();
-var adsResp=await fetch('/api/ads-performance');var adsData=await adsResp.json();
+var kpiResp=await fetch('/api/kpi-summary');var kpiData=JSON.parse(await kpiResp.text());
+var brandResp=await fetch('/api/brand-pipeline');var brandData=JSON.parse(await brandResp.text());
+var infResp=await fetch('/api/influencer-db');var infData=JSON.parse(await infResp.text());
+var adsResp=await fetch('/api/ads-performance');var adsData=JSON.parse(await adsResp.text());
 // Update pipeline summary box
 var pe=document.getElementById('pipeline-summary');
 if(pe){var m2=brandData.month||{},t2=brandData.today||{};
@@ -1451,9 +1451,9 @@ fetch('/api/sophie-content').then(function(r){return r.json()}).then(function(d)
 // 에이전트 성과 데이터 로드
 function loadAgentPerf(){
 Promise.all([
-  fetch('/api/agent-performance').then(function(r){return r.json()}),
-  fetch('/api/kpi-summary').then(function(r){return r.json()}),
-  fetch('/api/benchmarks').then(function(r){return r.json()}).catch(function(){return {}})
+  fetch('/api/agent-performance').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}),
+  fetch('/api/kpi-summary').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}),
+  fetch('/api/benchmarks').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).catch(function(){return {}})
 ]).then(function(res){
 var d=res[0],kpi=res[1],bench=res[2];
 var t=d.today||{};
@@ -1585,7 +1585,7 @@ e('lp-crawled',l.crawled.today);e('lp-emails',l.crawled.total);e('lp-sent',l.sen
 loadPipelineStats();
 // 아웃바운드 대시보드 KPI 로드
 function loadOutboundDashboard(agent,prefix){
-fetch('/api/outbound-dashboard?agent='+encodeURIComponent(agent)).then(function(r){return r.json()}).then(function(d){
+fetch('/api/outbound-dashboard?agent='+encodeURIComponent(agent)).then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).then(function(d){
 var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
 s(prefix+'-target', prefix==='bd' ? 'K-뷰티 브랜드 / '+d.send_status.today_sent+'건 발송' : 'SNS 인플루언서 / '+d.send_status.today_sent+'건 발송');
 s(prefix+'-sent',d.send_status.today_sent);s(prefix+'-pending',d.send_status.pending);
@@ -1615,7 +1615,7 @@ loadOutboundDashboard(agent,agent==='피치'?'bd':'inf');
 }).catch(function(){alert('발송 오류')})}
 // 카카오 상태 동적 로드
 function loadSheetPipeline(agent){
-fetch('/api/sheet-pipeline?agent='+encodeURIComponent(agent)).then(function(r){return r.json()}).then(function(d){
+fetch('/api/sheet-pipeline?agent='+encodeURIComponent(agent)).then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).then(function(d){
 var t=d.total||{},f=d.funnel||{},td=d.today||{};
 var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
 if(agent==='피치'){
@@ -1651,7 +1651,7 @@ expected_impact:'DB 50명 → 유효 35명 → 협찬확정 5건 예상',
 action_type:'luna_db_collect'
 })}).then(function(r){return r.json()}).then(function(){alert('승인 요청이 CEO 큐에 등록되었습니다.')}).catch(function(){alert('오류')})}
 function loadPitchPerf(){
-fetch('/api/pitch/performance').then(function(r){return r.json()}).then(function(d){
+fetch('/api/pitch/performance').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).then(function(d){
 var k=d.kpi||{},rt=d.reply_types||{};
 var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
 s('perf-db',k.total_db||0);
