@@ -1316,32 +1316,33 @@ async def api_ads_performance():
         print(f"[ads-perf] inbound error: {e}")
 
     # ========== 2. 계약시트 [계산서발행] → 매출합계 + 채널별 계약 ==========
+    # 작성월구분 컬럼(예: "2026.04")으로 필터 → V열(총합계) 합산
     month_revenue, prev_month_revenue = 0, 0
     month_contracts, prev_month_contracts = 0, 0
     ct_by_ch = {}  # 채널별 {count, revenue}
+    prev_month_dot_str = f"{prev_month_end.year}.{prev_month_end.month:02d}"
     try:
         ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
         if ct_rows and len(ct_rows) > 1:
             hdr_idx = _find_header_row(ct_rows, "작성일자", "공급가액", "공급받는자")
             headers = [str(h).replace("\n", " ").strip() for h in ct_rows[hdr_idx]]
-            ct_date_idx = _find_col(headers, "계산서 작성일자", "작성일자", "등록기준일", "발행일")
-            ct_amount_idx = _find_col(headers, "총합계", "공급가액")
+            ct_month_idx = _find_col(headers, "작성월구분", "작성월")
+            ct_amount_idx = _find_col(headers, "총합계")
             ct_ch_idx = _find_col(headers, "유입채널")
-            if ct_date_idx is None: ct_date_idx = 1
-            if ct_amount_idx is None and len(headers) > 21: ct_amount_idx = 21  # V열
-            print(f"[ads-perf] 계약 cols: date={ct_date_idx} amount={ct_amount_idx} ch={ct_ch_idx}")
+            # 총합계 못 찾으면 공급가액 폴백
+            if ct_amount_idx is None:
+                ct_amount_idx = _find_col(headers, "공급가액")
+            if ct_amount_idx is None and len(headers) > 21:
+                ct_amount_idx = 21  # V열
+            print(f"[ads-perf] 계약 cols: month_col={ct_month_idx} amount={ct_amount_idx} ch={ct_ch_idx} headers_len={len(headers)}")
             for row in ct_rows[hdr_idx+1:]:
                 if not row or len(row) < 3: continue
-                date_raw = str(row[ct_date_idx]).strip() if ct_date_idx < len(row) else ""
+                # 작성월구분으로 이번달/전월 판단
+                ym_val = str(row[ct_month_idx]).strip() if ct_month_idx is not None and ct_month_idx < len(row) else ""
                 rev = _pint(row[ct_amount_idx]) if ct_amount_idx is not None and ct_amount_idx < len(row) else 0
                 if rev <= 0: continue
-                row_date = _parse_row_date(date_raw, "")
-                date_clean = date_raw.replace("-","").replace(".","").replace("/","").replace(" ","")
-                # 이번달: 1일 ~ 오늘(당일 포함)
-                is_this = (row_date is not None and month_start.date() <= row_date <= now.date()) or \
-                          (len(date_clean) >= 6 and date_clean[:6] == this_ym)
-                is_prev = (row_date is not None and prev_month_start.date() <= row_date <= prev_month_end.date()) or \
-                          (len(date_clean) >= 6 and date_clean[:6] == prev_ym)
+                is_this = this_month_dot in ym_val
+                is_prev = prev_month_dot_str in ym_val
                 if is_this:
                     month_revenue += rev
                     month_contracts += 1
@@ -1522,6 +1523,17 @@ async def api_ads_performance():
             print(f"[ads-perf] 월별 추이 {len(monthly_trend)}개월 로드: {[t['month'] for t in monthly_trend]}")
     except Exception as e:
         print(f"[ads-perf] 월별매출탭 error: {e}")
+
+    # ========== 매출합계 보정: 월별매출&로하스 탭 이번달 값 우선 사용 ==========
+    trend_this_month = [t for t in monthly_trend if t.get("month") == this_month_dot]
+    if trend_this_month and trend_this_month[0].get("total"):
+        month_revenue = trend_this_month[0]["total"]
+        print(f"[ads-perf] 매출합계 월별매출탭 값 사용: {month_revenue}")
+    # 전월도 동일
+    prev_month_dot_str = f"{prev_month_end.year}.{prev_month_end.month:02d}"
+    trend_prev_month = [t for t in monthly_trend if t.get("month") == prev_month_dot_str]
+    if trend_prev_month and trend_prev_month[0].get("total"):
+        prev_month_revenue = trend_prev_month[0]["total"]
 
     # ========== 반환 ==========
     return {
