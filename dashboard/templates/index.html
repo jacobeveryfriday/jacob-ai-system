@@ -1005,44 +1005,50 @@ var sc=stColors[p.status]||stColors['미달'];
 var statusBdg='<span style="background:'+sc[0]+';color:'+sc[1]+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px">'+(p.status||'미달')+'</span>';
 pH+='<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><p style="font-size:13px;font-weight:700;color:#1B2A4A;margin:0">'+p.name+'</p>'+statusBdg+'</div><p style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A;margin:0 0 8px">'+fmtM(p.revenue)+'원</p><div style="display:flex;gap:12px;font-size:11px;color:#6B6B6B;margin-bottom:10px;flex-wrap:wrap"><span>계약 '+p.contracts+'건</span><span>전환율 '+(p.conversion||0)+'%</span><span>DB '+(p.db_count||0)+'건</span><span>ROAS '+(p.roas||0)+'%</span></div><div><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px"><span style="color:#6B6B6B">목표 2,000만원</span><span style="font-weight:700;color:'+barColor+'">'+Math.round(pct)+'%</span></div><div style="background:#EDEBE7;border-radius:6px;height:8px;overflow:hidden"><div style="background:'+barColor+';height:100%;width:'+Math.min(pct,100)+'%;border-radius:6px;transition:width .4s ease"></div></div></div></div>'});
 pH+='</div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">출처: 세금계산서시트 "담당자별 계약전환율" 탭 / KPI 목표: 2,000만원</p></div>';pE.innerHTML=pH;
-// === 6. 월별 추이 — 차트 + 3열 비교 테이블 ===
+// === 6. 월별 추이 — 총매출 막대 + 신규/재계약 선 + ROAS 점선 ===
 var labels=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 var thisY=new Date().getFullYear(),thisMn=new Date().getMonth()+1;
 var thisM=thisY+'.'+(thisMn<10?'0':'')+thisMn;
-// 2025/2026 데이터 12개월 슬롯
 var y25={},y26={};
 trend.forEach(function(t){if(t.month.startsWith('2025'))y25[t.month]=t;if(t.month.startsWith('2026'))y26[t.month]=t});
-// --- 차트 (2026만) ---
+// --- 차트 (2026, 막대+선 혼합) ---
 var cE=document.getElementById('ads-trend-chart');
-var cH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">2026 월별 매출 추이</div><div style="position:relative;height:260px"><canvas id="adsTrendCanvas"></canvas></div></div>';
-cE.innerHTML=cH;
+cE.innerHTML='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">2026 월별 매출 추이</div><div style="position:relative;height:280px"><canvas id="adsTrendCanvas"></canvas></div></div>';
 var revArr=[],newArr=[],renewArr=[],roasArr=[];
 for(var mi=1;mi<=12;mi++){var mk='2026.'+(mi<10?'0':'')+mi;var dd=y26[mk];
-revArr.push(dd&&dd.revenue?dd.revenue/10000:null);newArr.push(dd&&dd.new_revenue?dd.new_revenue/10000:null);
-renewArr.push(dd&&dd.renew_revenue?dd.renew_revenue/10000:null);roasArr.push(dd&&dd.roas?dd.roas:null)}
-try{new Chart(document.getElementById('adsTrendCanvas'),{type:'line',data:{labels:labels,datasets:[
-{label:'총매출(만)',data:revArr,borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,0.08)',fill:true,tension:.3,pointRadius:3,borderWidth:2,yAxisID:'y'},
-{label:'신규(만)',data:newArr,borderColor:'#16A34A',tension:.3,pointRadius:2,borderWidth:1.5,yAxisID:'y'},
-{label:'재계약(만)',data:renewArr,borderColor:'#EA580C',tension:.3,pointRadius:2,borderWidth:1.5,yAxisID:'y'},
-{label:'ROAS(%)',data:roasArr,borderColor:'#DC2626',borderDash:[5,3],tension:.3,pointRadius:2,borderWidth:1.5,yAxisID:'y1'}
-]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{font:{size:11},usePointStyle:true,padding:12}}},scales:{y:{position:'left',title:{display:true,text:'만원',font:{size:10}},ticks:{color:'#6B6B6B',font:{size:10}},grid:{color:'#EDEBE7'}},y1:{position:'right',title:{display:true,text:'ROAS %',font:{size:10}},ticks:{color:'#DC2626',font:{size:10}},grid:{drawOnChartArea:false}},x:{ticks:{color:'#6B6B6B',font:{size:10}},grid:{color:'#EDEBE7'}}}}})}catch(e){console.log('chart error',e)}
-// --- 3열 비교 테이블 ---
+revArr.push(dd&&dd.revenue?dd.revenue/10000:null);
+newArr.push(dd&&dd.new_revenue?dd.new_revenue/10000:null);
+renewArr.push(dd&&dd.renew_revenue?dd.renew_revenue/10000:null);
+roasArr.push(dd&&dd.roas!=null?dd.roas:null)}
+try{new Chart(document.getElementById('adsTrendCanvas'),{type:'bar',data:{labels:labels,datasets:[
+{label:'총매출(만)',data:revArr,type:'bar',backgroundColor:'rgba(37,99,235,0.25)',borderColor:'#2563EB',borderWidth:1,borderRadius:4,yAxisID:'y',order:4},
+{label:'신규(만)',data:newArr,type:'line',borderColor:'#16A34A',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,yAxisID:'y',order:2},
+{label:'재계약(만)',data:renewArr,type:'line',borderColor:'#EA580C',backgroundColor:'transparent',tension:.3,pointRadius:3,borderWidth:2,yAxisID:'y',order:3},
+{label:'ROAS(%)',data:roasArr,type:'line',borderColor:'#DC2626',borderDash:[5,3],backgroundColor:'transparent',tension:.3,pointRadius:3,pointStyle:'triangle',borderWidth:2,yAxisID:'y1',order:1}
+]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{font:{size:11},usePointStyle:true,padding:14}},tooltip:{callbacks:{label:function(ctx){var v=ctx.parsed.y;if(v==null)return'';return ctx.dataset.label+': '+(ctx.datasetIndex===3?v+'%':v.toLocaleString()+'만원')}}}},scales:{y:{position:'left',title:{display:true,text:'만원',font:{size:10}},ticks:{color:'#6B6B6B',font:{size:10},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'억':v.toLocaleString()}},grid:{color:'#EDEBE7'},beginAtZero:true},y1:{position:'right',title:{display:true,text:'ROAS %',font:{size:10}},ticks:{color:'#DC2626',font:{size:10},callback:function(v){return v+'%'}},grid:{drawOnChartArea:false},beginAtZero:true},x:{ticks:{color:'#6B6B6B',font:{size:10}},grid:{color:'#EDEBE7'}}}}})}catch(e){console.log('chart err',e)}
+// --- 3열 비교 테이블: 계약건수/ROAS ---
 var tE=document.getElementById('ads-trend-table');
-var tH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">전년 동기 대비</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>2025 매출 / ROAS</th><th>2026 매출 / ROAS</th><th>전년동기대비</th></tr></thead><tbody>';
+var tH='<div style="'+CS+'"><div style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:14px">전년 동기 대비</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>2025 계약건수 / ROAS</th><th>2026 계약건수 / ROAS</th><th>전년동기대비</th></tr></thead><tbody>';
 var sum25=0,sum26=0;
 for(var mi=1;mi<=12;mi++){var mk25='2025.'+(mi<10?'0':'')+mi,mk26='2026.'+(mi<10?'0':'')+mi;
-var d25=y25[mk25],d26=y26[mk26];var r25=d25?d25.revenue:0,r26=d26?d26.revenue:0;
-var ro25=d25?d25.roas:0,ro26=d26?d26.roas:0;sum25+=r25;sum26+=r26;
+var d25=y25[mk25],d26=y26[mk26];
+var r25=d25&&d25.revenue?d25.revenue:0,r26=d26&&d26.revenue?d26.revenue:0;
+var c25=d25&&d25.contracts?d25.contracts:null,c26=d26&&d26.contracts?d26.contracts:null;
+var ro25=d25&&d25.roas!=null?d25.roas:null,ro26=d26&&d26.roas!=null?d26.roas:null;
+sum25+=r25;sum26+=r26;
 var isCur=mk26===thisM;var bg=isCur?'background:#F0FDF4;font-weight:700':(mi%2===0?'background:#FAFAF8':'');
-var chg=r25>0?Math.round((r26-r25)/r25*100):r26>0?100:0;
-var chgHtml=r25===0&&r26===0?'<span style="color:#9B9B9B">-</span>':(chg>=0?'<span style="color:#16A34A;font-weight:700">▲ +'+chg+'%</span>':'<span style="color:#DC2626;font-weight:700">▼ '+chg+'%</span>');
-var v25=r25>0?fmtM(r25)+'원 / '+ro25+'%':'<span style="color:#9B9B9B">-</span>';
-var v26=r26>0?fmtM(r26)+'원 / '+ro26+'%':'<span style="color:#9B9B9B">-</span>';
-tH+='<tr style="'+bg+'"><td style="font-weight:'+(isCur?'700':'400')+'">'+mi+'월'+(isCur?' *':'')+'</td><td style="font-family:monospace">'+v25+'</td><td style="font-family:monospace">'+v26+'</td><td style="font-family:monospace">'+chgHtml+'</td></tr>'}
+var chgHtml;
+if(r26===0&&r25===0){chgHtml='<span style="color:#9B9B9B">-</span>'}
+else if(r26===0){chgHtml='<span style="color:#9B9B9B">-</span>'}
+else if(r25===0){chgHtml='<span style="color:#16A34A;font-weight:700">▲ NEW</span>'}
+else{var chg=Math.round((r26-r25)/r25*100);chgHtml=chg>=0?'<span style="color:#16A34A;font-weight:700">▲ +'+chg+'%</span>':'<span style="color:#DC2626;font-weight:700">▼ '+chg+'%</span>'}
+var v25=c25!=null?(c25+'건 / '+(ro25!=null?ro25+'%':'-')):'<span style="color:#9B9B9B">-</span>';
+var v26=c26!=null?(c26+'건 / '+(ro26!=null?ro26+'%':'-')):'<span style="color:#9B9B9B">-</span>';
+tH+='<tr style="'+bg+'"><td style="font-weight:'+(isCur?'700':'400')+'">'+mi+'월'+(isCur?' *':'')+'</td><td style="font-family:monospace">'+v25+'</td><td style="font-family:monospace">'+v26+'</td><td style="font-family:monospace;text-align:center">'+chgHtml+'</td></tr>'}
 var totalChg=sum25>0?Math.round((sum26-sum25)/sum25*100):(sum26>0?100:0);
-var totalChgHtml=totalChg>=0?'<span style="color:#16A34A;font-weight:700">▲ +'+totalChg+'%</span>':'<span style="color:#DC2626;font-weight:700">▼ '+totalChg+'%</span>';
-tH+='<tr style="background:#F5F4F0;font-weight:700"><td>합계</td><td style="font-family:monospace">'+fmtM(sum25)+'원</td><td style="font-family:monospace">'+fmtM(sum26)+'원</td><td style="font-family:monospace">'+totalChgHtml+'</td></tr>';
-tH+='</tbody></table></div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">출처: 세금계산서시트 월별매출&ROAS 탭 / 전년동기대비: 동일 월 비교 / 0값 월은 미집계</p></div>';tE.innerHTML=tH;
+var totalChgHtml=sum25===0&&sum26===0?'-':(totalChg>=0?'<span style="color:#16A34A;font-weight:700">▲ +'+totalChg+'%</span>':'<span style="color:#DC2626;font-weight:700">▼ '+totalChg+'%</span>');
+tH+='<tr style="background:#F5F4F0;font-weight:700"><td>합계</td><td style="font-family:monospace">'+fmtM(sum25)+'원</td><td style="font-family:monospace">'+fmtM(sum26)+'원</td><td style="font-family:monospace;text-align:center">'+totalChgHtml+'</td></tr>';
+tH+='</tbody></table></div><p style="font-size:10px;color:#9B9B9B;margin:10px 0 0;font-style:italic">출처: 세금계산서시트 "월별매출&로하스" 탭 / 전년동기대비: 동일 월 매출 비교 / 0값 월은 미집계</p></div>';tE.innerHTML=tH;
 }).catch(function(){var k=document.getElementById('ads-kpi-cards');if(k)k.innerHTML='<div style="background:#FFF;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:24px;color:#DC2626;font-weight:600">데이터 로딩 실패 — API 연결을 확인하세요</div>'})},
 
 sns:function(el){
