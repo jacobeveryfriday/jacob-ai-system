@@ -1635,7 +1635,11 @@ b3.addEventListener('click',(function(id){return function(){fetch('/api/email-qu
 // 삭제
 var b2=document.createElement('button');b2.style.cssText='padding:4px 10px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#C4332B;font-size:10px;cursor:pointer';b2.textContent='삭제';
 b2.addEventListener('click',(function(id){return function(){fetch('/api/email-queue/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(){loadEmailQueue(agent,containerId)})}})(e.id));btns.appendChild(b2);
-foot.appendChild(btns);card.appendChild(foot);el.appendChild(card)})}).catch(function(){})}
+foot.appendChild(btns);card.appendChild(foot);
+// 시트 바로보기 링크
+var sheetUrl=agent==='피치'?'https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit#gid=0':agent==='루나'?'https://docs.google.com/spreadsheets/d/1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs/edit#gid=0':'';
+if(sheetUrl){var sl=document.createElement('a');sl.href=sheetUrl;sl.target='_blank';sl.rel='noopener';sl.style.cssText='display:block;text-align:right;margin-top:6px;font-size:10px;color:#6B6B6B;text-decoration:none';sl.textContent='📊 결과 시트 바로보기 →';card.appendChild(sl)}
+el.appendChild(card)})}).catch(function(){})}
 function toggleAutoSend(agent,on){
 fetch('/api/agent-auto-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent:agent,enabled:on})}).catch(function(){})}
 // 자동 발송 토글 초기화

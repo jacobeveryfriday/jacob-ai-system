@@ -245,6 +245,13 @@ PITCH_SHEET_ID = os.getenv("PITCH_SHEET_ID", "1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqo
 LUNA_SHEET_ID = os.getenv("LUNA_SHEET_ID", "1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs")
 SOPHIE_SHEET_ID = os.getenv("SOPHIE_SHEET_ID", "1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU")
 
+SHEET_URLS = {
+    "피치": "https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit#gid=0",
+    "루나": "https://docs.google.com/spreadsheets/d/1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs/edit#gid=0",
+    "소피": "https://docs.google.com/spreadsheets/d/1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU/edit#gid=0",
+    "레이": "https://docs.google.com/spreadsheets/d/1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q/edit#gid=0",
+}
+
 MEETING_LINK ="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ3b3pndYo35A_3SjrHJeeXfAm3YpvBX0IXfkJqXP0QXixBEADR_ehY__tHBlJdNBkL5I2868Rrd"
 
 # ===== 에이전트 이메일 계정 =====
@@ -3349,7 +3356,8 @@ async def api_sns_content_generate(request: Request):
 async def api_sheet_pipeline(agent: str = "피치"):
     """구글시트 실시간 파이프라인 — 에이전트별 집계. 실제 시트 컬럼 기반."""
     now = datetime.now(KST)
-    result = {"agent": agent, "today": {}, "month": {}, "total": {}, "funnel": {}}
+    result = {"agent": agent, "today": {}, "month": {}, "total": {}, "funnel": {},
+              "sheet_url": SHEET_URLS.get(agent, "")}
     if agent == "피치":
         # 피치 시트: 파센문의 탭 A:V (헤더 3행)
         # A:국가 B:월 C:날짜 D:유입채널 E:업체명 F:연락처 G:이메일
