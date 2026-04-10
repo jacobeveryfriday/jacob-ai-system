@@ -2189,19 +2189,17 @@ EMAIL_WEBHOOK_URL = os.getenv("EMAIL_WEBHOOK_URL", "")
 
 AGENT_ID_MAP = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle", "레이": "ray", "하나": "hana", "맥스": "max"}
 
-def _send_email_webhook(to_email: str, subject: str, body_text: str, agent_name: str = "루나") -> dict:
-    """Google Apps Script 웹훅으로 이메일 발송."""
+def _send_email_webhook(to_email: str, subject: str, body_text: str, agent_name: str = "루나", html_body: str = "") -> dict:
+    """Google Apps Script 웹훅으로 이메일 발송. html_body 있으면 HTML 형식."""
     webhook_url = EMAIL_WEBHOOK_URL
     if not webhook_url:
         return {"status": "not_configured", "message": "EMAIL_WEBHOOK_URL 미설정"}
     agent_id = AGENT_ID_MAP.get(agent_name, "pitch")
+    payload = {"agent": agent_id, "to": to_email, "subject": subject, "body": body_text}
+    if html_body:
+        payload["htmlBody"] = html_body
     try:
-        resp = req_lib.post(webhook_url, json={
-            "agent": agent_id,
-            "to": to_email,
-            "subject": subject,
-            "body": body_text,
-        }, timeout=30, allow_redirects=True)
+        resp = req_lib.post(webhook_url, json=payload, timeout=30, allow_redirects=True)
         if resp.status_code == 200:
             data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"message": resp.text[:200]}
             return {"status": "ok", "to": to_email, "agent": agent_id, "method": "gas_webhook", "response": data}
@@ -2371,10 +2369,94 @@ KOL 라이브 → 2분 30초에 1억 매출
 ※ 회신 없이는 단 1통도 발송되지 않습니다.
 """
 
-    subject = f"[피치+루나 검수 요청] 4가지 시안 확인해주세요 — 4/30 마감"
-    result = _send_email_webhook(ceo_email, subject, body, "피치")
+    subject = f"[피치+루나 검수 요청] 4가지 시안 확인해주세요 | 4/30 마감"
+    # HTML 버전 생성
+    html = f'''<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px">
+<h2 style="color:#1a1a1a;border-bottom:2px solid #333;padding-bottom:10px">📋 발송 개요</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd;font-weight:bold">항목</td><td style="padding:8px;border:1px solid #ddd;font-weight:bold">내용</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">피치 발송 예정</td><td style="padding:8px;border:1px solid #ddd">{pitch_total}건 (K-뷰티 브랜드)</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">루나 발송 예정</td><td style="padding:8px;border:1px solid #ddd">{luna_total}건 (DB 수집 후 진행)</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">예상 오픈/답변/미팅</td><td style="padding:8px;border:1px solid #ddd">{max(1,int(pitch_total*0.20))}건 / {pitch_reply}건 / {pitch_meeting}건</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">발송 비용</td><td style="padding:8px;border:1px solid #ddd">약 {cost_est}원</td></tr>
+</table>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2 style="color:#1a1a1a">📧 피치 시안 A — 성과 후킹형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p style="margin:0 0 8px"><strong>제목:</strong> 숏폼 1개로 매출 8억 — {{브랜드명}}도 가능한 이유</p>
+<p style="margin:0"><strong>발신:</strong> Pitch | 공팔리터(0.8L)</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">
+<p>안녕하세요 {{담당자명}}님,<br>공팔리터(0.8L) 피치입니다.</p>
+<p>저희 파트너의 실제 성과입니다:<br>🔥 숏폼 1개 → 조회 287만 → 매출 8억<br>🔥 리뷰 200건 → 올리브영 검색량 +340%<br>🔥 KOL 라이브 → 2분 30초에 1억 매출</p>
+<p>4월 한정 — 숏폼 100건 기준 60% 할인 (4/30 마감)</p>
+<p>📎 <a href="https://buly.kr/AF24dn7">상품소개서</a> | 📅 <a href="https://buly.kr/1c9NOdW">5분 상담</a></p></div>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2 style="color:#1a1a1a">📧 피치 시안 B — 프로모션 긴급형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p style="margin:0 0 8px"><strong>제목:</strong> 4월 30일 마감 — 숏폼 100건 200만원 (정가 500만원)</p>
+<p style="margin:0"><strong>발신:</strong> Pitch | 공팔리터(0.8L)</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">
+<p>안녕하세요 {{담당자명}}님,<br>공팔리터(0.8L) 피치입니다.</p>
+<p>🇰🇷 <strong>국내</strong><br>🔥 숏폼 100건: 200만원 (60% 할인)<br>🔥 릴스 무제한 300만원<br>🔥 구매평 100건+ 건당 3,000원</p>
+<p>🌏 <strong>해외</strong><br>🔥 글로벌 숏폼 100건: 500만원 (50% 할인)<br>🔥 글로벌 구매평 100건+ 건당 3만원</p>
+<p>📎 <a href="https://buly.kr/AF24dn7">프로모션 상세</a> | 📅 <a href="https://buly.kr/1c9NOdW">5분 상담</a></p></div>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2 style="color:#1a1a1a">📧 루나 시안 A — 성과+수익 제안형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p style="margin:0 0 8px"><strong>제목:</strong> {{인플루언서명}}님 팔로워가 사고 싶어할 K-뷰티, 협찬 제안</p>
+<p style="margin:0"><strong>발신:</strong> Luna | 밀리밀리 x 공팔리터(0.8L)</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">
+<p>안녕하세요 {{인플루언서명}}님!<br>밀리밀리 x 공팔리터(0.8L) 루나입니다.</p>
+<p>✅ 숏폼 1개 → 조회 287만<br>✅ KOL 라이브 → 2분 30초에 1억<br>✅ 리뷰 → 검색량 3배</p>
+<p>✅ 제품 무상 제공 / ✅ 콘텐츠 100% 자유 / ✅ 수익 쉐어</p>
+<p>📎 <a href="https://buly.kr/AF24dn7">브랜드 소개</a> | 📅 <a href="https://buly.kr/1c9NOdW">협업 미팅</a></p></div>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2 style="color:#1a1a1a">📧 루나 시안 B — 단도직입형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p style="margin:0 0 8px"><strong>제목:</strong> K-뷰티 협찬 — 밀리밀리가 {{인플루언서명}}님을 선택했습니다</p>
+<p style="margin:0"><strong>발신:</strong> Luna | 밀리밀리 x 공팔리터(0.8L)</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">
+<p>안녕하세요 {{인플루언서명}}님,<br>밀리밀리 루나입니다.</p>
+<p>제품 무상 제공 + 수익 쉐어 / 콘텐츠 100% 자유<br>부담 없이 샘플부터 먼저 받아보실 수 있어요.</p>
+<p>📎 <a href="https://buly.kr/AF24dn7">브랜드 소개</a> | 📅 <a href="https://buly.kr/1c9NOdW">협업 미팅</a></p></div>
+<hr style="border:2px solid #333;margin:30px 0">
+<div style="background:#fff3cd;padding:15px;border:1px solid #ffc107;border-radius:4px">
+<h3 style="margin:0 0 10px;color:#856404">✉️ 이 이메일에 회신해주세요</h3>
+<p style="margin:0 0 8px">피치: <strong>"피치A"</strong> 또는 <strong>"피치B"</strong></p>
+<p style="margin:0 0 8px">루나: <strong>"루나A"</strong> 또는 <strong>"루나B"</strong></p>
+<p style="margin:0 0 8px">예시: <strong>"피치A, 루나B"</strong></p>
+<p style="margin:0;color:#dc3545"><strong>※ 회신 없이는 단 1통도 발송되지 않습니다.</strong></p>
+</div></div>'''
+
+    result = _send_email_webhook(ceo_email, subject, body, "피치", html_body=html)
     result["pitch_total"] = pitch_total
     result["luna_total"] = luna_total
+    return result
+
+@app.get("/api/send-luna-db-request")
+async def api_send_luna_db_request():
+    """루나 DB 수집 승인 요청 이메일 발송."""
+    ceo_email = "jacob@08liter.com"
+    subject = "[루나 DB 수집 승인 요청] 인플루언서 50명 | 비용 196원"
+    html = '''<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+<h2 style="color:#1a1a1a;border-bottom:2px solid #333;padding-bottom:10px">📦 루나 DB 수집 계획</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd;font-weight:bold">항목</td><td style="padding:8px;border:1px solid #ddd;font-weight:bold">내용</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">수집 출처</td><td style="padding:8px;border:1px solid #ddd">Instagram (#kbeauty #skincare 해시태그)</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">수집 목표</td><td style="padding:8px;border:1px solid #ddd">50명</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">완료 기간</td><td style="padding:8px;border:1px solid #ddd">승인 후 당일</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">예상 비용</td><td style="padding:8px;border:1px solid #ddd">약 196원 (Haiku 기준)</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">타겟 기준</td><td style="padding:8px;border:1px solid #ddd">✅ 팔로워 1만~100만<br>✅ 인게이지먼트 3%+<br>✅ 뷰티/스킨케어<br>✅ 공개 비즈니스 이메일<br>✅ 한국 50% / 일본 25% / 동남아 25%</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">제외 기준</td><td style="padding:8px;border:1px solid #ddd">❌ 인게이지먼트 3% 미만<br>❌ 3개월 미업로드<br>❌ 이메일 없는 계정</td></tr>
+</table>
+<div style="background:#fff3cd;padding:15px;border:1px solid #ffc107;border-radius:4px">
+<strong>✉️ 회신해주세요:</strong><br>
+"수집승인" → 즉시 수집 시작<br>
+"수집수정: [내용]" → 수정 후 재요청<br>
+"수집취소" → 취소<br><br>
+<strong style="color:#dc3545">※ 회신 없이는 수집 시작 불가</strong>
+</div></div>'''
+    result = _send_email_webhook(ceo_email, subject, "루나 DB 수집 승인 요청", "루나", html_body=html)
     return result
 
 
