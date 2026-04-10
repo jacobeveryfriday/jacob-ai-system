@@ -1480,10 +1480,10 @@ async def api_ads_performance():
         print(f"[ads-perf] 담당자탭 error: {e}")
 
     # ========== 8. 월별 추이 — "월별매출&로하스" 탭 (좌우 구조) ==========
-    # 시트 구조: 좌측(A~H)=25년, 우측(I~P)=26년, 같은 행에 나란히
-    # 1행=제목, 2행=연도구분, 3행(idx2)=헤더, 4행~=데이터
-    # 25년: A(0)=월, B(1)=당월계약건수, C(2)=매출합계, D(3)=매출(신규), E(4)=매출(재계약), F(5)=광고비, G(6)=ROAS(%), H(7)=평균단가
-    # 26년: I(8)=월, J(9)=당월계약건수, K(10)=매출합계, L(11)=매출(신규), M(12)=매출(재계약), N(13)=광고비, O(14)=ROAS(%), P(15)=평균단가
+    # 시트 구조: B~R열 (A열은 비어있음), 좌우 나란히
+    # 25년: B(0)=월, C(1)=당월계약건수, D(2)=매출합계, E(3)=매출(신규), F(4)=매출(재계약), G(5)=광고비, H(6)=ROAS(%), I(7)=평균단가
+    # 26년: K(9)=월, L(10)=당월계약건수, M(11)=매출합계, N(12)=매출(신규), O(13)=매출(재계약), P(14)=광고비, Q(15)=ROAS(%), R(16)=평균단가
+    # (J열=idx8은 빈 구분열)
     monthly_trend = []
     def _sv(row, idx):
         """시트 셀 → int. 0/#DIV/0!/빈값 → None"""
@@ -1500,23 +1500,23 @@ async def api_ads_performance():
         try: return round(float(v), 1)
         except: return None
     try:
-        mr_rows = fetch_sheet(SHEET_CONTRACT, "A:P", "월별매출&로하스", ttl_key="contract")
+        mr_rows = fetch_sheet(SHEET_CONTRACT, "B:R", "월별매출&로하스", ttl_key="contract")
         if mr_rows and len(mr_rows) > 3:
             print(f"[ads-perf] 월별매출 탭: {len(mr_rows)}행, 첫행 길이={len(mr_rows[0]) if mr_rows[0] else 0}")
             for row in mr_rows[3:]:  # 4행(idx3)부터 데이터
                 if not row or len(row) < 2: continue
-                # --- 25년 (A~H, idx 0~7) ---
+                # --- 25년 (B~I → idx 0~7) ---
                 m25 = str(row[0]).strip() if len(row) > 0 else ""
                 if m25 and m25.startswith("2025"):
                     monthly_trend.append({"month": m25, "contracts": _sv(row,1),
                         "total": _sv(row,2), "new_sales": _sv(row,3), "renew_sales": _sv(row,4),
                         "ad_cost": _sv(row,5), "roas": _sf(row,6), "avg_price": _sv(row,7)})
-                # --- 26년 (I~P, idx 8~15) ---
-                m26 = str(row[8]).strip() if len(row) > 8 else ""
+                # --- 26년 (K~R → idx 9~16, J=idx8은 빈 구분열) ---
+                m26 = str(row[9]).strip() if len(row) > 9 else ""
                 if m26 and m26.startswith("2026"):
-                    monthly_trend.append({"month": m26, "contracts": _sv(row,9),
-                        "total": _sv(row,10), "new_sales": _sv(row,11), "renew_sales": _sv(row,12),
-                        "ad_cost": _sv(row,13), "roas": _sf(row,14), "avg_price": _sv(row,15)})
+                    monthly_trend.append({"month": m26, "contracts": _sv(row,10),
+                        "total": _sv(row,11), "new_sales": _sv(row,12), "renew_sales": _sv(row,13),
+                        "ad_cost": _sv(row,14), "roas": _sf(row,15), "avg_price": _sv(row,16)})
             # 월 기준 정렬
             monthly_trend.sort(key=lambda x: x["month"])
             print(f"[ads-perf] 월별 추이 {len(monthly_trend)}개월 로드: {[t['month'] for t in monthly_trend]}")
