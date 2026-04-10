@@ -1684,6 +1684,13 @@ loadEmailQueue(agent,agent==='피치'?'pitch-email-queue':'luna-email-queue');
 loadOutboundDashboard(agent,agent==='피치'?'bd':'inf');
 }).catch(function(){alert('발송 오류')})}
 // 카카오 상태 동적 로드
+function loadSheetPipeline(agent){
+fetch('/api/sheet-pipeline?agent='+encodeURIComponent(agent)).then(function(r){return r.json()}).then(function(d){
+var t=d.total||{};var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
+if(agent==='피치'){s('pp-crawled',t.db||0);s('pp-queued',t.with_email||0)}
+if(agent==='루나'){s('lp-crawled',t.db||0);s('lp-emails',t.proposed||0);s('lp-secured',t.usable||0)}
+if(agent==='소피'){s('sns-today-content',(t.posts||0)+' / 목표 2')}
+}).catch(function(){})}
 function loadKakaoStatus(){
 fetch('/health').then(function(r){return r.json()}).then(function(d){
 var svc=d.services||{};var isOn=svc.kakao_b2b==='connected'||svc.kakao_b2c==='connected';
@@ -1746,8 +1753,9 @@ if(pageId==='alerts')loadAlertBoard();
 if(pageId==='settings')loadGoals();
 if(pageId==='api-status')loadApiStatus();
 if(pageId==='cs'){initCsCharts('brand');loadKakaoStatus()}
-if(pageId==='brand')loadOutboundDashboard('피치','bd');
-if(pageId==='influencer')loadOutboundDashboard('루나','inf');
+if(pageId==='brand'){loadOutboundDashboard('피치','bd');loadSheetPipeline('피치')}
+if(pageId==='influencer'){loadOutboundDashboard('루나','inf');loadSheetPipeline('루나')}
+if(pageId==='sns')loadSheetPipeline('소피');
 loadAgentPerf()};
 
 function loadAlertBoard(){

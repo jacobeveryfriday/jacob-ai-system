@@ -98,7 +98,30 @@
   <div id="proposalQueue"></div>
 </section>
 
-<!-- ===== SECTION 2B: 에이전트 자율운영 현황 ===== -->
+<!-- ===== SECTION 2B: 에이전트 파이프라인 (시트 기반) ===== -->
+<section class="section" id="section-pipelines" style="padding-bottom:0">
+  <div class="section-label">에이전트 파이프라인 — 구글시트 실시간</div>
+  <div class="grid-2" style="gap:16px">
+    <div style="background:var(--bg-card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">피치 — 브랜드 영업</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div style="text-align:center;background:var(--bg);border-radius:6px;padding:8px"><p style="font-size:8px;color:var(--text-muted)">총 DB</p><p id="ceo-pitch-db" style="font-family:var(--mono);font-size:18px;font-weight:700">—</p></div>
+        <div style="text-align:center;background:var(--bg);border-radius:6px;padding:8px"><p style="font-size:8px;color:var(--text-muted)">이메일 보유</p><p id="ceo-pitch-email" style="font-family:var(--mono);font-size:18px;font-weight:700">—</p></div>
+        <div style="text-align:center;background:var(--bg);border-radius:6px;padding:8px"><p style="font-size:8px;color:var(--text-muted)">워킹중</p><p id="ceo-pitch-working" style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">—</p></div>
+      </div>
+    </div>
+    <div style="background:var(--bg-card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">루나 — 인플루언서 확보</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div style="text-align:center;background:var(--bg);border-radius:6px;padding:8px"><p style="font-size:8px;color:var(--text-muted)">총 인플루언서</p><p id="ceo-luna-db" style="font-family:var(--mono);font-size:18px;font-weight:700">—</p></div>
+        <div style="text-align:center;background:var(--bg);border-radius:6px;padding:8px"><p style="font-size:8px;color:var(--text-muted)">제안발송</p><p id="ceo-luna-proposed" style="font-family:var(--mono);font-size:18px;font-weight:700">—</p></div>
+        <div style="text-align:center;background:var(--bg);border-radius:6px;padding:8px"><p style="font-size:8px;color:var(--text-muted)">사례활용</p><p id="ceo-luna-usable" style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)">—</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 2C: 에이전트 자율운영 현황 ===== -->
 <section class="section" id="section-agents">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <div class="section-label" style="margin-bottom:0">에이전트 자율운영 현황</div>
@@ -711,6 +734,17 @@ fetch('/api/token-usage').then(function(r){return r.json()}).then(function(d){
     var s=document.createElement('div');s.style.cssText='font-size:9px;color:var(--text-muted)';s.textContent=(a.today.total/1000000).toFixed(2)+'M';card.appendChild(s);
     grid.appendChild(card);
   })}
+}).catch(function(){});
+
+// 시트 파이프라인 로드
+Promise.all([
+  fetch('/api/sheet-pipeline?agent=피치').then(function(r){return r.json()}),
+  fetch('/api/sheet-pipeline?agent=루나').then(function(r){return r.json()})
+]).then(function(res){
+  var p=res[0].total||{},l=res[1].total||{};
+  var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
+  s('ceo-pitch-db',p.db||0);s('ceo-pitch-email',p.with_email||0);s('ceo-pitch-working',p.working||0);
+  s('ceo-luna-db',l.db||0);s('ceo-luna-proposed',l.proposed||0);s('ceo-luna-usable',l.usable||0);
 }).catch(function(){});
 
 loadAll();

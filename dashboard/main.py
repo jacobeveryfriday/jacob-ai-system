@@ -240,6 +240,11 @@ def _record_tokens(agent: str, input_tokens: int, output_tokens: int, model: str
     _record_perf(agent, "output_tokens", output_tokens)
     _record_perf(agent, "cost_usd_x100", int(cost * 100))
 
+# ===== 에이전트별 구글시트 =====
+PITCH_SHEET_ID = os.getenv("PITCH_SHEET_ID", "1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8")
+LUNA_SHEET_ID = os.getenv("LUNA_SHEET_ID", "1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs")
+SOPHIE_SHEET_ID = os.getenv("SOPHIE_SHEET_ID", "1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU")
+
 MEETING_LINK ="https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ3b3pndYo35A_3SjrHJeeXfAm3YpvBX0IXfkJqXP0QXixBEADR_ehY__tHBlJdNBkL5I2868Rrd"
 
 # ===== 에이전트 이메일 계정 =====
@@ -3339,6 +3344,60 @@ async def api_sns_content_generate(request: Request):
     save_proposals(proposals[-200:])
     _record_perf("소피", "content_created", 2)
     return {"status": "ok", "results": results}
+
+@app.get("/api/sheet-pipeline")
+async def api_sheet_pipeline(agent: str = "피치"):
+    """구글시트 실시간 파이프라인 — 에이전트별 집계."""
+    now = datetime.now(KST)
+    today_str = now.strftime("%Y-%m-%d")
+    this_month = now.strftime("%Y.%m")
+    result = {"agent": agent, "today": {}, "month": {}, "total": {}}
+    if agent == "피치":
+        rows = fetch_sheet(PITCH_SHEET_ID, "A:Z", "파센문의", ttl_key="inbound")
+        if rows:
+            hdr_idx = _find_header_row(rows, "국가", "컨택현황", "컨텍현황", "담당자")
+            headers = [str(h).replace("\n", " ").strip() for h in rows[hdr_idx]]
+            email_idx = _find_col(headers, "이메일") or 6
+            status_idx = _find_col(headers, "컨텍현황", "컨택현황") or 16
+            staff_idx = _find_col(headers, "담당자") or 14
+            date_idx = 2
+            month_idx = 1
+            t_total, t_emailed, t_replied, t_meeting, t_today = 0, 0, 0, 0, 0
+            for row in rows[hdr_idx + 1:]:
+                if len(row) < 5:
+                    continue
+                t_total += 1
+                email = str(row[email_idx]).strip() if email_idx < len(row) else ""
+                status = str(row[status_idx]).strip() if status_idx < len(row) else ""
+                date_val = str(row[date_idx]).strip() if date_idx < len(row) else ""
+                month_val = str(row[month_idx]).strip() if month_idx < len(row) else ""
+                if email and "@" in email:
+                    t_emailed += 1
+                if "워킹" in status:
+                    t_replied += 1
+                if _is_date_today(date_val, now):
+                    t_today += 1
+            result["total"] = {"db": t_total, "with_email": t_emailed, "working": t_replied}
+            result["today"] = {"inbound": t_today}
+    elif agent == "루나":
+        rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+        if rows and len(rows) > 1:
+            t_total = len(rows) - 1
+            t_outbound = sum(1 for r in rows[1:] if len(r) > 1 and "아웃바운드" in str(r[1]))
+            t_inbound = sum(1 for r in rows[1:] if len(r) > 1 and "인바운드" in str(r[1]))
+            t_listed = sum(1 for r in rows[1:] if len(r) > 10 and "리스트" in str(r[10]))
+            t_proposed = sum(1 for r in rows[1:] if len(r) > 10 and "제안" in str(r[10]))
+            t_usable = sum(1 for r in rows[1:] if len(r) > 10 and "사례" in str(r[10]))
+            result["total"] = {"db": t_total, "outbound": t_outbound, "inbound": t_inbound,
+                               "listed": t_listed, "proposed": t_proposed, "usable": t_usable}
+    elif agent == "소피":
+        rows = fetch_sheet(SOPHIE_SHEET_ID, "A:I", "소피_클로드", ttl_key="default")
+        if rows and len(rows) > 1:
+            t_total = len(rows) - 1
+            t_b2b = sum(1 for r in rows[1:] if len(r) > 4 and "b2b" in str(r[4]).lower())
+            t_b2c = sum(1 for r in rows[1:] if len(r) > 4 and "b2c" in str(r[4]).lower())
+            result["total"] = {"posts": t_total, "b2b": t_b2b, "b2c": t_b2c}
+    return result
 
 @app.get("/api/outbound-dashboard")
 async def api_outbound_dashboard(agent: str = "피치"):
