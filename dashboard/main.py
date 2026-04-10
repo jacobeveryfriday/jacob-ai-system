@@ -2771,38 +2771,49 @@ async def api_pitch_reply(request: Request):
 
 @app.get("/api/pitch/performance")
 async def api_pitch_performance():
-    """í¼ì¹ ì±ê³¼ 건ì건³´건 â ìí¸ ì¤건°ì´í° 기반."""
-    pipeline = await api_sheet_pipeline(agent="í¼ì¹")
-    perf = load_agent_perf()
+    """피치 성과 대시보드 — 피치_클로드 탭 직접 읽기."""
     now = datetime.now(KST)
     today = now.strftime("%Y-%m-%d")
     month_prefix = now.strftime("%Y-%m")
-    today_p = perf.get(today, {}).get("í¼ì¹", {})
+    # 피치_클로드 탭 직접 읽기 (A:N, 389행)
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클로드", ttl_key="inbound")
+    total_db, with_email, sent_count, unsent = 0, 0, 0, 0
+    if rows and len(rows) > 1:
+        total_db = len(rows) - 1
+        for row in rows[1:]:
+            email = str(row[7]).strip() if len(row) > 7 else ""
+            status = str(row[13]).strip() if len(row) > 13 else ""
+            if email and "@" in email:
+                with_email += 1
+            if status:
+                sent_count += 1
+            elif email and "@" in email:
+                unsent += 1
+    # agent_performance.json 폴백
+    perf = load_agent_perf()
     monthly_p = {}
     for dk, ad in perf.items():
-        if dk.startswith(month_prefix) and "í¼ì¹" in ad:
-            for mk, mv in ad["í¼ì¹"].items():
-                monthly_p[mk] = monthly_p.get(mk, 0) + mv
-    total = pipeline.get("total", {})
-    funnel = pipeline.get("funnel", {})
+        if dk.startswith(month_prefix):
+            for agent_key in ["피치", "pitch", "í¼ì¹"]:
+                if agent_key in ad:
+                    for mk, mv in ad[agent_key].items():
+                        monthly_p[mk] = monthly_p.get(mk, 0) + mv
     return {
         "kpi": {
-            "total_db": total.get("db", 0),
-            "with_email": total.get("with_email", 0),
-            "sent_today": today_p.get("email_sent", 0) + today_p.get("email_sent_batch", 0),
+            "total_db": total_db,
+            "with_email": with_email,
+            "sent": sent_count,
+            "unsent": unsent,
             "sent_month": monthly_p.get("email_sent", 0) + monthly_p.get("email_sent_batch", 0),
             "quality_fail": monthly_p.get("quality_fail", 0),
-            "working": total.get("working", 0),
-            "meeting": total.get("meeting", 0),
         },
-        "funnel": funnel,
         "reply_types": {
             "meeting": monthly_p.get("reply_meeting", 0),
             "info": monthly_p.get("reply_info", 0),
             "later": monthly_p.get("reply_later", 0),
             "reject": monthly_p.get("reply_reject", 0),
         },
-        "sheet_url": SHEET_URLS.get("í¼ì¹", ""),
+        "sheet_url": "https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit#gid=0",
     }
 
 

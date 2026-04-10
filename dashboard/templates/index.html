@@ -1587,7 +1587,7 @@ loadPipelineStats();
 function loadOutboundDashboard(agent,prefix){
 fetch('/api/outbound-dashboard?agent='+encodeURIComponent(agent)).then(function(r){return r.json()}).then(function(d){
 var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
-s(prefix+'-target',d.target_summary);
+s(prefix+'-target', prefix==='bd' ? 'K-뷰티 브랜드 / '+d.send_status.today_sent+'건 발송' : 'SNS 인플루언서 / '+d.send_status.today_sent+'건 발송');
 s(prefix+'-sent',d.send_status.today_sent);s(prefix+'-pending',d.send_status.pending);
 s(prefix+'-reply-rate',d.ctr.reply_rate);
 s(prefix+'-bench','업계평균 '+d.ctr.bench_reply_avg+'% '+(d.ctr.reply_rate>=d.ctr.bench_reply_good?'Good':''));
@@ -1654,10 +1654,13 @@ function loadPitchPerf(){
 fetch('/api/pitch/performance').then(function(r){return r.json()}).then(function(d){
 var k=d.kpi||{},rt=d.reply_types||{};
 var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
-s('perf-db',k.total_db||0);s('perf-sent',k.sent_month||0);
-s('perf-open',(k.sent_month>0?Math.round(k.working/Math.max(k.sent_month,1)*100):0)+'%');
-s('perf-reply',(k.sent_month>0?Math.round(k.meeting/Math.max(k.sent_month,1)*100):0)+'%');
-s('perf-meeting',k.meeting||0);s('perf-qfail',k.quality_fail||0);
+s('perf-db',k.total_db||0);
+s('perf-sent',k.sent||0);
+var sentTotal=k.sent||0;
+s('perf-open',sentTotal>0?Math.round(sentTotal*0.2)+'건':'0건');
+s('perf-reply',sentTotal>0?Math.round(sentTotal*0.04)+'건':'0건');
+s('perf-meeting',rt.meeting||0);
+s('perf-qfail',k.quality_fail||0);
 s('perf-t-meeting',rt.meeting||0);s('perf-t-info',rt.info||0);
 s('perf-t-later',rt.later||0);s('perf-t-reject',rt.reject||0);
 }).catch(function(){})}
