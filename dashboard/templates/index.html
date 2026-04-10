@@ -575,24 +575,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-ads">
-<!-- 맥스 에이전트 KPI -->
-<div class="agent-kpi-grid">
-  <div class="agent-kpi-item inactive"><div class="label">광고비 소진액</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">ROAS</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">CPA</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">에이전트 상태</div><div class="value">Meta API 연동 대기</div></div>
-</div>
-<div id="ads-manual-form" style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px;margin-bottom:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:12px">광고 수동 입력 (메타 토큰 갱신 전 임시)</p>
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-<div><label style="font-size:10px;color:#6B6B6B">오늘 광고비(원)</label><input id="ads-spend" type="number" value="0" style="width:100%;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;font-family:monospace"></div>
-<div><label style="font-size:10px;color:#6B6B6B">노출수</label><input id="ads-impressions" type="number" value="0" style="width:100%;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;font-family:monospace"></div>
-<div><label style="font-size:10px;color:#6B6B6B">클릭수</label><input id="ads-clicks" type="number" value="0" style="width:100%;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;font-family:monospace"></div>
-<div><label style="font-size:10px;color:#6B6B6B">CPA(원)</label><input id="ads-cpa" type="number" value="0" style="width:100%;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;font-family:monospace"></div>
-</div>
-<button onclick="saveAdsManual()" style="margin-top:10px;padding:8px 20px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
-<span id="ads-manual-msg" style="margin-left:10px;font-size:10px;color:#1A7A4C"></span>
-</div>
+<!-- 광고 성과 — JS에서 렌더링 -->
+<div id="ads-kpi-cards"></div>
+<div id="ads-funnel-table"></div>
+<div id="ads-divider" style="border-top:1px solid #E8E6E1;margin:24px 0;position:relative"><span style="position:absolute;top:-10px;left:16px;background:#F8F7F4;padding:0 8px;font-size:11px;font-weight:700;color:#6B6B6B">세부내역</span></div>
+<div id="ads-detail-table"></div>
+<div id="ads-person-grid"></div>
+<div id="ads-trend-table"></div>
 </div>
 
 <div id="page-sns">
@@ -965,63 +954,70 @@ mkPanels(el,[['총 인플루언서 풀',total>10000?(total/10000).toFixed(0)+'�
 }).catch(function(){mkKpi(el,[['데이터 로딩 실패','','','risk','API 연결을 확인하세요']])})},
 
 ads:function(el){
+var PERSON_KPI_TARGET=20000000;
 fetch('/api/ads-performance').then(function(r){return r.json()}).then(function(d){
-var mt=d.month||{},td2=d.today||{},pm=d.prev_month||{},ly=d.last_year_same||{};
-var srcNote=document.createElement('div');srcNote.style.cssText='font-size:10px;color:#9B9B9B;margin-bottom:12px';srcNote.textContent='데이터: '+(d.source==='live'?'Google Sheets':'샘플')+' | '+d.updated_at;el.appendChild(srcNote);
-// Toggle
-var toggle=document.createElement('div');toggle.className='tab-bar';
-var tDay=document.createElement('div');tDay.className='tab-btn active';tDay.textContent='일간';
-var tMon=document.createElement('div');tMon.className='tab-btn';tMon.textContent='누적';
-toggle.appendChild(tDay);toggle.appendChild(tMon);el.appendChild(toggle);
-var dayG=document.createElement('div');dayG.className='kpi-grid';
-var todaySpend=(td2.meta||{}).spend+(td2.google||{}).spend+(td2.naver||{}).spend+(td2.kakao||{}).spend;
-var todayDb=(td2.meta||{}).db+(td2.google||{}).db+(td2.naver||{}).db+(td2.kakao||{}).db;
-mkKpi(dayG,[['오늘 광고비',todaySpend,'만원','on',''],['오늘 DB',todayDb,'건','on',''],['오늘 CPA',todayDb>0?Math.round(todaySpend*10000/todayDb).toLocaleString():'0','원','watch',''],['이상 채널','0','개','on','']]);
-el.appendChild(dayG);
-var monG=document.createElement('div');monG.style.display='none';
-var totalSpend=(mt.meta||{}).spend+(mt.google||{}).spend+(mt.naver||{}).spend+(mt.kakao||{}).spend;
-var totalDb=(mt.meta||{}).db+(mt.google||{}).db+(mt.naver||{}).db+(mt.kakao||{}).db;
-var avgCpa=totalDb>0?Math.round(totalSpend*10000/totalDb):0;
-mkKpi(monG,[['이번 달 광고비',totalSpend,'만원','watch',''],['총 DB',totalDb,'건','on',''],['평균 CPA',avgCpa.toLocaleString(),'원','watch','목표 50,000원'],['목표 달성률',d.target_cpa?Math.round(d.target_cpa/avgCpa*100):'0','%','watch','']]);
-el.appendChild(monG);
-tDay.addEventListener('click',function(){tDay.classList.add('active');tMon.classList.remove('active');dayG.style.display='';monG.style.display='none'});
-tMon.addEventListener('click',function(){tMon.classList.add('active');tDay.classList.remove('active');monG.style.display='';dayG.style.display='none'});
-// Channel cards
-var channels=[{key:'meta',name:'Meta (FB/IG)',line:'#1877F2'},{key:'naver',name:'네이버',line:'#03C75A'},{key:'google',name:'구글',line:'#EA4335'},{key:'kakao',name:'카카오톡',line:'#FEE500'}];
-var cc=document.createElement('div');cc.className='ch-cards';
+var mt=d.month||{},pm=d.prev_month||{},fn=d.funnel||{},bp=d.by_person||[],trend=d.monthly_trend||[];
+var total=mt.total||{},ptotal=pm.total||{};
+var channels=[{key:'meta',name:'Meta'},{key:'naver',name:'네이버'},{key:'google',name:'구글'}];
+function badge(cur,prev){if(!prev)return'';var diff=cur-prev;var pct=prev>0?Math.round(diff/prev*100):0;var up=diff>=0;return' <span style="font-size:10px;font-weight:700;color:'+(up?'#22C55E':'#EF4444')+'">'+(up?'▲':'▼')+Math.abs(pct)+'%</span>'}
+function fmtW(v){return v>=10000?(v/10000).toFixed(0)+'만':v>=1000?Math.round(v/1000)+'천':v.toLocaleString()}
+function fmtM(v){if(v>=100000000)return(v/100000000).toFixed(1)+'억';if(v>=10000)return Math.round(v/10000)+'만';return v.toLocaleString()}
+// === 1. KPI 5카드 ===
+var kpiEl=document.getElementById('ads-kpi-cards');
+var totalSpend=total.spend||0,pSpend=ptotal.spend||0;
+var totalDb=total.db||0,pDb=ptotal.db||0;
+var dbCpa=totalDb>0?Math.round(totalSpend/totalDb):0,pCpa=pDb>0?Math.round(pSpend/pDb):0;
+var totalRev=trend.length?trend[trend.length-1].revenue||0:0;
+var pRev=d.prev_month_revenue||0;
+var roas=total.roas||0,pRoas=ptotal.roas||0;
+var kpiHtml='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">';
+[['총 광고비',fmtM(totalSpend)+'원',badge(totalSpend,pSpend),'#1B2A4A'],
+['DB 수',totalDb+'건',badge(totalDb,pDb),'#2D4A7A'],
+['DB 단가',fmtM(dbCpa)+'원',badge(-dbCpa,-pCpa),'#8B5E3C'],
+['매출 합계',fmtM(totalRev),badge(totalRev,pRev),'#1A7A4C'],
+['ROAS',roas.toFixed(1)+'x',badge(roas,pRoas),'#B8860B']
+].forEach(function(k){kpiHtml+='<div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:3px solid '+k[3]+';border-radius:8px;padding:16px;text-align:center"><p style="font-size:10px;color:#6B6B6B;margin:0">'+k[0]+'</p><p style="font-family:monospace;font-size:22px;font-weight:700;color:#1B2A4A;margin:6px 0 2px">'+k[1]+'</p><div>'+k[2]+'</div></div>'});
+kpiHtml+='</div>';kpiEl.innerHTML=kpiHtml;
+// === 2. 채널별 퍼널 테이블 ===
+var funEl=document.getElementById('ads-funnel-table');
+var funHtml='<div class="card" style="margin-bottom:20px"><div class="card-title">채널별 퍼널</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>채널</th><th>광고비</th><th>DB수</th><th>DB단가</th><th>미팅전환</th><th>계약전환</th><th>ROAS</th></tr></thead><tbody>';
 channels.forEach(function(ch){
-var mdata=mt[ch.key]||{};var tdata=td2[ch.key]||{};
-var card=document.createElement('div');card.className='ch-card';card.style.borderTopColor=ch.line;
-var h4=document.createElement('h4');h4.textContent=ch.name;card.appendChild(h4);
-[['이번 달 지출',(mdata.spend||0)+'만원'],['DB / CPA',(mdata.db||0)+'건 / '+(mdata.cpa||0).toLocaleString()+'원'],['CTR / 노출',(mdata.ctr||0)+'% / '+(mdata.impressions||0).toLocaleString()+'회'],['오늘',(tdata.spend||0)+'만원 / '+(tdata.db||0)+'건']].forEach(function(r){var row=document.createElement('div');row.className='ch-row';var l=document.createElement('span');l.textContent=r[0];var v=document.createElement('span');v.className='v';v.textContent=r[1];row.appendChild(l);row.appendChild(v);card.appendChild(row)});
-var s2=mdata.cpa<=50000?'on':'watch';var bdg=document.createElement('div');bdg.style.marginTop='8px';var b=document.createElement('span');b.className='badge badge-'+s2;b.textContent=SL[s2];bdg.appendChild(b);card.appendChild(bdg);cc.appendChild(card)});el.appendChild(cc);
-// Comparison table
-var compCard=document.createElement('div');compCard.className='card';compCard.style.marginTop='16px';
-var compTitle=document.createElement('div');compTitle.className='card-title';compTitle.textContent='기간별 DB 확보 및 광고비 비교';compCard.appendChild(compTitle);
-var compTbl=document.createElement('table');compTbl.className='data-table';
-var compTh=document.createElement('thead');var compTr=document.createElement('tr');['','오늘','이번달','전월','전월比','작년동월','YoY'].forEach(function(h){var th=document.createElement('th');th.textContent=h;compTr.appendChild(th)});compTh.appendChild(compTr);compTbl.appendChild(compTh);
-var compTb=document.createElement('tbody');
+var m=mt[ch.key]||{},f=fn[ch.key]||{};
+var cDb=m.db||0,cSpend=m.spend||0,cCpa=cDb>0?Math.round(cSpend/cDb):0;
+var cMeet=f.meeting||0,cContract=f.contract||0;
+var meetRate=cDb>0?Math.round(cMeet/cDb*100):0;
+var conRate=cMeet>0?Math.round(cContract/cMeet*100):0;
+var cRoas=m.roas||0;
+funHtml+='<tr><td style="font-weight:600">'+ch.name+'</td><td style="font-family:monospace">'+fmtM(cSpend)+'</td><td style="font-family:monospace">'+cDb+'</td><td style="font-family:monospace">'+fmtM(cCpa)+'</td><td style="font-family:monospace">'+cMeet+'건 ('+meetRate+'%)</td><td style="font-family:monospace">'+cContract+'건 ('+conRate+'%)</td><td style="font-family:monospace">'+cRoas.toFixed(1)+'x</td></tr>'});
+var ft=fn.total||{},fDb=ft.db||totalDb,fMeet=ft.meeting||0,fCon=ft.contract||0;
+funHtml+='<tr style="font-weight:700;background:#F5F4F0"><td>합계</td><td style="font-family:monospace">'+fmtM(totalSpend)+'</td><td style="font-family:monospace">'+totalDb+'</td><td style="font-family:monospace">'+fmtM(dbCpa)+'</td><td style="font-family:monospace">'+fMeet+'건 ('+(fDb>0?Math.round(fMeet/fDb*100):0)+'%)</td><td style="font-family:monospace">'+fCon+'건 ('+(fMeet>0?Math.round(fCon/fMeet*100):0)+'%)</td><td style="font-family:monospace">'+roas.toFixed(1)+'x</td></tr>';
+funHtml+='</tbody></table></div></div>';funEl.innerHTML=funHtml;
+// === 4. 세부내역 — 채널별 상세 테이블 ===
+var detEl=document.getElementById('ads-detail-table');
+var detHtml='<div class="card" style="margin-bottom:20px"><div class="card-title">채널별 상세</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>채널</th><th>노출</th><th>클릭</th><th>CTR</th><th>CPC</th><th>전월DB</th><th>DB증감</th></tr></thead><tbody>';
 channels.forEach(function(ch){
-var mdata=mt[ch.key]||{};var tdata=td2[ch.key]||{};var pmdata=pm[ch.key]||{};var lydata=ly[ch.key]||{};
-[{label:ch.name+' DB',t:tdata.db||0,m:mdata.db||0,p:pmdata.db||0,l:lydata.db||0},{label:ch.name+' CPA',t:tdata.cpa||0,m:mdata.cpa||0,p:pmdata.cpa||0,l:lydata.cpa||0}].forEach(function(row){
-var tr=document.createElement('tr');
-var cells=[row.label,row.t,row.m,row.p,'',row.l,''];
-cells.forEach(function(v,i){var td=document.createElement('td');
-if(i===4){var pct=row.p>0?Math.round((row.m-row.p)/row.p*100):0;td.textContent=(pct>=0?'+':'')+pct+'%';td.style.color=pct>=0?'#22C55E':'#EF4444';td.style.fontFamily='JetBrains Mono,monospace'}
-else if(i===6){var yoy=row.l>0?Math.round((row.m-row.l)/row.l*100):0;td.textContent=(yoy>=0?'+':'')+yoy+'%';td.style.color=yoy>=0?'#22C55E':'#EF4444';td.style.fontFamily='JetBrains Mono,monospace'}
-else{td.textContent=typeof v==='number'?v.toLocaleString():v;if(i>0)td.style.fontFamily='JetBrains Mono,monospace'}
-tr.appendChild(td)});compTb.appendChild(tr)})});
-compTbl.appendChild(compTb);compCard.appendChild(compTbl);el.appendChild(compCard);
-// Charts
-var trend=d.daily_trend||[];var trendPrev=d.daily_trend_prev||[];var cumCpa=d.cumulative_cpa||[];var cumCpaPrev=d.cumulative_cpa_prev||[];
-var days=trend.map(function(_,i){return(i+1)+'일'});
-mkChart(el,[
-{title:'일별 DB 획득 (이번달 vs 전월)',fn:function(c){new Chart(c,{type:'line',data:{labels:days,datasets:[{label:'이번달',data:trend,borderColor:'#1B2A4A',tension:.3,pointRadius:2,borderWidth:2,fill:false},{label:'전월',data:trendPrev,borderColor:'#8B95A6',borderDash:[5,3],tension:.3,pointRadius:2,borderWidth:1,fill:false}]},options:CD})}},
-{title:'채널별 CPA (원)',fn:function(c){new Chart(c,{type:'bar',data:{labels:channels.map(function(ch){return ch.name}),datasets:[{data:channels.map(function(ch){return(mt[ch.key]||{}).cpa||0}),backgroundColor:channels.map(function(ch){return ch.line})}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9B9B9B'},grid:{color:'#EDEBE7'}},y:{ticks:{color:'#9B9B9B'},grid:{color:'#EDEBE7'}}}}})}}
-]);
-mkChart(el,[{title:'누적 CPA 추이 (이번달 vs 전월)',fn:function(c){new Chart(c,{type:'line',data:{labels:days,datasets:[{label:'이번달 CPA',data:cumCpa,borderColor:'#1B2A4A',tension:.3,pointRadius:2,borderWidth:2,fill:false},{label:'전월 CPA',data:cumCpaPrev,borderColor:'#8B95A6',borderDash:[5,3],tension:.3,pointRadius:2,borderWidth:1,fill:false}]},options:CD})}}]);
-mkPanels(el,[['오늘 총 지출',todaySpend+'만원'],['오늘 DB',todayDb+'건'],['이상 소재','0건'],['활성 캠페인','8건']],[['오늘 광고 예산 확인',true],['네이버 CPA 개선 소재 교체',false],['구글 키워드 입찰가 조정',false],['Meta A/B 테스트 설정',false]]);
-}).catch(function(){mkKpi(el,[['데이터 로딩 실패','','','risk','API 연결을 확인하세요']])})},
+var m=mt[ch.key]||{},p=pm[ch.key]||{};
+var imp=m.impressions||0,clk=m.clicks||0,ctr=m.ctr||0,cpc=m.cpc||0;
+var pDb2=p.db||0,mDb2=m.db||0,dbDiff=mDb2-pDb2;
+detHtml+='<tr><td style="font-weight:600">'+ch.name+'</td><td style="font-family:monospace">'+imp.toLocaleString()+'</td><td style="font-family:monospace">'+clk.toLocaleString()+'</td><td style="font-family:monospace">'+ctr.toFixed(1)+'%</td><td style="font-family:monospace">'+fmtM(cpc)+'</td><td style="font-family:monospace">'+pDb2+'</td><td style="font-family:monospace;color:'+(dbDiff>=0?'#22C55E':'#EF4444')+'">'+(dbDiff>=0?'+':'')+dbDiff+'</td></tr>'});
+detHtml+='</tbody></table></div></div>';detEl.innerHTML=detHtml;
+// === 5. 담당자별 카드 그리드 ===
+var perEl=document.getElementById('ads-person-grid');
+var perHtml='<div class="card" style="margin-bottom:20px"><div class="card-title">담당자별 월 실적</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
+if(bp.length===0)bp=[{name:'데이터 없음',revenue:0,contracts:0,conversion:0}];
+bp.forEach(function(p){
+var pct=Math.min(Math.round(p.revenue/PERSON_KPI_TARGET*100),100);
+var barColor=pct>=100?'#1A7A4C':pct>=50?'#B8860B':'#EF4444';
+perHtml+='<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin:0 0 8px">'+p.name+'</p><p style="font-family:monospace;font-size:24px;font-weight:700;color:#1B2A4A;margin:0 0 6px">'+fmtM(p.revenue)+'원</p><div style="display:flex;gap:16px;font-size:11px;color:#6B6B6B;margin-bottom:8px"><span>계약 '+p.contracts+'건</span><span>전환율 '+p.conversion+'%</span></div><div style="margin-top:4px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px"><span style="color:#6B6B6B">목표 2,000만원</span><span style="font-weight:700;color:'+barColor+'">'+pct+'%</span></div><div style="background:#EDEBE7;border-radius:4px;height:6px;overflow:hidden"><div style="background:'+barColor+';height:100%;width:'+pct+'%;border-radius:4px;transition:width .3s"></div></div></div></div>'});
+perHtml+='</div></div>';perEl.innerHTML=perHtml;
+// === 6. 월별 추이 테이블 (최근 6개월) ===
+var trdEl=document.getElementById('ads-trend-table');
+var last6=trend.slice(-6);
+var trdHtml='<div class="card"><div class="card-title">월별 추이 (최근 6개월)</div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>월</th><th>계약건수</th><th>매출합계</th><th>ROAS%</th><th>평균단가</th></tr></thead><tbody>';
+last6.forEach(function(t){
+trdHtml+='<tr><td>'+t.month+'</td><td style="font-family:monospace">'+t.contracts+'건</td><td style="font-family:monospace">'+fmtM(t.revenue)+'원</td><td style="font-family:monospace">'+(t.roas*100).toFixed(0)+'%</td><td style="font-family:monospace">'+fmtM(t.avg_price)+'원</td></tr>'});
+trdHtml+='</tbody></table></div></div>';trdEl.innerHTML=trdHtml;
+}).catch(function(){var k=document.getElementById('ads-kpi-cards');if(k)k.innerHTML='<div class="card" style="padding:20px;color:#EF4444">데이터 로딩 실패 — API 연결을 확인하세요</div>'})},
 
 sns:function(el){
 // B2B / B2C tabs
@@ -1545,9 +1541,7 @@ if(basisEl)basisEl.textContent=mode==='daily'?'일간: 출처: 인바운드 구�
 }).catch(function(){})}
 loadOverviewCharts('daily');
 
-function saveAdsManual(){
-var d={spend:parseInt(document.getElementById('ads-spend').value)||0,impressions:parseInt(document.getElementById('ads-impressions').value)||0,clicks:parseInt(document.getElementById('ads-clicks').value)||0,cpa:parseInt(document.getElementById('ads-cpa').value)||0};
-fetch('/api/ads-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){var m=document.getElementById('ads-manual-msg');if(m){m.textContent='저장 완료!';setTimeout(function(){m.textContent=''},2000)}}).catch(function(){})}
+// saveAdsManual 삭제됨 — 수동입력 폼 제거 (2026-04-10)
 
 function saveSnsManual(){
 var d={channel:document.getElementById('sns-channel').value,followers:parseInt(document.getElementById('sns-followers').value)||0,engagement_rate:parseFloat(document.getElementById('sns-engagement').value)||0};

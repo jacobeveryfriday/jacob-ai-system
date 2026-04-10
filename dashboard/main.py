@@ -476,15 +476,31 @@ def _dummy_ads_performance():
     return {
         "source": "dummy",
         "month": {
-            "meta": {"spend": 9000000, "db": 18, "cpa": 500000, "roas": 0},
-            "google": {"spend": 5000000, "db": 9, "cpa": 556000, "roas": 0},
-            "naver": {"spend": 8000000, "db": 12, "cpa": 667000, "roas": 0},
-            "kakao": {"spend": 2000000, "db": 4, "cpa": 500000, "roas": 0},
+            "meta": {"spend": 9000000, "db": 18, "cpa": 500000, "roas": 0, "impressions": 120000, "clicks": 3600, "ctr": 3.0, "cpc": 2500},
+            "google": {"spend": 5000000, "db": 9, "cpa": 556000, "roas": 0, "impressions": 80000, "clicks": 2400, "ctr": 3.0, "cpc": 2083},
+            "naver": {"spend": 8000000, "db": 12, "cpa": 667000, "roas": 0, "impressions": 95000, "clicks": 2850, "ctr": 3.0, "cpc": 2807},
+            "kakao": {"spend": 2000000, "db": 4, "cpa": 500000, "roas": 0, "impressions": 40000, "clicks": 800, "ctr": 2.0, "cpc": 2500},
             "total": {"spend": 24000000, "db": 43, "cpa": 558000, "roas": 9.41},
         },
+        "prev_month": {
+            "meta": {"spend": 8500000, "db": 16, "cpa": 531000, "impressions": 110000, "clicks": 3300, "ctr": 3.0, "cpc": 2576},
+            "google": {"spend": 4800000, "db": 8, "cpa": 600000, "impressions": 75000, "clicks": 2100, "ctr": 2.8, "cpc": 2286},
+            "naver": {"spend": 7500000, "db": 10, "cpa": 750000, "impressions": 88000, "clicks": 2640, "ctr": 3.0, "cpc": 2841},
+            "kakao": {"spend": 1800000, "db": 3, "cpa": 600000, "impressions": 35000, "clicks": 700, "ctr": 2.0, "cpc": 2571},
+            "total": {"spend": 22600000, "db": 37, "cpa": 611000, "roas": 8.90},
+        },
+        "funnel": {
+            "meta": {"db": 18, "meeting": 8, "contract": 3},
+            "google": {"db": 9, "meeting": 4, "contract": 2},
+            "naver": {"db": 12, "meeting": 5, "contract": 2},
+            "total": {"db": 39, "meeting": 17, "contract": 7},
+        },
+        "by_person": [
+            {"name": "소필라", "revenue": 18500000, "contracts": 3, "conversion": 37.5},
+            {"name": "라이더", "revenue": 12000000, "contracts": 2, "conversion": 33.3},
+            {"name": "제이콥", "revenue": 8700000, "contracts": 1, "conversion": 25.0},
+        ],
         "monthly_trend": [
-            {"month": "2025.09", "contracts": 26, "revenue": 124800000, "spend": 22000000, "roas": 5.67, "avg_price": 4800000},
-            {"month": "2025.10", "contracts": 26, "revenue": 135200000, "spend": 21000000, "roas": 6.44, "avg_price": 5200000},
             {"month": "2025.11", "contracts": 43, "revenue": 249400000, "spend": 25000000, "roas": 9.98, "avg_price": 5800000},
             {"month": "2025.12", "contracts": 45, "revenue": 157500000, "spend": 18000000, "roas": 8.75, "avg_price": 3500000},
             {"month": "2026.01", "contracts": 32, "revenue": 121600000, "spend": 23420000, "roas": 5.19, "avg_price": 3800000},
@@ -1191,7 +1207,36 @@ async def api_ads_performance():
         result = _dummy_ads_performance()
         result["source"] = "live"
         if monthly:
-            result["monthly_trend"] = monthly[-12:]
+            result["monthly_trend"] = monthly[-6:]
+        # 브랜드 파이프라인에서 담당자별 매출 + 퍼널 데이터 가져오기
+        try:
+            brand = await api_brand_pipeline()
+            # 담당자별 매출 집계
+            month_brands = brand.get("brands", [])
+            person_map = {}
+            for b in month_brands:
+                s = b.get("staff", "")
+                if not s:
+                    continue
+                if s not in person_map:
+                    person_map[s] = {"revenue": 0, "contracts": 0}
+                person_map[s]["revenue"] += b.get("revenue", 0)
+                person_map[s]["contracts"] += 1
+            month_data = brand.get("month", {})
+            total_inbound = month_data.get("inbound", 0)
+            by_person = []
+            for name, vals in person_map.items():
+                conv = round(vals["contracts"] / max(total_inbound, 1) * 100, 1) if total_inbound else 0
+                by_person.append({"name": name, "revenue": vals["revenue"],
+                                  "contracts": vals["contracts"], "conversion": conv})
+            by_person.sort(key=lambda x: x["revenue"], reverse=True)
+            result["by_person"] = by_person
+            # 전월 데이터
+            prev = brand.get("prev_month", {})
+            result["prev_month_revenue"] = prev.get("revenue", 0)
+            result["prev_month_contract"] = prev.get("contract", 0)
+        except Exception:
+            pass
         return result
     except Exception as e:
         print(f"ads-performance error: {e}")
