@@ -1287,7 +1287,7 @@ async def api_ads_performance():
                 month_val = str(row[month_col]).strip() if month_col is not None and month_col < len(row) else ""
                 date_val = str(row[date_col]).strip() if date_col is not None and date_col < len(row) else ""
                 row_date = _parse_row_date(date_val, month_val)
-                is_this = row_date is not None and month_start.date() <= row_date <= yesterday.date()
+                is_this = row_date is not None and month_start.date() <= row_date <= now.date()
                 is_prev = row_date is not None and prev_month_start.date() <= row_date <= prev_month_end.date()
                 if row_date is None and month_val:
                     is_this = this_month_dot in month_val
@@ -1527,7 +1527,7 @@ async def api_ads_performance():
     return {
         "source": "live" if GSHEETS_API_KEY else "dummy",
         "updated_at": now.strftime("%Y-%m-%d %H:%M"),
-        "period": f"{month_start.strftime('%m/%d')}~{yesterday.strftime('%m/%d')}",
+        "period": f"{month_start.strftime('%m/%d')}~{now.strftime('%m/%d')}",
         # KPI 카드
         "total_db": total_db, "prev_db": prev_ib_total,
         "total_revenue": month_revenue, "prev_revenue": prev_month_revenue,
