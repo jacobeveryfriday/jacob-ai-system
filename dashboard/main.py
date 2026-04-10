@@ -1919,35 +1919,12 @@ def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "
         return {"status": "error", "message": str(e), "method": "smtp"}
 
 def _send_email(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
-    """이메일 발송: SMTP 우선 → Resend 폴백. 에이전트별 발신주소 자동 적용."""
-    from_email, sender_name = _get_from(agent_name)
-    # 1차: Naver Works SMTP
-    smtp_result = _send_email_smtp(to_email, subject, html, agent_name)
-    if smtp_result["status"] == "ok":
+    """이메일 발송: Naver Works SMTP 전용. Resend 비활성화 (도메인 미인증)."""
+    result = _send_email_smtp(to_email, subject, html, agent_name)
+    if result["status"] == "ok":
         _record_perf(agent_name, "email_sent")
         _log_email(agent_name, to_email, subject, "sent")
-        return smtp_result
-    # 2차: Resend API 폴백
-    api_key = os.getenv("RESEND_API_KEY", "")
-    resend_from = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-    if not api_key:
-        return {"status": "error", "message": f"SMTP 실패({smtp_result.get('message','')}), RESEND_API_KEY도 미설정"}
-    try:
-        resp = req_lib.post(
-            "https://api.resend.com/emails",
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"from": f"{sender_name} <{resend_from}>", "reply_to": from_email,
-                  "to": [to_email], "subject": subject, "html": html},
-            timeout=15,
-        )
-        data = resp.json()
-        if resp.status_code == 200:
-            _record_perf(agent_name, "email_sent")
-            _log_email(agent_name, to_email, subject, "sent")
-            return {"status": "ok", "to": to_email, "from": from_email, "id": data.get("id", ""), "method": "resend"}
-        return {"status": "error", "message": data.get("message", resp.text[:200]), "code": resp.status_code}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    return result
 
 
 @app.post("/api/send-email")
@@ -1981,12 +1958,11 @@ async def api_test_email(agent: str = "피치"):
         f"이메일 연동이 정상적으로 작동하고 있습니다."
     )
     subject = f"[테스트] {agent} 이메일 발송 확인"
-    # SMTP 우선 시도
+    # SMTP 전용 (Resend 비활성화)
     result = _send_email_smtp(to_email, subject, html, agent)
-    if result["status"] != "ok":
-        # Resend 폴백
-        result = _send_email(to_email, subject, html, agent)
     result["smtp_user"] = smtp_user or "미설정"
+    result["smtp_host"] = "smtp.worksmobile.com"
+    result["smtp_port"] = 465
     result["to"] = to_email
     return result
 
