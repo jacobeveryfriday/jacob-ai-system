@@ -2990,6 +2990,7 @@ async def api_cache_clear():
 async def api_debug_env():
     """환경변수 설정 여부 확인. 실제 값은 숨기고 SET/NOT_SET만 표시."""
     keys = [
+        "EMAIL_WEBHOOK_URL",
         "PITCH_SMTP_USER", "PITCH_SMTP_PASS", "LUNA_SMTP_USER", "LUNA_SMTP_PASS",
         "ANTHROPIC_API_KEY", "GOOGLE_SHEETS_API_KEY",
         "NAVER_WORKS_SMTP_USER", "NAVER_WORKS_SMTP_PASSWORD",
