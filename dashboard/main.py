@@ -356,7 +356,7 @@ _cache: Dict[str, list] = {}
 _cache_time: Dict[str, float] = {}
 CACHE_TTLS = {
     "inbound": 300,      # 5 min
-    "contract": 0,       # 실시간 - 매출 즉시 반영
+    "contract": 300,     # 5분 — 로딩 속도 개선
     "influencer": 21600, # 6 hours
     "ads": 3600,         # 1 hour
     "default": 1800,     # 30 min fallback

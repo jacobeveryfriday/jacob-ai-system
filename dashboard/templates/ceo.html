@@ -234,7 +234,7 @@ async function loadAll() {
   if (_firstLoad) {
     var kpiRow = document.getElementById('kpiRow');
     if (kpiRow && !kpiRow.dataset.loaded) {
-      kpiRow.querySelectorAll('.kpi-value').forEach(function(el){el.style.opacity='0.3'});
+      kpiRow.querySelectorAll('.kpi-card').forEach(function(el){el.classList.add('skeleton');el.style.minHeight='100px'});
     }
   }
   try {
@@ -263,7 +263,8 @@ async function loadAll() {
       badge.style.display = 'none';
     }
     if (_firstLoad) {
-      document.getElementById('kpiRow').dataset.loaded = '1';
+      var kr=document.getElementById('kpiRow');
+      if(kr){kr.dataset.loaded='1';kr.querySelectorAll('.kpi-card').forEach(function(el){el.classList.remove('skeleton');el.style.minHeight=''})}
       _firstLoad = false;
     }
   } catch(e) { console.error('Load error:', e); }
