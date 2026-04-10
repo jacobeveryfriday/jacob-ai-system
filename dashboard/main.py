@@ -1262,8 +1262,14 @@ async def api_ads_performance():
             _ib_hdr_idx_debug = hdr_idx
             month_col = _find_col(headers, "월")
             date_col = _auto_detect_date_col(headers, ib_rows[hdr_idx+1:hdr_idx+6])
-            # 유입채널: 정확히 "유입채널" 또는 "유입 채널" 또는 "채널" 로 찾기
-            ch_col = _find_col(headers, "유입채널", "유입 채널", "채널")
+            # 유입채널: exact match 우선 (D열 "유입채널 (열삭제 금지)..." 오매칭 방지)
+            ch_col = None
+            for i, h in enumerate(headers):
+                if h == "유입채널":
+                    ch_col = i
+                    break
+            if ch_col is None:
+                ch_col = _find_col(headers, "유입채널", "유입 채널", "채널")
             _ch_col_debug = ch_col
             # 채널 컬럼 첫 5행 샘플
             for sr in ib_rows[hdr_idx+1:hdr_idx+6]:
