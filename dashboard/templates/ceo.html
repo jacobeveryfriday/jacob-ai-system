@@ -754,5 +754,21 @@ loadPerformance();
 setInterval(loadAll, 300000);
 setInterval(loadPerformance, 300000);
 </script>
+<!-- 플로팅 채팅 -->
+<div id="ceoChatPanel" style="display:none;position:fixed;right:24px;bottom:80px;width:340px;height:480px;z-index:9999;background:#fff;border:0.5px solid #E8E6E1;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);flex-direction:column;overflow:hidden">
+  <div style="padding:12px 14px;border-bottom:0.5px solid #E8E6E1;font-size:13px;font-weight:700;color:#1B2A4A;display:flex;justify-content:space-between;align-items:center"><span>카일 — 총괄 에이전트</span><span style="font-size:10px;color:#1A7A4C">온라인</span></div>
+  <div id="ceoChatMsgs" style="flex:1;overflow-y:auto;padding:10px 12px;font-size:12px"><div style="padding:8px 12px;border-radius:8px;background:#F1EFEB;margin-bottom:6px;line-height:1.5">에이전트에게 질문하세요.</div></div>
+  <div style="padding:8px 12px;border-top:0.5px solid #E8E6E1;display:flex;gap:6px"><textarea id="ceoChatInput" rows="1" placeholder="메시지 입력..." style="flex:1;resize:none;background:#F1EFEB;border:0.5px solid #E8E6E1;border-radius:6px;padding:8px 10px;font-size:12px;font-family:inherit;color:#1B2A4A"></textarea><button onclick="sendCeoChat()" style="background:#1B2A4A;color:#fff;border:none;border-radius:6px;width:32px;height:32px;cursor:pointer;font-size:14px">&#9654;</button></div>
+</div>
+<button onclick="toggleCeoChat()" style="display:flex;align-items:center;justify-content:center;position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:#1B2A4A;color:#fff;border:none;cursor:pointer;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:20px">💬</button>
+<script>
+function toggleCeoChat(){var p=document.getElementById('ceoChatPanel');p.style.display=p.style.display==='flex'?'none':'flex'}
+function sendCeoChat(){var input=document.getElementById('ceoChatInput'),text=input.value.trim();if(!text)return;
+var msgs=document.getElementById('ceoChatMsgs');
+var u=document.createElement('div');u.style.cssText='padding:8px 12px;border-radius:8px;background:#1B2A4A;color:#fff;margin-bottom:6px;margin-left:auto;max-width:90%;line-height:1.5';u.textContent=text;msgs.appendChild(u);input.value='';msgs.scrollTop=msgs.scrollHeight;
+fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,page:'overview'})}).then(function(r){return r.json()}).then(function(d){
+var r=document.createElement('div');r.style.cssText='padding:8px 12px;border-radius:8px;background:#F1EFEB;margin-bottom:6px;line-height:1.5;white-space:pre-line;max-width:95%';r.textContent=d.reply||'응답 오류';msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight
+}).catch(function(){var r=document.createElement('div');r.style.cssText='padding:8px 12px;border-radius:8px;background:#F1EFEB;margin-bottom:6px';r.textContent='연결 오류';msgs.appendChild(r)})}
+</script>
 </body>
 </html>

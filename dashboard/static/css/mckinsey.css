@@ -460,12 +460,14 @@ textarea.input-field:focus {
 .agent-kpi-item.inactive { opacity: 0.5; border-top-color: var(--border); }
 .agent-kpi-item.inactive .value { color: var(--text-muted); font-size: 12px; font-weight: 500; }
 
-/* ===== Mobile floating chat ===== */
+/* ===== Floating chat button — 항상 표시 ===== */
 .chat-float-btn {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 24px;
+  right: 24px;
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -480,5 +482,5 @@ textarea.input-field:focus {
 }
 @media (max-width: 768px) {
   .agent-kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .chat-float-btn { display: flex; align-items: center; justify-content: center; }
+  /* chat-float-btn은 항상 표시 — 여기서 별도 처리 불필요 */
 }
