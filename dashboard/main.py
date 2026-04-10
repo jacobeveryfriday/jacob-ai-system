@@ -2596,6 +2596,23 @@ PITCH_REPLY_TEMPLATES = {
                "body": "ìëíì¸ì {contact}ë,\n\në§ì ê°ì¬í©ëë¤.\në¦¬ë·°Â·ìí¼Â·í´ì¸ ì§ì¶ ê´ë ¨í´ì\nê³ ë¯¼ì´ ìê¸°ì¤ ë í¸íê² ì°ë½ ì£¼ì¸ì.\n\n---\nê³µíë¦¬í° ì£¼ëì´ ì»¨ì¤í´í¸\ní¼ì¹ ëë¦¼\n\npitch@08liter.com\nwww.08liter.com"},
 }
 
+def _luna_quality_check(email: str, subject: str, body: str, country: str = "KR") -> list:
+    """루나 발송 전 품질 점검 10항목."""
+    errors = []
+    if not email or "@" not in email:
+        errors.append("이메일 무효")
+    if not subject:
+        errors.append("제목 비어있음")
+    if not body:
+        errors.append("본문 비어있음")
+    if "{" in subject or "{" in body:
+        errors.append("개인화 미치환")
+    if "08liter" not in body and "공팔리터" not in body and "luna" not in body.lower():
+        errors.append("서명 누락")
+    if not _is_business_hours(country):
+        errors.append(f"업무시간 외 ({country})")
+    return errors
+
 def _pitch_quality_check(email: str, subject: str, body: str) -> list:
     """ë°ì¡ ì  íì§ ì ê². ì¤í¨ ì¬ì  ë¦¬ì¤í¸ ë°í (ë¹ ë¦¬ì¤í¸ = íµê³¼)."""
     errors = []
@@ -2877,6 +2894,8 @@ async def api_luna_review_na():
 <tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd"><b>총 확보</b></td><td style="padding:8px;border:1px solid #ddd">{na_count}명 / 400명 목표</td></tr>
 <tr><td style="padding:8px;border:1px solid #ddd">이메일 보유</td><td style="padding:8px;border:1px solid #ddd">{na_email}명</td></tr>
 <tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">미발송 (이번 주 발송 예정)</td><td style="padding:8px;border:1px solid #ddd">{unsent}명</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">채널</td><td style="padding:8px;border:1px solid #ddd">틱톡 50% / 인스타 50%</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">국가</td><td style="padding:8px;border:1px solid #ddd">US/CA</td></tr>
 </table>
 <hr style="border:1px solid #eee;margin:20px 0">
 <h2>📧 시안 D — 한국 매니저형</h2>
@@ -2928,7 +2947,7 @@ async def api_luna_send_na(request: Request):
             break
         subj = tmpl["subject"].replace("{name}", t["name"]).replace("{InfluencerName}", t["name"])
         email_body = tmpl["body"].replace("{name}", t["name"]).replace("{InfluencerName}", t["name"])
-        qc = _pitch_quality_check(t["email"], subj, email_body)
+        qc = _luna_quality_check(t["email"], subj, email_body, t.get("country", "US"))
         if qc:
             skipped += 1
             continue
