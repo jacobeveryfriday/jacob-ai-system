@@ -743,8 +743,9 @@ Promise.all([
 ]).then(function(res){
   var p=res[0].total||{},l=res[1].total||{};
   var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
-  s('ceo-pitch-db',p.db||0);s('ceo-pitch-email',p.with_email||0);s('ceo-pitch-working',p.working||0);
-  s('ceo-luna-db',l.db||0);s('ceo-luna-proposed',l.proposed||0);s('ceo-luna-usable',l.usable||0);
+  var pf=res[0].funnel||{},lf=res[1].funnel||{};
+  s('ceo-pitch-db',pf.db||p.db||0);s('ceo-pitch-email',pf.email||p.with_email||0);s('ceo-pitch-working',pf.working||p.working||0);
+  s('ceo-luna-db',lf.crawled||l.total||0);s('ceo-luna-proposed',lf.proposed||l.proposed||0);s('ceo-luna-usable',lf.usable||l.usable||0);
 }).catch(function(){});
 
 loadAll();
