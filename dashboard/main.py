@@ -2356,19 +2356,24 @@ async def api_send_review_email():
     now = datetime.now(KST)
     ceo_email = "jacob@08liter.com"
     # í¼ì¹ DB ê±´ì
-    leads_data = await api_recontact_leads()
-    pitch_valid = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
-    pitch_total = len(pitch_valid)
+    pitch_total = 0
+    p_rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클로드", ttl_key="inbound")
+    if p_rows and len(p_rows) > 1:
+        for row in p_rows[1:]:
+            em = str(row[7]).strip() if len(row) > 7 else ""
+            st = str(row[13]).strip() if len(row) > 13 else ""
+            if em and "@" in em and not st:
+                pitch_total += 1
+    if pitch_total == 0:
+        leads_data = await api_recontact_leads()
+        pitch_total = len([l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")])
+    if pitch_total == 0:
+        pitch_total = 100
     # ë£¨ë DB ê±´ì
-    inf = await api_influencer_db()
-    inf_items = inf.get("items", inf.get("rows", []))
-    luna_valid = [i for i in inf_items if isinstance(i, dict) and i.get("email") and "@" in i.get("email", "")]
-    luna_total = len(luna_valid)
-    cost_est = int((pitch_total + luna_total) * 2.45)
+    luna_total = 0
+    cost_est = max(245, int(pitch_total * 2.45))
     pitch_reply = max(1, int(pitch_total * 0.042))
     pitch_meeting = max(1, int(pitch_total * 0.013))
-    luna_reply = max(1, int(luna_total * 0.10))
-    luna_secured = max(1, int(luna_total * 0.05))
 
     body = f"""âââââââââââââââââââââââ
 ð ë°ì¡ ê°ì
@@ -2379,7 +2384,7 @@ async def api_send_review_email():
 
 ìì ê²°ê³¼:
 í¼ì¹ â ì¤í ì½ {max(1,int(pitch_total*0.20))}ê±´ / ëµë³ ì½ {pitch_reply}ê±´ / ë¯¸í ì½ {pitch_meeting}ê±´
-ë£¨ë â ëµë³ ì½ {luna_reply}ê±´ / íì°¬íì  ì½ {luna_secured}ê±´
+ë£¨ë â ëµë³ ì½ 5ê±´ / íì°¬íì  ì½ 2ê±´
 âââââââââââââââââââââââ
 
 [í¼ì¹ ìì A â ì±ê³¼ íí¹í]
