@@ -30,6 +30,14 @@
 
 ## 변경 이력
 
+- **2026-04-10 7차**: DB수/미팅전환율/채널별퍼널 인바운드시트 정확히 연동
+  - 날짜 파싱: M/D, ISO, YYYYMMDD 3형식 → date 객체로 통일, 이번달1일~어제 필터
+  - 채널분류: sns→Meta, cpc/na/naver→네이버, google_sa→구글, 나머지→기타
+  - 미팅전환율: 전체 + 채널별 (부적합/정보누락 제외)
+  - 계약시트: V열(총합계) + L열(유입채널) → 채널별 계약건수/매출
+  - 퍼널: ad_spend/db_count/db_cost/meeting_rate/contract_count/contract_rate/roas
+  - 광고비 0일 때 db_cost/roas = null (None) 반환
+  - KPI 카드: period 표시 (04/01~04/09 형태)
 - **2026-04-10 6차**: 월별추이 — 시트 표+그래프 그대로 표시, 전년동기 삭제
   - 전년동기 비교 테이블 삭제
   - 표: 월/계약건수/매출합계/신규/재계약/ROAS (시트값 그대로)
