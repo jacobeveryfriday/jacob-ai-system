@@ -1280,27 +1280,53 @@ async def api_ads_performance():
     except Exception as e:
         print(f"ads-perf contract error: {e}")
 
-    # ---------- 3. Meta 광고 API → 이번달 광고비 ----------
+    # ---------- 3. Meta 광고 API → 이번달 광고비 (원화) ----------
     meta_spend = 0
+    meta_debug = {"token_set": False, "status": None, "error": None, "raw_spend_usd": 0}
     try:
         token = os.getenv("META_ACCESS_TOKEN", "")
         account_id = os.getenv("META_AD_ACCOUNT_ID", "230720044045370")
+        meta_debug["token_set"] = bool(token)
+        meta_debug["account_id"] = account_id
         if token:
+            # 이번달 1일~오늘 명시적 날짜 범위
+            since_date = now.replace(day=1).strftime("%Y-%m-%d")
+            until_date = now.strftime("%Y-%m-%d")
             url = f"https://graph.facebook.com/v18.0/act_{account_id}/insights"
-            resp = req_lib.get(url, params={"access_token": token, "fields": "spend,impressions,clicks",
-                                            "date_preset": "this_month"}, timeout=15)
+            params = {
+                "access_token": token,
+                "fields": "spend,impressions,clicks",
+                "time_range": json.dumps({"since": since_date, "until": until_date}),
+                "level": "account",
+            }
+            resp = req_lib.get(url, params=params, timeout=15)
+            meta_debug["status"] = resp.status_code
+            resp_json = resp.json()
             if resp.status_code == 200:
-                for r in resp.json().get("data", []):
-                    meta_spend += int(float(r.get("spend", 0)))
+                data_rows = resp_json.get("data", [])
+                meta_debug["data_count"] = len(data_rows)
+                for r in data_rows:
+                    spend_usd = float(r.get("spend", 0))
+                    meta_debug["raw_spend_usd"] += spend_usd
+                    # Meta API는 광고 계정 통화로 반환. 한국 계정이면 KRW(원화), 달러 계정이면 USD.
+                    # KRW 계정은 이미 원화, USD면 환율 적용 필요
+                    meta_spend += int(spend_usd)  # 계정 통화 그대로 사용
+            else:
+                err = resp_json.get("error", {})
+                meta_debug["error"] = f"[{err.get('code','')}] {err.get('message', resp.text[:200])}"
+                print(f"[ads-perf] Meta API 오류: {meta_debug['error']}")
+        else:
+            meta_debug["error"] = "META_ACCESS_TOKEN 미설정"
     except Exception as e:
-        print(f"ads-perf meta error: {e}")
+        meta_debug["error"] = str(e)
+        print(f"[ads-perf] Meta API 예외: {e}")
 
-    # ---------- 4. 네이버/구글 광고비 (API 미연동 시 더미) ----------
+    # ---------- 4. 네이버/구글 광고비 (API 미연동) ----------
     naver_spend = 0  # TODO: 네이버 SA API 연동
     google_spend = 0  # TODO: Google Ads API 연동
     total_spend = meta_spend + naver_spend + google_spend
 
-    # ---------- 5. 전월 광고비 (더미) ----------
+    # ---------- 5. 전월 광고비 ----------
     prev_total_spend = round(total_spend * 0.9) if total_spend > 0 else 22600000
 
     # ---------- 결과 조합 ----------
@@ -1411,6 +1437,7 @@ async def api_ads_performance():
         "meta_spend": meta_spend,
         "naver_spend": naver_spend,
         "google_spend": google_spend,
+        "meta_debug": meta_debug,
     }
 
 
