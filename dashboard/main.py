@@ -1791,6 +1791,32 @@ def _build_pitch_html(brand_name: str, body_text: str) -> str:
 </td></tr></table></body></html>"""
 
 
+# 에이전트별 발신 이메일/이름 매핑
+AGENT_FROM_EMAILS = {
+    "피치": os.getenv("PITCH_FROM_EMAIL", "pitch@08liter.com"),
+    "루나": os.getenv("LUNA_FROM_EMAIL", "luna@08liter.com"),
+    "소피": os.getenv("SOPHIE_EMAIL", "sophie@08liter.com"),
+    "카일": os.getenv("KYLE_EMAIL", "kyle@08liter.com"),
+    "레이": os.getenv("RAY_EMAIL", "ray@08liter.com"),
+    "하나": os.getenv("HANA_EMAIL", "hana@08liter.com"),
+    "맥스": os.getenv("MAX_EMAIL", "max@08liter.com"),
+}
+AGENT_FROM_NAMES = {
+    "피치": os.getenv("FROM_NAME_PITCH", "Pitch | 공팔리터글로벌"),
+    "루나": os.getenv("FROM_NAME_LUNA", "Luna | 공팔리터글로벌"),
+    "소피": "Sophie | 공팔리터글로벌",
+    "카일": "Kyle | 공팔리터글로벌",
+    "레이": "Ray | 공팔리터글로벌",
+    "하나": "Hana | 공팔리터글로벌",
+    "맥스": "Max | 공팔리터글로벌",
+}
+
+def _get_from(agent_name: str):
+    """에이전트별 발신 이메일+이름 반환."""
+    email = AGENT_FROM_EMAILS.get(agent_name, "pitch@08liter.com")
+    name = AGENT_FROM_NAMES.get(agent_name, f"{agent_name} | 공팔리터글로벌")
+    return email, name
+
 def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
     """Naver Works SMTP로 이메일 1건 발송."""
     import smtplib
@@ -1802,46 +1828,49 @@ def _send_email_smtp(to_email: str, subject: str, html: str, agent_name: str = "
     smtp_pass = os.getenv("NAVER_WORKS_SMTP_PASSWORD", "")
     if not smtp_user or not smtp_pass:
         return {"status": "not_configured", "message": "NAVER_WORKS_SMTP 미설정"}
-    agent_email = AGENT_EMAILS.get(agent_name, smtp_user)
-    sender_name = f"{agent_name} | 공팔리터글로벌"
+    from_email, sender_name = _get_from(agent_name)
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"] = f"{sender_name} <{smtp_user}>"
+        msg["Reply-To"] = from_email
         msg["To"] = to_email
         msg.attach(MIMEText(html, "html", "utf-8"))
         with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
             server.starttls()
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, [to_email], msg.as_string())
-        return {"status": "ok", "to": to_email, "method": "smtp"}
+        return {"status": "ok", "to": to_email, "from": from_email, "method": "smtp"}
     except Exception as e:
         return {"status": "error", "message": str(e), "method": "smtp"}
 
 def _send_email(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
-    """이메일 발송: SMTP 우선 → Resend 폴백."""
+    """이메일 발송: SMTP 우선 → Resend 폴백. 에이전트별 발신주소 자동 적용."""
+    from_email, sender_name = _get_from(agent_name)
     # 1차: Naver Works SMTP
     smtp_result = _send_email_smtp(to_email, subject, html, agent_name)
     if smtp_result["status"] == "ok":
         _record_perf(agent_name, "email_sent")
+        _log_email(agent_name, to_email, subject, "sent")
         return smtp_result
     # 2차: Resend API 폴백
     api_key = os.getenv("RESEND_API_KEY", "")
-    from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-    sender_name = f"{agent_name} | 공팔리터글로벌"
+    resend_from = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
     if not api_key:
         return {"status": "error", "message": f"SMTP 실패({smtp_result.get('message','')}), RESEND_API_KEY도 미설정"}
     try:
         resp = req_lib.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={"from": f"{sender_name} <{from_email}>", "to": [to_email], "subject": subject, "html": html},
+            json={"from": f"{sender_name} <{resend_from}>", "reply_to": from_email,
+                  "to": [to_email], "subject": subject, "html": html},
             timeout=15,
         )
         data = resp.json()
         if resp.status_code == 200:
             _record_perf(agent_name, "email_sent")
-            return {"status": "ok", "to": to_email, "id": data.get("id", ""), "method": "resend"}
+            _log_email(agent_name, to_email, subject, "sent")
+            return {"status": "ok", "to": to_email, "from": from_email, "id": data.get("id", ""), "method": "resend"}
         return {"status": "error", "message": data.get("message", resp.text[:200]), "code": resp.status_code}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -1864,17 +1893,20 @@ async def api_send_email(request: Request):
 
 
 @app.get("/api/test-email")
-async def api_test_email():
-    """발신 이메일로 테스트 메일 발송 (Resend API)."""
-    from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+async def api_test_email(agent: str = "피치"):
+    """에이전트별 테스트 이메일 발송."""
+    from_email, sender_name = _get_from(agent)
+    to_email = os.getenv("CEO_EMAIL", os.getenv("KYLE_EMAIL", "jacob@08liter.com"))
     html = _build_pitch_html(
         "테스트",
-        "안녕하세요!\n\n이 메일은 08L_AI Command Center에서 Resend API를 통해 발송한 테스트 이메일입니다.\n"
-        "이메일 연동이 정상적으로 작동하고 있습니다.\n\n"
-        f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)"
+        f"안녕하세요!\n\n이 메일은 [{agent}] 에이전트 테스트 이메일입니다.\n"
+        f"발신: {sender_name} <{from_email}>\n"
+        f"발송 시각: {datetime.now(KST).strftime('%Y-%m-%d %H:%M:%S')} (KST)\n\n"
+        f"이메일 연동이 정상적으로 작동하고 있습니다."
     )
-    result = _send_email(from_email, "[08L_AI] Resend 테스트 이메일", html)
-    result["sent_to"] = from_email
+    result = _send_email(to_email, f"[{agent}] 테스트 이메일 — {sender_name}", html, agent)
+    result["from"] = f"{sender_name} <{from_email}>"
+    result["to"] = to_email
     return result
 
 
