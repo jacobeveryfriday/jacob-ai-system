@@ -480,7 +480,19 @@ textarea.input-field:focus {
   font-size: 20px;
   line-height: 1;
 }
+/* Chart height constraint */
+.chart-container {
+  position: relative;
+  height: 180px !important;
+  max-height: 180px;
+}
+canvas#chart-revenue,
+canvas#chart-contracts,
+canvas#chart-ov-rev,
+canvas#chart-ov-contracts {
+  max-height: 180px !important;
+}
+
 @media (max-width: 768px) {
   .agent-kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  /* chat-float-btn은 항상 표시 — 여기서 별도 처리 불필요 */
 }
