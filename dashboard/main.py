@@ -2604,23 +2604,7 @@ def _is_business_hours(country: str = "KR") -> bool:
 
 # ===== 피치 자율 실행 + 품질 점검 + 2차 이건©일 =====
 
-PITCH_TEMPLATES = {
-    "A": {"label": "성공사건¡형",
-          "subject": "2건¶ 30초에 1억, 숏폼 1개건¡ 287건§ 조회 â {brand}의 건¤음 사건¡가 건  수 있습건건¤",
-          "body": "안건하세요 {contact}건,\n\n저희 파트건가 건§건 이시아 건¼이건¸ 2건¶ 30초 건§에 1억 건§¤출,\n국건´ 파트건건 숏폼 1개건¡ 287건§ 조회Â·건§¤출 +180%건¥¼ 건§건¤었습건건¤.\n\n{brand}이 진출하건 ¤건 국가건 채건, 고건¯¼하시건 건¶건¶을\n알건 ¤주시건©´ 관건 ¨ 성공 사건¡건¥¼ 건°건¡ 건³´건´건건¦¬겠습건건¤.\n편하신 시간에 30건¶ 건¹건건©´으건¡ 직접 설건ª건건¦´ 수건 있습건건¤.\n\nð 상품소개서 건° 프건¡건ª¨션: https://buly.kr/AF24dn7\nð 30건¶ 건¹건건©´ 건¯¸팅 예약: https://buly.kr/1c9NOdW\n\n---\n공팔건¦¬터 주건어 컨설턴트\n피치 건건¦¼\n\npitch@08liter.com\nwww.08liter.com"},
-    "B": {"label": "프건¡건ª¨션형",
-          "subject": "4/30 건§감 â 숏폼 100건 200건§원, {brand} 신청 가건¥합건건¤",
-          "body": "안건하세요 {contact}건,\n\n4월 한 건¬건§ 진행하건 프건¡건ª¨션입건건¤.\n\n국건´: 숏폼 100건 200건§원 (정가 500건§원 / 60% 할인)\n해외(아건§존Â·쇼피Â·틱톡샵): 글건¡건² 숏폼 100건 500건§원 (정가 1,000건§원 / 50% 할인)\n\n생성건 콘텐츠건 3개월간 광고 소재건¡ 건¬´건£ 활용 가건¥합건건¤.\n{brand}에 건§건 활용 건°©건²을 30건¶ 건¹건건©´으건¡ 설건ª건건¦´ 수 있습건건¤.\n\nð 전체 프건¡건ª¨션 상세: https://buly.kr/AF24dn7\nð 30건¶ 건¹건건©´ 건¯¸팅 예약: https://buly.kr/1c9NOdW\n\n---\n공팔건¦¬터 주건어 컨설턴트\n피치 건건¦¼\n\npitch@08liter.com\nwww.08liter.com"},
-    "C": {"label": "후킹형",
-          "subject": "{brand}, 지금 가장 고건¯¼하시건 게 건­가요?",
-          "body": "안건하세요 {contact}건,\n\n건¦¬건·°가 없어서, 숏폼이 안 터져서, 해외 진출이 건§건§해서.\n건¸건건건§건¤ 고건¯¼이 건¤건¦건건¤.\n\n진출하건 ¤건 국가건 채건을 알건 ¤주시건©´\n10건간 8개국 2건§여 건¸건건와 함께한 경험으건¡\n건± 건§건 사건¡건¥¼ 찾아 30건¶ 건¹건건©´으건¡ 설건ª건건¦¬겠습건건¤.\n\nð 상품소개서 건° 프건¡건ª¨션: https://buly.kr/AF24dn7\nð 30건¶ 건¹건건©´ 건¯¸팅 예약: https://buly.kr/1c9NOdW\n\n---\n공팔건¦¬터 주건어 컨설턴트\n피치 건건¦¼\n\npitch@08liter.com\nwww.08liter.com"},
-    "A_EN": {"label": "Success Story (EN)",
-             "subject": "287M views from 1 short video â {brand} could be next",
-             "body": "Hi {contact},\n\nOne of our partners hit 1B KRW in sales from a 2.5-minute live stream in Malaysia.\nAnother drove 287M views and +180% revenue from a single short-form video.\n\nLet us know which market or channel you're focusing on, and we'll share the most relevant case study.\n\nHappy to explain in a 30-min virtual call.\n\nð Deck + Promotions: https://buly.kr/AF24dn7\nð Book a call: https://buly.kr/1c9NOdW\n\n---\nPitch\nJunior Consultant, 08liter Global\n\npitch@08liter.com\nwww.08liter.com"},
-    "B_EN": {"label": "Promo Urgent (EN)",
-             "subject": "April only â 100 short videos for 2M KRW ({brand} eligible)",
-             "body": "Hi {contact},\n\nThis month only, we're offering 100 short-form videos (Reels/TikTok) for 2M KRW â regular price 5M KRW.\n\nFor global markets (Amazon, Shopee, TikTok Shop): 100 videos for 5M KRW (regular 10M KRW).\n\nAll content is yours to reuse as ad creative for 3 months at no extra cost.\n\nð Full details: https://buly.kr/AF24dn7\nð 30-min call: https://buly.kr/1c9NOdW\n\n---\nPitch\nJunior Consultant, 08liter Global\n\npitch@08liter.com\nwww.08liter.com"},
-}
+from pitch_templates import PITCH_TEMPLATES
 
 PITCH_REPLY_TEMPLATES = {
     "meeting": {"subject": "RE: 건¯¸팅 예약 건§크 건³´건´건건¦½건건¤",
