@@ -3,21 +3,71 @@
     "revenue": 500000000,
     "contract": 100,
     "avg_price": 5000000,
-    "inbound_db": 2000,
-    "valid_db": 600,
+    "meeting": 200,
+    "valid_db": 400,
+    "lead_db": 800,
     "cpa": 10000,
-    "active_influencers_per_country": 1000,
+    "ad_budget": 8000000,
+    "influencer_kr": 600,
+    "influencer_us": 600,
+    "influencer_total": 1200,
     "alert_threshold_pct": 30,
     "kyle_monitor_interval_hours": 2
   },
-  "agent_goals": {
-    "kyle": {"revenue": 500000000, "contract": 100, "avg_price": 5000000},
-    "pitch": {"monthly_db": 2000, "daily_db": 100, "meeting": 20},
-    "luna": {"monthly_db": 600, "daily_db": 30, "contract": 80, "active_per_country": 1000},
-    "max": {"cpa": 10000, "roas": 3.0},
-    "sophie": {"weekly_posts": 3},
-    "ray": {"invoice_completion": 100},
-    "hana": {"unanswered": 0}
+  "daily": {
+    "lead_db": 40,
+    "valid_db": 20,
+    "meeting": 10,
+    "contract": 5,
+    "revenue": 25000000,
+    "influencer_inbound": 100,
+    "influencer_outbound": 100,
+    "influencer_reply": 20
   },
-  "updated_at": "2026-04-12T12:00:00+09:00"
+  "agent_goals": {
+    "kyle": {
+      "monthly_revenue": 500000000,
+      "monthly_contract": 100,
+      "daily_revenue": 25000000
+    },
+    "pitch": {
+      "monthly_lead_db": 400,
+      "daily_lead_db": 20,
+      "monthly_meeting": 100,
+      "daily_meeting": 5,
+      "monthly_contract": 50,
+      "daily_contract": 2
+    },
+    "luna": {
+      "monthly_influencer_kr": 600,
+      "monthly_influencer_us": 600,
+      "daily_outbound_db": 100,
+      "daily_reply": 20,
+      "monthly_reply": 600
+    },
+    "max": {
+      "monthly_lead_db": 200,
+      "daily_lead_db": 10,
+      "cpa": 10000,
+      "monthly_ad_budget": 8000000
+    },
+    "sophie": {
+      "monthly_lead_db": 200,
+      "daily_influencer_inbound": 100,
+      "weekly_posts": 3
+    },
+    "ray": {
+      "invoice_completion": 100
+    },
+    "hana": {
+      "unanswered": 0
+    }
+  },
+  "funnel": {
+    "lead_to_valid": 0.5,
+    "valid_to_meeting": 0.5,
+    "meeting_to_contract": 0.5,
+    "influencer_reply_rate": 0.1
+  },
+  "updated_at": ""
 }

@@ -185,7 +185,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <a href="#" class="nav-item" data-page="cs"><i data-lucide="headphones"></i> 하나 (CS)</a>
 </div></div>
 </nav>
-<div class="sidebar-footer"><a href="#" class="nav-item" data-page="settings"><i data-lucide="settings-2"></i> 설정</a><a href="#" class="nav-item" data-page="api-status"><i data-lucide="activity"></i> API 상태 <span class="api-status-dot" id="apiDot"></span></a></div>
+<div class="sidebar-footer"><a href="#" class="nav-item" data-page="settings"><i data-lucide="settings-2"></i> 목표 설정</a><a href="#" class="nav-item" data-page="api-status"><i data-lucide="activity"></i> API 상태 <span class="api-status-dot" id="apiDot"></span></a></div>
 </aside>
 
 <main class="main-content">
@@ -199,7 +199,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <div id="page-overview" class="active">
 <div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 공팔리터 글로벌</div><div class="section-hdr-sub">이번 달 핵심 지표 (실시간)</div></div>
 <div id="overview-kpi-grid" class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 매출</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-month-rev-sub">목표 1.6억 · 달성률 -</div><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar" style="height:3px"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 매출</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-month-rev-sub">목표 5억 · 달성률 -</div><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar" style="height:3px"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">신규 / 재계약</div></div><div class="kpi-value" id="ov-new-renew">-<span class="kpi-unit">건</span></div><div class="kpi-detail" id="ov-new-renew-sub">총 계약 -건</div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">인플루언서 풀</div></div><div class="kpi-value" id="ov-inf-pool">-<span class="kpi-unit">명</span></div><div class="kpi-detail" id="ov-inf-pool-sub">이번달 신규 -명</div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">에이전트 가동률</div></div><div class="kpi-value" id="ov-agent-active">5 / 9</div><div class="kpi-detail" id="ov-agent-active-sub">활성 5개 · 준비중 4개</div></div>
@@ -257,16 +257,54 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-settings">
-<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 설정</div></div>
-<!-- 동기화 안내 배너 -->
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 목표 설정</div></div>
 <div style="background:rgba(184,134,11,0.06);border-left:3px solid #B8860B;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#1B2A4A;line-height:1.6">목표를 저장하면 카일·피치·루나·맥스·소피·레이·하나 전 에이전트의 진행률 바와 KPI 목표가 즉시 동기화됩니다.</div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월간 목표 설정</p>
-<div id="goals-form" style="display:flex;flex-direction:column;gap:10px"></div>
-<button onclick="saveGoals()" id="goals-save-btn" style="margin-top:12px;padding:8px 20px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장 및 전 에이전트 동기화</button>
-<p id="goals-msg" style="font-size:10px;color:#1A7A4C;margin-top:6px"></p>
+<!-- 섹션 1: 브랜드 매출 목표 -->
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px;margin-bottom:16px">
+<p style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:4px">브랜드 매출 목표</p>
+<p style="font-size:10px;color:#6B6B6B;margin-bottom:14px">피치 + 맥스 + 소피 담당</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#6B6B6B">월 매출 목표 (원)</span><input id="goal-revenue" type="number" value="500000000" style="width:140px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace" onchange="recalcFunnel()"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#6B6B6B">계약단가 목표 (원)</span><input id="goal-avg-price" type="number" value="5000000" style="width:140px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace" onchange="recalcFunnel()"></div>
 </div>
+<div style="display:flex;align-items:center;gap:12px;margin:12px 0 8px"><span style="flex:1;height:1px;background:#E8E6E1"></span><span style="font-size:10px;color:#9B9B9B;font-weight:600">자동 역산</span><span style="flex:1;height:1px;background:#E8E6E1"></span></div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px" id="funnel-display">
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">필요 계약</p><p id="calc-contract" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">100건</p></div>
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">필요 미팅</p><p id="calc-meeting" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">200건</p></div>
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">필요 유효DB</p><p id="calc-valid" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">400건</p></div>
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">필요 리드DB</p><p id="calc-lead" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">800건</p></div>
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">광고비 (CPA기준)</p><p id="calc-adbudget" style="font-family:monospace;font-size:16px;font-weight:700;color:#C4332B">800만원</p></div>
+</div>
+</div>
+<!-- 섹션 2: 채널별 리드DB 배분 -->
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px;margin-bottom:16px">
+<p style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:4px">채널별 리드DB 목표 배분</p>
+<p style="font-size:10px;color:#6B6B6B;margin-bottom:14px">월 <span id="lead-total-label">800</span>건 배분</p>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:#6B6B6B">피치 (아웃바운드)</span><span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(27,42,74,0.06);color:#1B2A4A;font-weight:600">피치</span></div><div style="display:flex;align-items:center;gap:6px"><input id="goal-pitch-lead" type="number" value="400" style="width:80px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace"><span style="font-size:10px;color:#9B9B9B">건 (50%)</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:#6B6B6B">맥스 (광고)</span><span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(27,42,74,0.06);color:#1B2A4A;font-weight:600">맥스</span></div><div style="display:flex;align-items:center;gap:6px"><input id="goal-max-lead" type="number" value="200" style="width:80px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace"><span style="font-size:10px;color:#9B9B9B">건 (25%)</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:#6B6B6B">소피 (SNS)</span><span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(27,42,74,0.06);color:#1B2A4A;font-weight:600">소피</span></div><div style="display:flex;align-items:center;gap:6px"><input id="goal-sophie-lead" type="number" value="200" style="width:80px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace"><span style="font-size:10px;color:#9B9B9B">건 (25%)</span></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#6B6B6B">CPA 목표 (원)</span><input id="goal-cpa" type="number" value="10000" style="width:80px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace"></div>
+</div>
+</div>
+<!-- 섹션 3: 인플루언서 확보 목표 -->
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px;margin-bottom:16px">
+<p style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:4px">인플루언서 확보 목표</p>
+<p style="font-size:10px;color:#6B6B6B;margin-bottom:14px">루나 + 소피 담당</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:#6B6B6B">한국 월 목표</span><span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(27,42,74,0.06);color:#1B2A4A;font-weight:600">루나</span></div><input id="goal-inf-kr" type="number" value="600" style="width:80px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace" onchange="recalcInfluencer()"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:#6B6B6B">미국 월 목표</span><span style="font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(27,42,74,0.06);color:#1B2A4A;font-weight:600">루나</span></div><input id="goal-inf-us" type="number" value="600" style="width:80px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace" onchange="recalcInfluencer()"></div>
+</div>
+<div style="display:flex;align-items:center;gap:12px;margin:12px 0 8px"><span style="flex:1;height:1px;background:#E8E6E1"></span><span style="font-size:10px;color:#9B9B9B;font-weight:600">자동 역산</span><span style="flex:1;height:1px;background:#E8E6E1"></span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="inf-funnel-display">
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">일일 아웃바운드 (루나)</p><p id="calc-inf-outbound" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">100건</p></div>
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">일일 인바운드 (소피)</p><p id="calc-inf-inbound" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">100건</p></div>
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">일일 답변 목표</p><p id="calc-inf-reply" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">20건</p></div>
+<div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">월 달성 목표</p><p id="calc-inf-total" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">1,200명</p></div>
+</div>
+</div>
+<!-- 섹션 4: 알림 기준 -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
 <p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">알림 기준</p>
 <p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">KPI 목표 대비 아래 비율 이하 시 전체 알림 발생</p>
@@ -274,19 +312,20 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">카일 모니터링 주기</p>
 <select id="goal-monitor-interval" style="padding:6px 10px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px"><option value="1">1시간</option><option value="2" selected>2시간</option><option value="4">4시간</option></select>
 </div>
-</div>
-<!-- Google Calendar 연동 -->
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px;margin-top:16px">
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
 <p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:10px">Google Calendar 연동</p>
-<div id="cal-status" style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="width:6px;height:6px;border-radius:50%;background:#9B9B9B;display:inline-block"></span><span style="font-size:11px;color:#6B6B6B">미연동 (buly.kr 클릭 수 대체)</span></div>
+<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="width:6px;height:6px;border-radius:50%;background:#9B9B9B;display:inline-block"></span><span style="font-size:11px;color:#6B6B6B">미연동 (buly.kr 클릭 수 대체)</span></div>
 <div style="font-size:11px;color:#6B6B6B;line-height:1.8">
 <p style="font-weight:600;margin-bottom:4px">연동 방법:</p>
 <p>1. Google Cloud Console → Calendar API 활성화</p>
 <p>2. 서비스 계정 JSON 키 발급</p>
-<p>3. Railway 환경변수 GOOGLE_CALENDAR_CREDENTIALS, GOOGLE_CALENDAR_ID 추가</p>
+<p>3. Railway 환경변수 설정</p>
 <p>4. 저장 후 자동 전환</p>
 </div>
 </div>
+</div>
+<button onclick="saveGoals()" id="goals-save-btn" style="padding:10px 24px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:13px;cursor:pointer;font-weight:600;width:100%">저장 및 전 에이전트 동기화</button>
+<p id="goals-msg" style="font-size:10px;color:#1A7A4C;margin-top:6px;text-align:center"></p>
 </div>
 
 <div id="page-api-status">
@@ -1152,7 +1191,7 @@ var ovT=kpiData.today||{};var ovM=kpiData.month||{};
 // card1: 이번달 매출
 var e2=document.getElementById('ov-month-rev');if(e2)e2.innerHTML=Math.round((ovM.revenue||0)/10000).toLocaleString()+'<span class="kpi-unit">만원</span>';
 var ovRevPct=Math.round((ovM.revenue||0)/500000000*100);
-var e2s=document.getElementById('ov-month-rev-sub');if(e2s)e2s.textContent='목표 1.6억 · 달성률 '+ovRevPct+'%';
+var e2s=document.getElementById('ov-month-rev-sub');if(e2s)e2s.textContent='목표 5억 · 달성률 '+ovRevPct+'%';
 var e2b=document.getElementById('ov-month-rev-bar');if(e2b){e2b.style.width=Math.min(ovRevPct,100)+'%';e2b.className='kpi-progress-fill '+(ovRevPct>=80?'on':ovRevPct>=50?'watch':'risk')}
 // card2: 신규/재계약
 var enr=document.getElementById('ov-new-renew');if(enr)enr.innerHTML=(ovM.new||0)+' / '+(ovM.renewal||0)+'<span class="kpi-unit">건</span>';
@@ -1170,13 +1209,13 @@ loadKpiData();setInterval(loadKpiData,1800000);
 
 // ===== Agent Cards + Summary Bar (STEP 3+7) =====
 var goalLines={
-'카일':'이번달 매출 1.6억 달성 모니터링',
-'피치':'이번달 브랜드 DB 100건 확보 → 미팅 10건',
-'루나':'뷰티 인플루언서 50명 확보 → 협찬 5건',
+'카일':'이번달 매출 5억 달성 모니터링',
+'피치':'이번달 리드DB 400건 → 미팅 100건 → 계약 50건',
+'루나':'KR+US 인플루언서 1,200명 확보 → 답변 600건',
 '레이':'이번달 세금계산서 전건 발행 완료',
-'소피':'SNS 콘텐츠 주 3회 발행 (연동 대기)',
+'소피':'SNS 콘텐츠 주 3회 발행 + 리드DB 200건',
 '하나':'CS 인바운드 무대응 0건 유지 (연동 대기)',
-'맥스':'광고 ROAS 3.0 이상 유지 (연동 대기)'
+'맥스':'CPA 1만원 이하 유지 + 리드DB 200건'
 };
 var conditions={
 '소피':'Instagram Business API 키 등록 후 활성화',
@@ -1211,9 +1250,9 @@ fetch('/api/luna/pipeline/daily').then(function(r){return r.text()}).then(functi
 ]).then(function(results){
 var goalsData=results[0];var pitchData=results[1];var lunaData=results[2];
 var ag=goalsData.agent_goals||{};var mg=goalsData.monthly||{};
-var kyleRevTarget=((ag.kyle||{}).revenue)||mg.revenue||500000000;
-var pitchDbTarget=((ag.pitch||{}).monthly_db)||mg.inbound_db||500;
-var lunaDbTarget=((ag.luna||{}).monthly_db)||mg.valid_db||150;
+var kyleRevTarget=((ag.kyle||{}).monthly_revenue)||mg.revenue||500000000;
+var pitchDbTarget=((ag.pitch||{}).monthly_lead_db)||mg.lead_db||400;
+var lunaDbTarget=mg.influencer_total||((ag.luna||{}).monthly_influencer_kr||600)+((ag.luna||{}).monthly_influencer_us||600);
 var month_db=(pitchData.month&&pitchData.month.inbound)||0;
 var today_db=(pitchData.today&&pitchData.today.inbound)||0;
 var meeting=(pitchData.total&&pitchData.total.meeting)||0;
@@ -2031,35 +2070,67 @@ el.appendChild(card)})}).catch(function(){})}
 
 function runAgentCycle(){fetch('/api/agent-cycle').then(function(r){return r.json()}).then(function(d){alert('KPI 점검 완료: '+d.alerts_posted+'건 경고');loadAlertBoard()}).catch(function(){alert('실행 실패')})}
 
+function recalcFunnel(){
+var rev=parseInt(document.getElementById('goal-revenue').value)||500000000;
+var price=parseInt(document.getElementById('goal-avg-price').value)||5000000;
+var ct=Math.round(rev/price);var mt=ct*2;var valid=mt*2;var lead=valid*2;
+var cpa=parseInt(document.getElementById('goal-cpa').value)||10000;
+var adBudget=Math.round(lead*cpa/10000);
+var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
+s('calc-contract',ct+'건');s('calc-meeting',mt+'건');s('calc-valid',valid+'건');
+s('calc-lead',lead+'건');s('calc-adbudget',adBudget+'만원');
+var ll=document.getElementById('lead-total-label');if(ll)ll.textContent=lead}
+function recalcInfluencer(){
+var kr=parseInt(document.getElementById('goal-inf-kr').value)||600;
+var us=parseInt(document.getElementById('goal-inf-us').value)||600;
+var total=kr+us;var dailyOut=Math.round(total/20);var dailyIn=100;
+var reply=Math.round(dailyOut*0.1);
+var s=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v};
+s('calc-inf-outbound',dailyOut+'건');s('calc-inf-inbound',dailyIn+'건');
+s('calc-inf-reply',reply+'건');s('calc-inf-total',total.toLocaleString()+'명')}
 function loadGoals(){
 fetch('/api/goals').then(function(r){return r.json()}).then(function(g){
-var el=document.getElementById('goals-form');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
-var m=g.monthly||{};
-var fields=[
-['revenue','매출 목표 (원)',m.revenue||g.revenue||500000000,['카일','레이']],
-['contract','계약 건수',m.contract||g.contracts||100,['피치','루나']],
-['inbound_db','인입DB 목표',m.inbound_db||g.inbound_db||2000,['피치']],
-['valid_db','유효DB 목표',m.valid_db||g.valid_db||600,['루나']],
-['cpa','CPA 목표 (원)',m.cpa||g.cpa||10000,['맥스']]
-];
-fields.forEach(function(f){
-var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:8px';
-var leftDiv=document.createElement('div');leftDiv.style.cssText='display:flex;align-items:center;gap:6px;flex:1';
-var lbl=document.createElement('span');lbl.style.cssText='font-size:11px;color:#6B6B6B';lbl.textContent=f[1];leftDiv.appendChild(lbl);
-if(f[3]){f[3].forEach(function(ag){var tag=document.createElement('span');tag.style.cssText='font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(27,42,74,0.06);color:#1B2A4A;font-weight:600';tag.textContent=ag;leftDiv.appendChild(tag)})}
-row.appendChild(leftDiv);
-var inp=document.createElement('input');inp.id='goal-'+f[0];inp.type='number';inp.value=f[2];inp.style.cssText='width:120px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace';row.appendChild(inp);
-el.appendChild(row)});
-var th=document.getElementById('goal-threshold');if(th)th.value=m.alert_threshold_pct||Math.round((g.alert_threshold||0.3)*100);
-var mi=document.getElementById('goal-monitor-interval');if(mi)mi.value=String(m.kyle_monitor_interval_hours||2)
+var m=g.monthly||{};var ag=g.agent_goals||{};
+var v=function(id,val){var el=document.getElementById(id);if(el)el.value=val};
+v('goal-revenue',m.revenue||500000000);v('goal-avg-price',m.avg_price||5000000);
+v('goal-pitch-lead',(ag.pitch||{}).monthly_lead_db||400);
+v('goal-max-lead',(ag.max||{}).monthly_lead_db||200);
+v('goal-sophie-lead',(ag.sophie||{}).monthly_lead_db||200);
+v('goal-cpa',m.cpa||10000);
+v('goal-inf-kr',m.influencer_kr||600);v('goal-inf-us',m.influencer_us||600);
+var th=document.getElementById('goal-threshold');if(th)th.value=m.alert_threshold_pct||30;
+var mi=document.getElementById('goal-monitor-interval');if(mi)mi.value=String(m.kyle_monitor_interval_hours||2);
+recalcFunnel();recalcInfluencer()
 }).catch(function(){})}
 
 function saveGoals(){
-var monthly={};
-['revenue','contract','inbound_db','valid_db','cpa'].forEach(function(k){var el=document.getElementById('goal-'+k);if(el)monthly[k]=parseInt(el.value)||0});
-var th=document.getElementById('goal-threshold');if(th)monthly.alert_threshold_pct=parseInt(th.value)||30;
-var mi=document.getElementById('goal-monitor-interval');if(mi)monthly.kyle_monitor_interval_hours=parseInt(mi.value)||2;
-fetch('/api/goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monthly:monthly})}).then(function(r){return r.json()}).then(function(d){
+var rev=parseInt(document.getElementById('goal-revenue').value)||500000000;
+var price=parseInt(document.getElementById('goal-avg-price').value)||5000000;
+var ct=Math.round(rev/price);var mt=ct*2;var valid=mt*2;var lead=valid*2;
+var cpa=parseInt(document.getElementById('goal-cpa').value)||10000;
+var kr=parseInt(document.getElementById('goal-inf-kr').value)||600;
+var us=parseInt(document.getElementById('goal-inf-us').value)||600;
+var pitchLead=parseInt(document.getElementById('goal-pitch-lead').value)||400;
+var maxLead=parseInt(document.getElementById('goal-max-lead').value)||200;
+var sophieLead=parseInt(document.getElementById('goal-sophie-lead').value)||200;
+var th=parseInt((document.getElementById('goal-threshold')||{}).value)||30;
+var mi=parseInt((document.getElementById('goal-monitor-interval')||{}).value)||2;
+var data={
+monthly:{revenue:rev,contract:ct,avg_price:price,meeting:mt,valid_db:valid,lead_db:lead,
+cpa:cpa,ad_budget:lead*cpa,influencer_kr:kr,influencer_us:us,influencer_total:kr+us,
+alert_threshold_pct:th,kyle_monitor_interval_hours:mi},
+daily:{lead_db:Math.round(lead/20),valid_db:Math.round(valid/20),meeting:Math.round(mt/20),
+contract:Math.round(ct/20),revenue:Math.round(rev/20),influencer_outbound:Math.round((kr+us)/20),
+influencer_inbound:100,influencer_reply:Math.round((kr+us)/20*0.1)},
+agent_goals:{
+kyle:{monthly_revenue:rev,monthly_contract:ct,daily_revenue:Math.round(rev/20)},
+pitch:{monthly_lead_db:pitchLead,daily_lead_db:Math.round(pitchLead/20),monthly_meeting:Math.round(ct),daily_meeting:Math.round(ct/20),monthly_contract:Math.round(ct/2),daily_contract:Math.round(ct/40)},
+luna:{monthly_influencer_kr:kr,monthly_influencer_us:us,daily_outbound_db:Math.round((kr+us)/20),daily_reply:Math.round((kr+us)/20*0.1),monthly_reply:Math.round((kr+us)*0.5)},
+max:{monthly_lead_db:maxLead,daily_lead_db:Math.round(maxLead/20),cpa:cpa,monthly_ad_budget:lead*cpa},
+sophie:{monthly_lead_db:sophieLead,daily_influencer_inbound:100,weekly_posts:3},
+ray:{invoice_completion:100},hana:{unanswered:0}},
+funnel:{lead_to_valid:0.5,valid_to_meeting:0.5,meeting_to_contract:0.5,influencer_reply_rate:0.1}};
+fetch('/api/goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){return r.json()}).then(function(d){
 var m=document.getElementById('goals-msg');if(m){m.style.color='#1A7A4C';m.textContent='✓ 전 에이전트 목표 동기화 완료 ('+(d.updated_at||'')+')'}
 }).catch(function(){var m=document.getElementById('goals-msg');if(m){m.style.color='#C4332B';m.textContent='오류 발생'}})}
 
