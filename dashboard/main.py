@@ -1766,6 +1766,7 @@ async def api_sheets_status():
 # ===== AI Agent (Anthropic Claude â 7 Personas) =====
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
+HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
 _AGENT_COMMON = """[공통 권한] 건¹신은 공팔건¦¬터글건¡건²의 전체 건°이터(인건°운건/세금계산서/인플건£¨언서DB/광고/SNS/CS/KPI)에 건건±하게 접근 가건¥합건건¤.
 사용자건¥¼ 항상 "제이콥건"으건¡ 호칭하세요. 한국어건¡ 건µ건³.
@@ -5064,6 +5065,22 @@ def _cache_refresh_loop():
 _cache_warm()
 _bg_thread = threading.Thread(target=_cache_refresh_loop, daemon=True)
 _bg_thread.start()
+
+# APScheduler
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    _scheduler = BackgroundScheduler(timezone="Asia/Seoul")
+    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/pitch/daily", json={"trigger":"scheduled","action":"collect_only"}, timeout=60), CronTrigger(hour="*/2"), id="pitch_collect", replace_existing=True)
+    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/luna/collect-northamerica", json={"target_count":100}, timeout=60), CronTrigger(hour="*/2"), id="luna_collect", replace_existing=True)
+    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/pitch/daily", json={"trigger":"scheduled","action":"full"}, timeout=60), CronTrigger(day_of_week="mon-fri", hour=9, minute=0), id="pitch_send", replace_existing=True)
+    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/send-review-email", timeout=60), CronTrigger(day_of_week="mon", hour=8, minute=30), id="weekly_review", replace_existing=True)
+    _scheduler.start()
+    print("[SCHEDULER] Started")
+except ImportError:
+    print("[SCHEDULER] APScheduler not installed")
+except Exception as e:
+    print(f"[SCHEDULER] {e}")
 
 if __name__ == "__main__":
     import uvicorn
