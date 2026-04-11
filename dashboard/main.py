@@ -1013,8 +1013,8 @@ async def api_brand_pipeline(brand_filter: Optional[str] = None):
         dummy["not_connected"] = ["광고CPA", "CS", "유효DB(컨택현황 업건°이트 필요)"]
         return dummy
     try:
-        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센건¬¸의", ttl_key="inbound")
-        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서건°행", ttl_key="contract")
+        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
         ib = _parse_inbound(inbound_rows) if inbound_rows else {}
         ct = _parse_contracts(contract_rows) if contract_rows else {}
 
@@ -1096,7 +1096,7 @@ async def api_influencer_db(
     if not GSHEETS_API_KEY:
         return _dummy_influencer_db()
     try:
-        rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수건건§¤칭)", ttl_key="influencer")
+        rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
         if not rows:
             return _dummy_influencer_db()
         items = []
@@ -1256,7 +1256,7 @@ async def api_ads_performance():
     _ib_hdr_idx_debug = None
     _sample_ch_values = []  # 첫 5행 채건값 샘플
     try:
-        ib_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센건¬¸의", ttl_key="inbound")
+        ib_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
         if ib_rows and len(ib_rows) > 2:
             hdr_idx = _find_header_row(ib_rows, "국가", "컨택현황", "컨텍현황", "건´건¹자")
             headers = [str(h).replace("\n", " ").strip() for h in ib_rows[hdr_idx]]
@@ -1317,14 +1317,14 @@ async def api_ads_performance():
     except Exception as e:
         print(f"[ads-perf] inbound error: {e}")
 
-    # ========== 2. 계약시트 [계산서건°행] â 건§¤출합계 + 채건건³ 계약 ==========
+    # ========== 2. 계약시트 [계산서발행] â 건§¤출합계 + 채건건³ 계약 ==========
     # 작성월구건¶ 컬건¼(예: "2026.04")으건¡ 필터 â V열(총합계) 합산
     month_revenue, prev_month_revenue = 0, 0
     month_contracts, prev_month_contracts = 0, 0
     ct_by_ch = {}  # 채건건³ {count, revenue}
     prev_month_dot_str = f"{prev_month_end.year}.{prev_month_end.month:02d}"
     try:
-        ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서건°행", ttl_key="contract")
+        ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
         if ct_rows and len(ct_rows) > 1:
             hdr_idx = _find_header_row(ct_rows, "작성일자", "공급가액", "공급건°건자")
             headers = [str(h).replace("\n", " ").strip() for h in ct_rows[hdr_idx]]
@@ -1651,7 +1651,7 @@ async def api_ads_performance():
 
 @app.get("/api/kpi-summary")
 async def api_kpi_summary():
-    """총괄 KPI 요약 (brand + ads 합산). 건§¤출은 계산서건°행 T열(공급가액) 기준."""
+    """총괄 KPI 요약 (brand + ads 합산). 건§¤출은 계산서발행 T열(공급가액) 기준."""
     brand = await api_brand_pipeline()
     ads = await api_ads_performance()
     today = brand.get("today", {})
@@ -2158,8 +2158,8 @@ async def api_recontact_leads():
     try:
         now = datetime.now(KST)
         six_months_ago = now - timedelta(days=180)
-        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센건¬¸의", ttl_key="inbound")
-        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서건°행", ttl_key="contract")
+        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
         # 계약 건¸건건 Set
         ct_hdr = _find_header_row(contract_rows, "작성일자", "공급가액", "공급건°건자")
         ct_headers = [str(h).replace("\n", " ").strip() for h in contract_rows[ct_hdr]]
@@ -3023,7 +3023,7 @@ async def api_campaign_recontact(request: Request):
 
 async def _pitch_inbound_auto():
     """피치: 신규 인건°운건 감지 â 자건 응건 이건©일 + 건¯¸팅 건§크 건°송."""
-    inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센건¬¸의", ttl_key="inbound")
+    inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
     if not inbound_rows:
         return {"sent": 0}
     hdr_idx = _find_header_row(inbound_rows, "국가", "컨택현황", "컨텍현황", "건´건¹자")
@@ -3086,7 +3086,7 @@ async def _pitch_outbound_crm():
 
 async def _luna_inbound_welcome():
     """루나: 신규 인플건£¨언서 지원자에게 환영 이건©일 + 캠페인 안건´."""
-    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수건건§¤칭)", ttl_key="influencer")
+    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
     if not rows:
         return {"sent": 0}
     now = datetime.now(KST)
@@ -3118,7 +3118,7 @@ async def _luna_inbound_welcome():
 
 async def _luna_outbound_pitch():
     """루나: 인플건£¨언서 DB에서 이건©일 있건 건상에게 캠페인 제안 건°송."""
-    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수건건§¤칭)", ttl_key="influencer")
+    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
     if not rows:
         return {"sent": 0}
     targets = []
@@ -3629,7 +3629,7 @@ async def api_kpi_trend():
     except Exception:
         pass
     # 계산서에서 월건³ 건§¤출 집계 (B열 건 짜 기반 통일)
-    ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서건°행", ttl_key="contract")
+    ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
     monthly_rev = {}
     if ct_rows:
         hdr = _find_header_row(ct_rows, "작성일자", "공급가액", "공급건°건자")
@@ -4510,7 +4510,7 @@ async def api_sheet_pipeline(agent: str = "피치"):
         # 피치 시트: 파센건¬¸의 탭 A:V (헤건 3행)
         # A:국가 B:월 C:건 짜 D:유입채건 E:업체건ª F:연건½처 G:이건©일
         # M:건¯¸팅예약 N:팀 O:건´건¹자 Q:컨택현황
-        rows = fetch_sheet(PITCH_SHEET_ID, "A:V", "파센건¬¸의", ttl_key="inbound")
+        rows = fetch_sheet(PITCH_SHEET_ID, "A:V", "파센문의", ttl_key="inbound")
         if rows:
             hdr_idx = _find_header_row(rows, "국가", "컨택현황", "컨텍현황", "건´건¹자")
             headers = [str(h).replace("\n", " ").strip() for h in rows[hdr_idx]]
@@ -5024,8 +5024,8 @@ def _cache_warm():
     if not GSHEETS_API_KEY:
         return
     try:
-        fetch_sheet(SHEET_INBOUND, "A:Z", "파센건¬¸의", ttl_key="inbound")
-        fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서건°행", ttl_key="contract")
+        fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+        fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
         fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수건건§¤칭)", ttl_key="influencer")
         print("[CACHE] 구글시트 건°이터 사전 건¡건 완건£")
     except Exception as e:
