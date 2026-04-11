@@ -1,7 +1,7 @@
-# 08liter Global Operations Master Document v1
+# 08liter Global Operations Master v1
 
 ## Company
-- 08liter Global: Influencer marketing platform
+- 08liter Global: Influencer marketing (140M+ creators, 30K+ brand campaigns)
 - Mili Mili: K-beauty brand
 - Dashboard: https://dashboard-production-b2bd.up.railway.app/
 - GitHub: jacobeveryfriday/jacob-ai-system
@@ -12,48 +12,67 @@
 | Revenue | 500M KRW |
 | Contracts | 100 |
 | Avg price | 5M KRW |
-| Daily inbound DB | 100 |
+| Daily inbound | 100 |
 | Daily valid DB | 30 |
 | CPA | Under 10K KRW |
 | Active influencers | 1,000+ per country |
 
-## Email Automation Flow
-```
-Railway API -> GAS Webhook -> Naver Works SMTP -> Recipient
-                |
-                v
-         GAS internal templates (Korean hardcoded)
-         Variable substitution: {brand}, {contact}
-```
+## Email Templates
+| Code | Target | Lang | Subject |
+|------|--------|------|---------|
+| Pitch-A | Brand | KR | Category success story hook |
+| Pitch-B | Brand | KR | April promo urgent |
+| Pitch-C | Brand | KR | Competitor hook |
+| Luna-KR-A | KR influencer | KR | Brand + terms direct |
+| Luna-KR-B | KR influencer | KR | Revenue case + limited hook |
+| Luna-US-A | US influencer | EN | K-Beauty brand offer |
+| Luna-US-B | US influencer | EN | Revenue case hook |
 
-## Agents
-| Agent | Email | Role |
-|-------|-------|------|
-| Kyle | kyle@08liter.com | Lead - all KPI |
-| Luna | luna@08liter.com | Brand sales |
-| Pitch | pitch@08liter.com | Influencer outreach |
-| Max | max@08liter.com | Ads - CPA |
-| Sophie | sophie@08liter.com | Content - SNS |
-| Ray | ray@08liter.com | Finance |
-| Hana | hana@08liter.com | CS |
+## Auto-Reply Scenarios
+| Type | Keywords | Action |
+|------|----------|--------|
+| 1 Meeting | yes, when, available | Send meeting link |
+| 2 Info | what, cost, price | Send service guide |
+| 3 Later | later, busy, review | 3-week followup |
+| 4 Reject | no need, pass | Polite close |
+
+## Send Rules
+- Send during recipient local business hours (09-18)
+- KR -> Korean / US,CA -> English / JP -> Japanese
+- No weekends, no local holidays
+- KST conversion: KR 09-18 / US-ET 23-08 / US-PT 02-11 / MY 08-17
 
 ## Google Sheets
-| Sheet | ID | Key Tabs |
-|-------|----|----------|
-| Tax Invoice | 1j_3IYME... | 계산서발행 |
-| Inbound/Pitch | 1ISL7s9... | 파센문의, 피치_클로드 |
-| Influencer | 1xLkrml... | 현황시트(수동매칭), 루나_클로드 |
-| Ads/Sophie | 1FOnGv2... | 소피_클로드 |
+| Env Var | Tab | Purpose |
+|---------|-----|---------|
+| SHEET_TAB_CONTRACT | 계산서발행 | Revenue |
+| SHEET_TAB_INBOUND | 파센문의 | Inbound DB |
+| SHEET_TAB_PITCH | 피치_클로드 | Pitch send DB |
+| SHEET_TAB_LUNA | 루나_클로드 | Luna send DB |
+| SHEET_TAB_SOPHIE | 소피_클로드 | Sophie data |
 
-## Encoding Rules
-1. Never write Korean in Python source code
-2. Use Unicode escapes or env vars for Korean strings
-3. json.dumps -> ensure_ascii=False always
-4. Tab names managed via env vars (TAB_CONTRACT, TAB_INBOUND, etc.)
+## Known Issues & Fixes
+| Problem | Cause | Fix |
+|---------|-------|-----|
+| Korean email garbled | ensure_ascii=True | ensure_ascii=False |
+| Sheet data 0 | Tab name encoding | Env var tab names |
+| Today data 0 | UTC/KST mismatch | KST timezone |
+| Dashboard fetch error | res.json() | res.text()+JSON.parse() |
+| Goals not saved | Hardcoded | goals.json |
+| Kyle Korean garbled | Python->JS | Frontend hardcode |
 
-## Deploy Checklist
-1. python3 -c "import main; print('OK')"
-2. git push origin main
-3. Wait 90s for Railway build
-4. curl /health -> google_sheets: connected
-5. curl /api/kpi-summary -> revenue > 0
+## Design
+- McKinsey style: #1a1a1a, Helvetica Neue, data-driven
+- Buttons: Black bg + white text
+- Consistent across dashboard, email, deck, quote
+
+## Agents
+| Agent | Email | KPI |
+|-------|-------|-----|
+| Kyle (lead) | kyle@08liter.com | All KPI + supervision |
+| Luna (brand) | luna@08liter.com | Revenue, contracts |
+| Pitch (influencer) | pitch@08liter.com | Influencer pool, outreach |
+| Max (ads) | max@08liter.com | CPA, organic |
+| Sophie (content) | sophie@08liter.com | SNS, followers |
+| Ray (finance) | ray@08liter.com | Tax invoices |
+| Hana (CS) | hana@08liter.com | CS, renewal |
