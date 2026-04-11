@@ -257,13 +257,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
   <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
   <!-- Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">Today Outbound Pipeline</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uc544\uc6c3\ubc14\uc6b4\ub4dc \ud30c\uc774\ud504\ub77c\uc778</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="pitch-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">Click numbers to open sheet</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uc22b\uc790 \ud074\ub9ad \uc2dc \uc2dc\ud2b8\ub85c \uc774\ub3d9</p>
   </div>
   <!-- Monthly Pipeline -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">This Month (cumulative)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="pitch-pipeline-monthly"></div>
   </div>
   <!-- 피치 성과 보고 -->
@@ -361,13 +361,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
   <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
   <!-- Luna Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">Today Influencer Pipeline</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uc778\ud50c\ub8e8\uc5b8\uc11c \ud30c\uc774\ud504\ub77c\uc778</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="luna-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">Click numbers to open sheet</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uc22b\uc790 \ud074\ub9ad \uc2dc \uc2dc\ud2b8\ub85c \uc774\ub3d9</p>
   </div>
   <!-- Luna Monthly -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">This Month (cumulative)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="luna-pipeline-monthly"></div>
   </div>
   <!-- KPI + 파이프라인만 (승인은 이메일로) -->
@@ -598,8 +598,8 @@ var CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color
 var AGENTS={
 overview:{name:'카일 — 총괄 에이전트',color:'#7C3AED',ex:['오늘 이상 감지 항목 요약해줘','이번 달 목표 달성률 알려줘','가장 급한 처리 항목이 뭐야']},
 kpi:{name:'카일 — 총괄 KPI',color:'#F97316',ex:['계약 목표 달성률은?','단가 하락 원인 분석해줘','P1 목표 달성 가능?']},
-brand:{name:'루나 — 브랜드 영업',color:'#F97316',ex:['재접촉 이메일 발송해줘','재접촉 메시지 작성해줘','이번 달 매출 달성 가능해?']},
-influencer:{name:'피치 — 인플루언서 매칭',color:'#F97316',ex:['뷰티 동남아 인플루언서 현황은?','팔로워 10만 이상 KR 몇 명?','오늘 신규 발굴 현황 알려줘']},
+brand:{name:'Pitch',color:'#1B2A4A',ex:['DB how many today?','Send review email','Monthly target progress?']},
+influencer:{name:'Luna',color:'#2D4A7A',ex:['Influencer DB count?','North America progress?','Today send count?']},
 ads:{name:'맥스 — 광고센터',color:'#F97316',ex:['오늘 채널별 광고 성과는?','CPA가 가장 높은 채널은?','리드 획득 효율 개선 방법은?']},
 sns:{name:'소피 — 공식 SNS',color:'#F97316',ex:['오늘 채널별 성과는?','팔로워 증가율 가장 높은 채널은?','이번 주 콘텐츠 추천해줘']},
 management:{name:'레이 — 경영지원',color:'#F97316',ex:['이번 달 자금 현황 요약해줘','진행중인 정부지원사업 알려줘','미수금 현황 확인해줘']},
@@ -1643,11 +1643,12 @@ var item=data[k]||{value:0,link:'',source:''};
 var card=document.createElement('a');card.href=item.link||'#';card.target='_blank';card.rel='noopener';
 card.style.cssText='text-align:center;background:#F8F7F5;border-radius:6px;padding:10px 6px;text-decoration:none;cursor:pointer';
 var num=document.createElement('p');num.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:'+colors[i];num.textContent=item.value||0;card.appendChild(num);
-var label=document.createElement('p');label.style.cssText='font-size:8px;color:#6B6B6B;margin-top:2px';label.textContent=k.charAt(0).toUpperCase()+k.slice(1);card.appendChild(label);
+var labelMap={target:'타겟',pending:'대기',sent:'발송 성공',replied:'답변',meeting:'미팅',contract:'계약'};
+var label=document.createElement('p');label.style.cssText='font-size:8px;color:#6B6B6B;margin-top:2px';label.textContent=labelMap[k]||k;card.appendChild(label);
 var src=document.createElement('p');src.style.cssText='font-size:7px;color:#BFBFBF;margin-top:1px';src.textContent=item.source||'';card.appendChild(src);
 el.appendChild(card)});
 if(data.conversion){var cv=data.conversion;var cvEl=document.createElement('div');cvEl.style.cssText='grid-column:1/-1;font-size:8px;color:#9B9B9B;margin-top:4px';
-cvEl.textContent='Conversion: '+(cv.sent_rate||'0%')+' sent | '+(cv.reply_rate||'0%')+' reply | '+(cv.meeting_rate||'0%')+' meeting';el.appendChild(cvEl)}}
+cvEl.textContent='\uc804\ud658\uc728: \ubc1c\uc1a1\ub960 '+(cv.sent_rate||'0%')+' | \ub2f5\ubcc0\ub960 '+(cv.reply_rate||'0%')+' | \ubbf8\ud305\ub960 '+(cv.meeting_rate||'0%');el.appendChild(cvEl)}}
 function loadPipelineData(){
 fetch('/api/pitch/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-daily',JSON.parse(t),'meeting')}).catch(function(){});
 fetch('/api/pitch/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-monthly',JSON.parse(t),'meeting')}).catch(function(){});

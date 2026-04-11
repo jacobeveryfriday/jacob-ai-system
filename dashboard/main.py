@@ -1910,7 +1910,20 @@ async def api_chat(request: Request):
              "파이프건¼인건수", "계약건¨가", "풀수", "국가건³현황", "플건«폼건³현황", "CPA", "오가건건¦¬건",
              "채건건³현황", "채건건³효율", "이건²주콘텐츠현황", "건¯¸처건¦¬건", "건¯¸확인건", "건¯¸응건µ건", "재계약건¥ ",
              "금일인입DB", "금일유효DB", "건¬´건응건", "재접촉건수", "에이전트이건©일"]
-        system_prompt = persona["system"].format(**{k: kpi.get(k, "N/A") for k in all_keys})
+        system_prompt = persona["system"]
+        # Inject real-time pipeline data
+        if page == "brand":
+            try:
+                pd = await api_pitch_pipeline_daily()
+                pm = await api_pitch_pipeline_monthly()
+                system_prompt += f"\n\n[Real-time data - today]\nTarget: {pd['target']['value']}\nSent: {pd['sent']['value']}\nReplied: {pd['replied']['value']}\nMeeting: {pd['meeting']['value']}\n[This month]\nTarget: {pm['target']['value']}\nSent: {pm['sent']['value']}\nReplied: {pm['replied']['value']}\nSheet: {pd['target']['link']}"
+            except Exception: pass
+        elif page == "influencer":
+            try:
+                ld = await api_luna_pipeline_daily()
+                lm = await api_luna_pipeline_monthly()
+                system_prompt += f"\n\n[Real-time data - today]\nTarget: {ld['target']['value']}\nSent: {ld['sent']['value']}\nReplied: {ld['replied']['value']}\nContract: {ld.get('contract',{}).get('value',0)}\n[This month]\nTarget: {lm['target']['value']}\nSent: {lm['sent']['value']}\nSheet: {ld['target']['link']}"
+            except Exception: pass
     except (KeyError, IndexError):
         system_prompt = persona["system"]
 
@@ -3016,11 +3029,11 @@ async def api_pitch_pipeline_daily():
     meeting = tp.get("reply_meeting", 0)
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "Pitch Claude tab"},
-        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "Email queue"},
-        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "Sent (excl. bounced)"},
-        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com replies"},
-        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr clicks"},
+        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "피치_클로드 탭"},
+        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com 수신"},
+        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr 클릭 기준"},
         "conversion": {
             "pending_rate": f"{round(pending/max(target,1)*100)}%" if target else "0%",
             "sent_rate": f"{round(sent/max(target,1)*100)}%" if target else "0%",
@@ -3049,11 +3062,11 @@ async def api_pitch_pipeline_monthly():
     meeting = mp.get("reply_meeting", 0)
     return {
         "period": "monthly", "date": now.strftime("%Y-%m"),
-        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "Pitch Claude tab"},
-        "pending": {"value": 0, "link": PITCH_SHEET_URL, "source": "Email queue"},
-        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "Sent (excl. bounced)"},
-        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com replies"},
-        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr clicks"},
+        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "피치_클로드 탭"},
+        "pending": {"value": 0, "link": PITCH_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com 수신"},
+        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr 클릭 기준"},
     }
 
 @app.get("/api/luna/pipeline/daily")
@@ -3069,11 +3082,11 @@ async def api_luna_pipeline_daily():
     contract = tp.get("reply_meeting", 0)
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "Influencer DB"},
-        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "Email queue"},
-        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "Sent (excl. bounced)"},
-        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com replies"},
-        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "Contract completed"},
+        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
+        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
+        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "계약 완료"},
     }
 
 @app.get("/api/luna/pipeline/monthly")
@@ -3096,10 +3109,10 @@ async def api_luna_pipeline_monthly():
     contract = mp.get("reply_meeting", 0)
     return {
         "period": "monthly", "date": now.strftime("%Y-%m"),
-        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "Influencer DB"},
-        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "Sent (excl. bounced)"},
-        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com replies"},
-        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "Contract completed"},
+        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
+        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "계약 완료"},
     }
 
 async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
