@@ -72,6 +72,27 @@ async def health_check():
         "cache_entries": len(_cache),
     }
 
+@app.get("/api/sheets/health")
+async def api_sheets_health():
+    """Google Sheets tab access check."""
+    if not GSHEETS_API_KEY:
+        return {"status": "no_api_key"}
+    tabs = {
+        "contract": {"sheet": SHEET_CONTRACT, "tab": TAB_CONTRACT, "range": "A1:A2"},
+        "inbound": {"sheet": SHEET_INBOUND, "tab": TAB_INBOUND, "range": "A1:A2"},
+        "influencer": {"sheet": SHEET_INFLUENCER, "tab": TAB_INFLUENCER, "range": "A1:A2"},
+        "pitch_claude": {"sheet": PITCH_SHEET_ID, "tab": TAB_PITCH, "range": "A1:A2"},
+        "sophie_claude": {"sheet": SOPHIE_SHEET_ID, "tab": TAB_SOPHIE, "range": "A1:A2"},
+    }
+    results = {}
+    for key, info in tabs.items():
+        try:
+            data = fetch_sheet(info["sheet"], info["range"], info["tab"], ttl_key="default")
+            results[key] = {"status": "ok", "tab": info["tab"], "rows": len(data)}
+        except Exception as e:
+            results[key] = {"status": "error", "tab": info["tab"], "error": str(e)[:100]}
+    return results
+
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: str = ""):
@@ -360,6 +381,14 @@ SHEET_INBOUND = os.getenv("INBOUND_SHEET_ID", "1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yq
 SHEET_CONTRACT = os.getenv("GOOGLE_SHEETS_ID", "1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q")
 SHEET_INFLUENCER = "1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs"
 SHEET_ADS = "1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU"
+
+# 시트 탭명 (환경변수 — 인코딩 깨짐 방지)
+TAB_CONTRACT = os.getenv("SHEET_TAB_CONTRACT", "\uacc4\uc0b0\uc11c\ubc1c\ud589")
+TAB_INBOUND = os.getenv("SHEET_TAB_INBOUND", "\ud30c\uc13c\ubb38\uc758")
+TAB_INFLUENCER = os.getenv("SHEET_TAB_INFLUENCER", "\ud604\ud669\uc2dc\ud2b8(\uc218\ub3d9\ub9e4\uce6d)")
+TAB_PITCH = os.getenv("SHEET_TAB_PITCH", "\ud53c\uce58_\ud074\ub85c\ub4dc")
+TAB_LUNA = os.getenv("SHEET_TAB_LUNA", "\ub8e8\ub098_\ud074\ub85c\ub4dc")
+TAB_SOPHIE = os.getenv("SHEET_TAB_SOPHIE", "\uc18c\ud53c_\ud074\ub85c\ub4dc")
 
 _cache: Dict[str, list] = {}
 _cache_time: Dict[str, float] = {}
@@ -1013,8 +1042,8 @@ async def api_brand_pipeline(brand_filter: Optional[str] = None):
         dummy["not_connected"] = ["광고CPA", "CS", "유효DB(컨택현황 업건°이트 필요)"]
         return dummy
     try:
-        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
-        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", TAB_INBOUND, ttl_key="inbound")
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", TAB_CONTRACT, ttl_key="contract")
         ib = _parse_inbound(inbound_rows) if inbound_rows else {}
         ct = _parse_contracts(contract_rows) if contract_rows else {}
 
@@ -1096,7 +1125,7 @@ async def api_influencer_db(
     if not GSHEETS_API_KEY:
         return _dummy_influencer_db()
     try:
-        rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
+        rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", TAB_INFLUENCER, ttl_key="influencer")
         if not rows:
             return _dummy_influencer_db()
         items = []
@@ -1256,7 +1285,7 @@ async def api_ads_performance():
     _ib_hdr_idx_debug = None
     _sample_ch_values = []  # 첫 5행 채건값 샘플
     try:
-        ib_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+        ib_rows = fetch_sheet(SHEET_INBOUND, "A:Z", TAB_INBOUND, ttl_key="inbound")
         if ib_rows and len(ib_rows) > 2:
             hdr_idx = _find_header_row(ib_rows, "국가", "컨택현황", "컨텍현황", "건´건¹자")
             headers = [str(h).replace("\n", " ").strip() for h in ib_rows[hdr_idx]]
@@ -1324,7 +1353,7 @@ async def api_ads_performance():
     ct_by_ch = {}  # 채건건³ {count, revenue}
     prev_month_dot_str = f"{prev_month_end.year}.{prev_month_end.month:02d}"
     try:
-        ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+        ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", TAB_CONTRACT, ttl_key="contract")
         if ct_rows and len(ct_rows) > 1:
             hdr_idx = _find_header_row(ct_rows, "작성일자", "공급가액", "공급건°건자")
             headers = [str(h).replace("\n", " ").strip() for h in ct_rows[hdr_idx]]
@@ -1520,7 +1549,7 @@ async def api_ads_performance():
     # ========== 7. 건´건¹자건³ KPI â 기존 유지 ==========
     by_person = []
     try:
-        staff_rows = fetch_sheet(SHEET_CONTRACT, "A:J", "건´건¹자건³ 계약전환율", ttl_key="contract")
+        staff_rows = fetch_sheet(SHEET_CONTRACT, "A:J", "담당자별 계약전환율", ttl_key="contract")
         if staff_rows and len(staff_rows) > 1:
             sh_hdr_idx = 0
             for ri, row in enumerate(staff_rows[:5]):
@@ -1582,7 +1611,7 @@ async def api_ads_performance():
         try: return round(float(v), 1)
         except: return None
     try:
-        mr_rows = fetch_sheet(SHEET_CONTRACT, "B:R", "월건³건§¤출&건¡하스", ttl_key="contract")
+        mr_rows = fetch_sheet(SHEET_CONTRACT, "B:R", "월별매출&로하스", ttl_key="contract")
         if mr_rows and len(mr_rows) > 3:
             print(f"[ads-perf] 월건³건§¤출 탭: {len(mr_rows)}행, 첫행 길이={len(mr_rows[0]) if mr_rows[0] else 0}")
             for row in mr_rows[3:]:  # 4행(idx3)건¶터 건°이터
@@ -2158,8 +2187,8 @@ async def api_recontact_leads():
     try:
         now = datetime.now(KST)
         six_months_ago = now - timedelta(days=180)
-        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
-        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+        inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", TAB_INBOUND, ttl_key="inbound")
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", TAB_CONTRACT, ttl_key="contract")
         # 계약 건¸건건 Set
         ct_hdr = _find_header_row(contract_rows, "작성일자", "공급가액", "공급건°건자")
         ct_headers = [str(h).replace("\n", " ").strip() for h in contract_rows[ct_hdr]]
@@ -2291,7 +2320,9 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: st
     if html_body:
         payload["htmlBody"] = html_body
     try:
-        resp = req_lib.post(webhook_url, json=payload, timeout=30, allow_redirects=True,
+        resp = req_lib.post(webhook_url,
+                            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                            timeout=30, allow_redirects=True,
                             headers={"Content-Type": "application/json; charset=utf-8"})
         if resp.status_code == 200:
             try:
@@ -2358,7 +2389,7 @@ async def api_send_review_email():
     ceo_email = "jacob@08liter.com"
     # 피치 DB 건수
     pitch_total = 0
-    p_rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클로드", ttl_key="inbound")
+    p_rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
     if p_rows and len(p_rows) > 1:
         for row in p_rows[1:]:
             em = str(row[7]).strip() if len(row) > 7 else ""
@@ -2647,7 +2678,7 @@ async def api_pitch_send(request: Request):
         template_key = "A"  # 건³µ수 선택 시 A 우선
     tmpl = PITCH_TEMPLATES.get(template_key, PITCH_TEMPLATES["A"])
     # DB 소스: 오직 피치 시트 "피치_클건¡건" 탭 (건¤건¥¸ 시트 혼용 금지)
-    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클건¡건", ttl_key="inbound")
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
     leads = []
     if rows and len(rows) > 1:
         # 헤건 확인 (A:No B:DB확건³´건 짜 ... E:건¸건건건ª ... H:이건©일 ... N:건°송상태)
@@ -2705,7 +2736,7 @@ async def api_pitch_daily(request: Request):
     result = {"timestamp": now.isoformat(), "steps": []}
 
     # STEP 1: 피치_클건¡건 탭 신규 DB 건수 확인
-    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클건¡건", ttl_key="inbound")
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
     unsent = 0
     if rows and len(rows) > 1:
         for row in rows[1:]:
@@ -2776,7 +2807,7 @@ async def api_pitch_performance():
     today = now.strftime("%Y-%m-%d")
     month_prefix = now.strftime("%Y-%m")
     # 피치_클로드 탭 직접 읽기 (A:N, 389행)
-    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", "피치_클로드", ttl_key="inbound")
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
     total_db, with_email, sent_count, unsent = 0, 0, 0, 0
     if rows and len(rows) > 1:
         total_db = len(rows) - 1
@@ -2838,7 +2869,7 @@ async def api_luna_collect_na(request: Request):
     target_count = body.get("target_count", 100)
     now = datetime.now(KST)
     # 루나 시트에서 기존 US/CA 건수 확인
-    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
     existing_na = 0
     existing_emails = set()
     if rows and len(rows) > 1:
@@ -2893,7 +2924,7 @@ async def api_luna_collect_na(request: Request):
 async def api_luna_review_na():
     """월요일 09:00 — 루나 북미 승인 요청 이메일 발송."""
     now = datetime.now(KST)
-    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
     na_count, na_email, total = 0, 0, 0
     if rows and len(rows) > 1:
         total = len(rows) - 1
@@ -2948,7 +2979,7 @@ async def api_luna_send_na(request: Request):
     body = await request.json()
     template_key = body.get("template", "D").upper()
     tmpl = LUNA_NA_TEMPLATES.get(template_key, LUNA_NA_TEMPLATES["D"])
-    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
     targets = []
     if rows and len(rows) > 1:
         for r in rows[1:]:
@@ -3023,7 +3054,7 @@ async def api_campaign_recontact(request: Request):
 
 async def _pitch_inbound_auto():
     """피치: 신규 인건°운건 감지 â 자건 응건 이건©일 + 건¯¸팅 건§크 건°송."""
-    inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
+    inbound_rows = fetch_sheet(SHEET_INBOUND, "A:Z", TAB_INBOUND, ttl_key="inbound")
     if not inbound_rows:
         return {"sent": 0}
     hdr_idx = _find_header_row(inbound_rows, "국가", "컨택현황", "컨텍현황", "건´건¹자")
@@ -3086,7 +3117,7 @@ async def _pitch_outbound_crm():
 
 async def _luna_inbound_welcome():
     """루나: 신규 인플건£¨언서 지원자에게 환영 이건©일 + 캠페인 안건´."""
-    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
+    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", TAB_INFLUENCER, ttl_key="influencer")
     if not rows:
         return {"sent": 0}
     now = datetime.now(KST)
@@ -3118,7 +3149,7 @@ async def _luna_inbound_welcome():
 
 async def _luna_outbound_pitch():
     """루나: 인플건£¨언서 DB에서 이건©일 있건 건상에게 캠페인 제안 건°송."""
-    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수동매칭)", ttl_key="influencer")
+    rows = fetch_sheet(SHEET_INFLUENCER, "A2:R", TAB_INFLUENCER, ttl_key="influencer")
     if not rows:
         return {"sent": 0}
     targets = []
@@ -3629,7 +3660,7 @@ async def api_kpi_trend():
     except Exception:
         pass
     # 계산서에서 월건³ 건§¤출 집계 (B열 건 짜 기반 통일)
-    ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+    ct_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", TAB_CONTRACT, ttl_key="contract")
     monthly_rev = {}
     if ct_rows:
         hdr = _find_header_row(ct_rows, "작성일자", "공급가액", "공급건°건자")
@@ -4510,7 +4541,7 @@ async def api_sheet_pipeline(agent: str = "피치"):
         # 피치 시트: 파센건¬¸의 탭 A:V (헤건 3행)
         # A:국가 B:월 C:건 짜 D:유입채건 E:업체건ª F:연건½처 G:이건©일
         # M:건¯¸팅예약 N:팀 O:건´건¹자 Q:컨택현황
-        rows = fetch_sheet(PITCH_SHEET_ID, "A:V", "파센문의", ttl_key="inbound")
+        rows = fetch_sheet(PITCH_SHEET_ID, "A:V", TAB_INBOUND, ttl_key="inbound")
         if rows:
             hdr_idx = _find_header_row(rows, "국가", "컨택현황", "컨텍현황", "건´건¹자")
             headers = [str(h).replace("\n", " ").strip() for h in rows[hdr_idx]]
@@ -4560,7 +4591,7 @@ async def api_sheet_pipeline(agent: str = "피치"):
         # 루나 시트: 현황시트(수건건§¤칭) A:R (헤건 1행)
         # A:컨택건 짜 B:건ª¨집형태 C:국가 D:카테고건¦¬ E:플건«폼 F:인플건£¨언서건ª
         # H:팔건¡워 I:이건©일 K:진행상태 P:건´건¹자
-        rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수건건§¤칭)", ttl_key="influencer")
+        rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
         if rows and len(rows) > 1:
             cnt = {"total": 0, "outbound": 0, "inbound": 0, "with_email": 0,
                    "listed": 0, "proposed": 0, "usable": 0,
@@ -4596,7 +4627,7 @@ async def api_sheet_pipeline(agent: str = "피치"):
     elif agent == "소피":
         # 소피 시트: 소피_클건¡건 A:I (헤건 1행)
         # A:일자 B:국가 C:채건 D:기획안 E:타겟 F:예상건ª©적 G:건¹용 H:결과 I:결과확인시트
-        rows = fetch_sheet(SOPHIE_SHEET_ID, "A:I", "소피_클건¡건", ttl_key="default")
+        rows = fetch_sheet(SOPHIE_SHEET_ID, "A:I", TAB_SOPHIE, ttl_key="default")
         if rows and len(rows) > 1:
             cnt = {"total": 0, "b2b": 0, "b2c": 0, "with_result": 0}
             for r in rows[1:]:
@@ -5024,9 +5055,9 @@ def _cache_warm():
     if not GSHEETS_API_KEY:
         return
     try:
-        fetch_sheet(SHEET_INBOUND, "A:Z", "파센문의", ttl_key="inbound")
-        fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
-        fetch_sheet(SHEET_INFLUENCER, "A2:R", "현황시트(수건건§¤칭)", ttl_key="influencer")
+        fetch_sheet(SHEET_INBOUND, "A:Z", TAB_INBOUND, ttl_key="inbound")
+        fetch_sheet(SHEET_CONTRACT, "A:Z", TAB_CONTRACT, ttl_key="contract")
+        fetch_sheet(SHEET_INFLUENCER, "A2:R", TAB_INFLUENCER, ttl_key="influencer")
         print("[CACHE] 구글시트 건°이터 사전 건¡건 완건£")
     except Exception as e:
         print(f"[CACHE] 사전 건¡건 오건¥: {e}")
