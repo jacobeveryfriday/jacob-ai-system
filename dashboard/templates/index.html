@@ -442,57 +442,116 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-ads">
-<div id="ads-kpi-cards"></div>
-<div id="ads-funnel-table"></div>
-<div id="ads-divider" style="display:flex;align-items:center;gap:12px;margin:28px 0"><span style="flex:1;height:1px;background:#D5D3CE"></span><span style="background:#1A7A4C;color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px">세부내역</span><span style="flex:1;height:1px;background:#D5D3CE"></span></div>
-<div id="ads-detail-table"></div>
-<div id="ads-person-grid"></div>
-<div id="ads-trend-chart"></div>
-<div id="ads-trend-table"></div>
+  <!-- KPI 카드 -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \uad11\uace0\ube44</p><p id="ads-budget-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">\u20a90</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ucc44\ub110\ubcc4 CPA</p><p id="ads-cpa-avg" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">\u20a90</p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\ubaa9\ud45c: \u20a910,000 \uc774\ud558</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \ud074\ub9ad</p><p id="ads-clicks-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc804\ud658 \uac74\uc218</p><p id="ads-conv-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="ads-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="ads-token-month">0</span></p></div>
+  </div>
+  <!-- Daily Pipeline -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uad11\uace0 \ud30c\uc774\ud504\ub77c\uc778</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="max-pipeline-daily"></div>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uad11\uace0\ube44 \u2192 \ud074\ub9ad \u2192 \uc720\uc785 \u2192 CPA \u2192 \uc804\ud658</p>
+  </div>
+  <!-- Monthly Pipeline -->
+  <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="max-pipeline-monthly"></div>
+  </div>
+  <!-- 채널별 성과 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\ucc44\ub110\ubcc4 \uc131\uacfc</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="ads-channel-cards">
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Meta</p><p id="ads-ch-meta" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">CPA \u20a9\u2014</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Kakao</p><p id="ads-ch-kakao" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">CPA \u20a9\u2014</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Naver</p><p id="ads-ch-naver" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">CPA \u20a9\u2014</p></div>
+    </div>
+    <p style="font-size:9px;color:#9B9B9B;margin-top:8px">\ub9e5\uc2a4 \uc5d0\uc774\uc804\ud2b8 \uc790\ub3d9\ubd84\uc11d \u00b7 5\ubd84\ub9c8\ub2e4 \uac31\uc2e0</p>
+  </div>
 </div>
 
 <div id="page-sns">
-<!-- SNS Content Performance -->
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Brand Leads (B2B)</p><p id="sns-b2b-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">0 / 15</p><p style="font-size:8px;color:#9B9B9B">daily target</p></div>
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Influencer Leads (B2C)</p><p id="sns-b2c-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">0 / 10</p><p style="font-size:8px;color:#9B9B9B">daily target</p></div>
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Today Content</p><p id="sns-today-content" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">0 / 2</p></div>
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Lead Transfer</p><p style="font-size:11px;color:#B8860B;margin-top:4px">Pitch 0 / Luna 0</p></div>
-</div>
-<!-- Content Publish Status -->
-<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-  <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">Content Status</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <div style="background:#F8F7F5;border-radius:6px;padding:12px">
-      <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2B Content</p>
-      <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">Published: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">Pending: 0</span></div>
-    </div>
-    <div style="background:#F8F7F5;border-radius:6px;padding:12px">
-      <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2C Content</p>
-      <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">Published: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">Pending: 0</span></div>
-    </div>
+  <!-- KPI 카드 -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ube0c\ub79c\ub4dc \ub9ac\ub4dc (B2B)</p><p id="sns-b2b-leads" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">0 / 15</p><p style="font-size:8px;color:#9B9B9B">\uc77c\uc77c \ubaa9\ud45c</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc778\ud50c\ub8e8\uc5b8\uc11c \ub9ac\ub4dc (B2C)</p><p id="sns-b2c-leads" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">0 / 10</p><p style="font-size:8px;color:#9B9B9B">\uc77c\uc77c \ubaa9\ud45c</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \ucf58\ud150\uce20</p><p id="sns-today-content" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0 / 2</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ub9ac\ub4dc \uc804\ub2ec</p><p style="font-size:11px;color:#B8860B;margin-top:4px">Pitch 0 / Luna 0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="sns-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="sns-token-month">0</span></p></div>
   </div>
-</div>
+  <!-- Daily Pipeline -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \ucf58\ud150\uce20 \ud30c\uc774\ud504\ub77c\uc778</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="sophie-pipeline-daily"></div>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\ubc1c\ud589\uc608\uc815 \u2192 \ubc1c\ud589\uc644\ub8cc \u2192 \uc870\ud68c\uc218 \u2192 \ucc38\uc5ec\uc728 \u2192 \ub9ac\ub4dc</p>
+  </div>
+  <!-- Monthly Pipeline -->
+  <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="sophie-pipeline-monthly"></div>
+  </div>
+  <!-- 콘텐츠 발행 현황 -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\ucf58\ud150\uce20 \ubc1c\ud589 \ud604\ud669</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:#F8F7F5;border-radius:6px;padding:12px">
+        <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2B \ucf58\ud150\uce20</p>
+        <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">\ubc1c\ud589\uc644\ub8cc: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">\ub300\uae30\uc911: 0</span></div>
+      </div>
+      <div style="background:#F8F7F5;border-radius:6px;padding:12px">
+        <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2C \ucf58\ud150\uce20</p>
+        <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">\ubc1c\ud589\uc644\ub8cc: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">\ub300\uae30\uc911: 0</span></div>
+      </div>
+    </div>
+    <p style="font-size:9px;color:#9B9B9B;margin-top:8px">\uc18c\ud53c \uc5d0\uc774\uc804\ud2b8 \uc790\ub3d9\ubd84\uc11d \u00b7 5\ubd84\ub9c8\ub2e4 \uac31\uc2e0</p>
+  </div>
 </div>
 
 <div id="page-management">
-<!-- 레이 에이전트 KPI -->
-<div class="agent-kpi-grid">
-  <div class="agent-kpi-item inactive"><div class="label">세금계산서 발행</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">현금흐름 요약</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">미수금 현황</div><div class="value">데이터 연동 후 활성화</div></div>
-  <div class="agent-kpi-item inactive"><div class="label">에이전트 상태</div><div class="value">실데이터 연동 대기</div></div>
-</div>
-<p style="text-align:center;padding:40px 0;color:#9B9B9B;font-size:13px">실데이터 연동 후 자동 활성화됩니다</p>
+  <!-- KPI 카드 -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc774\ubc88\ub2ec \ubc1c\ud589</p><p id="ray-issued-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">0\uac74</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc218\uae08\uc644\ub8cc</p><p id="ray-paid-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">\u20a90</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #C4332B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ubbf8\uc218\uae08</p><p id="ray-unpaid-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#C4332B;margin-top:4px">\u20a90</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc218\uae08\ub960</p><p id="ray-collect-rate" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0%</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="ray-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="ray-token-month">0</span></p></div>
+  </div>
+  <!-- Daily Pipeline -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uc138\uae08\uacc4\uc0b0\uc11c \ud30c\uc774\ud504\ub77c\uc778</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="ray-pipeline-daily"></div>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\ubc1c\ud589\uc608\uc815 \u2192 \ubc1c\ud589\uc644\ub8cc \u2192 \uc218\uae08\uc644\ub8cc \u2192 \ubbf8\uc218\uae08</p>
+  </div>
+  <!-- Monthly Pipeline -->
+  <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="ray-pipeline-monthly"></div>
+  </div>
+  <p style="font-size:9px;color:#9B9B9B;margin-top:4px">\ub808\uc774 \uc5d0\uc774\uc804\ud2b8 \u00b7 \uad6c\uae00\uc2dc\ud2b8 \uc2e4\ub370\uc774\ud130 \uae30\ubc18 \u00b7 5\ubd84\ub9c8\ub2e4 \uac31\uc2e0</p>
 </div>
 <div id="page-cs">
-<!-- 하나 에이전트 KPI -->
-<div class="agent-kpi-grid">
-  <div class="agent-kpi-item" style="border-top-color:#B8860B"><div class="label">오늘 문의 접수</div><div class="value">14</div><div class="note">브랜드+인플루언서</div></div>
-  <div class="agent-kpi-item" style="border-top-color:#1A7A4C"><div class="label">해결 건수</div><div class="value">8</div><div class="note">오늘 기준</div></div>
-  <div class="agent-kpi-item" style="border-top-color:#2D4A7A"><div class="label">평균 응답시간</div><div class="value">10분</div><div class="note">목표 15분 이내</div></div>
-  <div class="agent-kpi-item" style="border-top-color:#1B2A4A"><div class="label">에이전트 상태</div><div class="value" id="cs-kakao-status" style="font-size:16px;color:#B8860B">확인중...</div></div>
-</div>
+  <!-- KPI 카드 -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \ubb38\uc758 \uc811\uc218</p><p id="cs-inquiry-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0</p><p style="font-size:8px;color:#9B9B9B">\ube0c\ub79c\ub4dc+\uc778\ud50c\ub8e8\uc5b8\uc11c</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud574\uacb0 \uac74\uc218</p><p id="cs-resolved-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0</p><p style="font-size:8px;color:#9B9B9B">\uc624\ub298 \uae30\uc900</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud3c9\uade0 \uc751\ub2f5\uc2dc\uac04</p><p id="cs-avg-response" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">\u2014</p><p style="font-size:8px;color:#9B9B9B">\ubaa9\ud45c 15\ubd84 \uc774\ub0b4</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc5d0\uc774\uc804\ud2b8 \uc0c1\ud0dc</p><p id="cs-kakao-status" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">\ud655\uc778\uc911...</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="cs-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="cs-token-month">0</span></p></div>
+  </div>
+  <!-- Daily Pipeline -->
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 CS \ud30c\uc774\ud504\ub77c\uc778</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="hana-pipeline-daily"></div>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uc2e0\uaddc\ubb38\uc758 \u2192 \ucc98\ub9ac\uc911 \u2192 \uc644\ub8cc \u2192 \uc7ac\uacc4\uc57d</p>
+  </div>
+  <!-- Monthly Pipeline -->
+  <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="hana-pipeline-monthly"></div>
+  </div>
 <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
 <button onclick="setCsTab('brand')" id="cs-tab-brand" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1B2A4A;color:#fff">브랜드</button>
 <button onclick="setCsTab('influencer')" id="cs-tab-influencer" style="padding:6px 20px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:#9B9B9B">인플루언서</button>
@@ -1634,16 +1693,21 @@ detail:'타겟: 뷰티 인플루언서 (팔로워 1만~100만)\n채널: Instagra
 expected_impact:'DB 50명 → 유효 35명 → 협찬확정 5건 예상',
 action_type:'luna_db_collect'
 })}).then(function(r){return r.json()}).then(function(){alert('승인 요청이 CEO 큐에 등록되었습니다.')}).catch(function(){alert('오류')})}
-function renderPipeline(containerId, data, lastLabel) {
+function renderPipeline(containerId, data, lastLabel, customKeys, customLabels) {
 var el=document.getElementById(containerId);if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
-var keys=['target','pending','sent','replied',lastLabel||'meeting'];
+var keys=customKeys||['target','pending','sent','replied',lastLabel||'meeting'];
 var colors=['#1B2A4A','#B8860B','#2D4A7A','#1A7A4C','#1A7A4C'];
+var defaultLabelMap={target:'\ud0c0\uac9f',pending:'\ub300\uae30',sent:'\ubc1c\uc1a1 \uc131\uacf5',replied:'\ub2f5\ubcc0',meeting:'\ubbf8\ud305',contract:'\uacc4\uc57d',
+budget:'\uad11\uace0\ube44',clicks:'\ud074\ub9ad',visits:'\uc720\uc785',cpa:'CPA',conversions:'\uc804\ud658',
+scheduled:'\ubc1c\ud589\uc608\uc815',published:'\ubc1c\ud589\uc644\ub8cc',views:'\uc870\ud68c\uc218',engagement:'\ucc38\uc5ec\uc728',leads:'\ub9ac\ub4dc',
+issued:'\ubc1c\ud589\uc608\uc815',collected:'\ubc1c\ud589\uc644\ub8cc',paid:'\uc218\uae08\uc644\ub8cc',unpaid:'\ubbf8\uc218\uae08',
+new_inquiry:'\uc2e0\uaddc\ubb38\uc758',in_progress:'\ucc98\ub9ac\uc911',resolved:'\uc644\ub8cc',renewal:'\uc7ac\uacc4\uc57d'};
+var labelMap=customLabels?Object.assign({},defaultLabelMap,customLabels):defaultLabelMap;
 keys.forEach(function(k,i){
 var item=data[k]||{value:0,link:'',source:''};
 var card=document.createElement('a');card.href=item.link||'#';card.target='_blank';card.rel='noopener';
 card.style.cssText='text-align:center;background:#F8F7F5;border-radius:6px;padding:10px 6px;text-decoration:none;cursor:pointer';
-var num=document.createElement('p');num.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:'+colors[i];num.textContent=item.value||0;card.appendChild(num);
-var labelMap={target:'타겟',pending:'대기',sent:'발송 성공',replied:'답변',meeting:'미팅',contract:'계약'};
+var num=document.createElement('p');num.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:'+colors[i%colors.length];num.textContent=item.value||0;card.appendChild(num);
 var label=document.createElement('p');label.style.cssText='font-size:8px;color:#6B6B6B;margin-top:2px';label.textContent=labelMap[k]||k;card.appendChild(label);
 var src=document.createElement('p');src.style.cssText='font-size:7px;color:#BFBFBF;margin-top:1px';src.textContent=item.source||'';card.appendChild(src);
 el.appendChild(card)});
@@ -1653,7 +1717,19 @@ function loadPipelineData(){
 fetch('/api/pitch/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-daily',JSON.parse(t),'meeting')}).catch(function(){});
 fetch('/api/pitch/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-monthly',JSON.parse(t),'meeting')}).catch(function(){});
 fetch('/api/luna/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('luna-pipeline-daily',JSON.parse(t),'contract')}).catch(function(){});
-fetch('/api/luna/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('luna-pipeline-monthly',JSON.parse(t),'contract')}).catch(function(){});}
+fetch('/api/luna/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('luna-pipeline-monthly',JSON.parse(t),'contract')}).catch(function(){});
+var maxKeys=['budget','clicks','visits','cpa','conversions'];
+fetch('/api/max/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('max-pipeline-daily',JSON.parse(t),null,maxKeys)}).catch(function(){});
+fetch('/api/max/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('max-pipeline-monthly',JSON.parse(t),null,maxKeys)}).catch(function(){});
+var sophieKeys=['scheduled','published','views','engagement','leads'];
+fetch('/api/sophie/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('sophie-pipeline-daily',JSON.parse(t),null,sophieKeys)}).catch(function(){});
+fetch('/api/sophie/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('sophie-pipeline-monthly',JSON.parse(t),null,sophieKeys)}).catch(function(){});
+var rayKeys=['issued','collected','paid','unpaid'];
+fetch('/api/ray/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('ray-pipeline-daily',JSON.parse(t),null,rayKeys)}).catch(function(){});
+fetch('/api/ray/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('ray-pipeline-monthly',JSON.parse(t),null,rayKeys)}).catch(function(){});
+var hanaKeys=['new_inquiry','in_progress','resolved','renewal'];
+fetch('/api/hana/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('hana-pipeline-daily',JSON.parse(t),null,hanaKeys)}).catch(function(){});
+fetch('/api/hana/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('hana-pipeline-monthly',JSON.parse(t),null,hanaKeys)}).catch(function(){});}
 loadPipelineData();
 function loadPitchPerf(){
 fetch('/api/pitch/performance').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).then(function(d){

@@ -3112,7 +3112,157 @@ async def api_luna_pipeline_monthly():
         "target": {"value": target, "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
         "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
         "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
-        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "계약 완료"},
+        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "\uacc4\uc57d \uc644\ub8cc"},
+    }
+
+# ===== Max/Sophie/Ray/Hana Pipeline APIs =====
+
+@app.get("/api/max/pipeline/daily")
+async def api_max_pipeline_daily():
+    """Max daily ads pipeline: budget -> clicks -> visits -> CPA -> conversions."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("max", perf.get(today, {}).get("\ub9e5\uc2a4", {}))
+    return {
+        "period": "daily", "date": today,
+        "budget": {"value": tp.get("budget", 0), "source": "Meta+Kakao+Naver"},
+        "clicks": {"value": tp.get("clicks", 0), "source": "\ucd1d \ud074\ub9ad"},
+        "visits": {"value": tp.get("visits", 0), "source": "\uc720\uc785 \uc218"},
+        "cpa": {"value": tp.get("cpa", 0), "source": "\ubaa9\ud45c: \u20a910,000"},
+        "conversions": {"value": tp.get("conversions", 0), "source": "\uc804\ud658 \uac74\uc218"},
+    }
+
+@app.get("/api/max/pipeline/monthly")
+async def api_max_pipeline_monthly():
+    """Max monthly ads pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["max", "\ub9e5\uc2a4"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "budget": {"value": mp.get("budget", 0), "source": "Meta+Kakao+Naver"},
+        "clicks": {"value": mp.get("clicks", 0), "source": "\ucd1d \ud074\ub9ad"},
+        "visits": {"value": mp.get("visits", 0), "source": "\uc720\uc785 \uc218"},
+        "cpa": {"value": mp.get("cpa", 0), "source": "\ubaa9\ud45c: \u20a910,000"},
+        "conversions": {"value": mp.get("conversions", 0), "source": "\uc804\ud658 \uac74\uc218"},
+    }
+
+@app.get("/api/sophie/pipeline/daily")
+async def api_sophie_pipeline_daily():
+    """Sophie daily content pipeline."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("sophie", perf.get(today, {}).get("\uc18c\ud53c", {}))
+    return {
+        "period": "daily", "date": today,
+        "scheduled": {"value": tp.get("scheduled", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
+        "published": {"value": tp.get("published", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
+        "views": {"value": tp.get("views", 0), "source": "\uc870\ud68c\uc218"},
+        "engagement": {"value": tp.get("engagement", 0), "source": "\ucc38\uc5ec\uc728 (%)"},
+        "leads": {"value": tp.get("leads", 0), "source": "B2B+B2C \ub9ac\ub4dc"},
+    }
+
+@app.get("/api/sophie/pipeline/monthly")
+async def api_sophie_pipeline_monthly():
+    """Sophie monthly content pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["sophie", "\uc18c\ud53c"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "scheduled": {"value": mp.get("scheduled", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
+        "published": {"value": mp.get("published", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
+        "views": {"value": mp.get("views", 0), "source": "\uc870\ud68c\uc218"},
+        "engagement": {"value": mp.get("engagement", 0), "source": "\ucc38\uc5ec\uc728 (%)"},
+        "leads": {"value": mp.get("leads", 0), "source": "B2B+B2C \ub9ac\ub4dc"},
+    }
+
+@app.get("/api/ray/pipeline/daily")
+async def api_ray_pipeline_daily():
+    """Ray daily invoice pipeline."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("ray", perf.get(today, {}).get("\ub808\uc774", {}))
+    return {
+        "period": "daily", "date": today,
+        "issued": {"value": tp.get("issued", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
+        "collected": {"value": tp.get("collected", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
+        "paid": {"value": tp.get("paid", 0), "source": "\uc218\uae08 \uc644\ub8cc"},
+        "unpaid": {"value": tp.get("unpaid", 0), "source": "\ubbf8\uc218\uae08"},
+    }
+
+@app.get("/api/ray/pipeline/monthly")
+async def api_ray_pipeline_monthly():
+    """Ray monthly invoice pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["ray", "\ub808\uc774"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "issued": {"value": mp.get("issued", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
+        "collected": {"value": mp.get("collected", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
+        "paid": {"value": mp.get("paid", 0), "source": "\uc218\uae08 \uc644\ub8cc"},
+        "unpaid": {"value": mp.get("unpaid", 0), "source": "\ubbf8\uc218\uae08"},
+    }
+
+@app.get("/api/hana/pipeline/daily")
+async def api_hana_pipeline_daily():
+    """Hana daily CS pipeline."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("hana", perf.get(today, {}).get("\ud558\ub098", {}))
+    return {
+        "period": "daily", "date": today,
+        "new_inquiry": {"value": tp.get("new_inquiry", 0), "source": "\uc2e0\uaddc \ubb38\uc758"},
+        "in_progress": {"value": tp.get("in_progress", 0), "source": "\ucc98\ub9ac\uc911"},
+        "resolved": {"value": tp.get("resolved", 0), "source": "\uc644\ub8cc"},
+        "renewal": {"value": tp.get("renewal", 0), "source": "\uc7ac\uacc4\uc57d"},
+    }
+
+@app.get("/api/hana/pipeline/monthly")
+async def api_hana_pipeline_monthly():
+    """Hana monthly CS pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["hana", "\ud558\ub098"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "new_inquiry": {"value": mp.get("new_inquiry", 0), "source": "\uc2e0\uaddc \ubb38\uc758"},
+        "in_progress": {"value": mp.get("in_progress", 0), "source": "\ucc98\ub9ac\uc911"},
+        "resolved": {"value": mp.get("resolved", 0), "source": "\uc644\ub8cc"},
+        "renewal": {"value": mp.get("renewal", 0), "source": "\uc7ac\uacc4\uc57d"},
     }
 
 async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
