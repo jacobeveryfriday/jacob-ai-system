@@ -1,21 +1,23 @@
 {
   "monthly": {
-    "revenue": 160000000,
-    "contract": 38,
-    "inbound_db": 500,
-    "valid_db": 150,
+    "revenue": 500000000,
+    "contract": 100,
+    "avg_price": 5000000,
+    "inbound_db": 2000,
+    "valid_db": 600,
     "cpa": 10000,
+    "active_influencers_per_country": 1000,
     "alert_threshold_pct": 30,
     "kyle_monitor_interval_hours": 2
   },
   "agent_goals": {
-    "kyle": {"revenue": 160000000, "contract": 38},
-    "pitch": {"monthly_db": 500, "daily_db": 100, "meeting": 10},
-    "luna": {"monthly_db": 150, "daily_db": 50, "contract": 80},
+    "kyle": {"revenue": 500000000, "contract": 100, "avg_price": 5000000},
+    "pitch": {"monthly_db": 2000, "daily_db": 100, "meeting": 20},
+    "luna": {"monthly_db": 600, "daily_db": 30, "contract": 80, "active_per_country": 1000},
     "max": {"cpa": 10000, "roas": 3.0},
     "sophie": {"weekly_posts": 3},
     "ray": {"invoice_completion": 100},
     "hana": {"unanswered": 0}
   },
-  "updated_at": "2026-04-12T00:00:00"
+  "updated_at": "2026-04-12T12:00:00+09:00"
 }

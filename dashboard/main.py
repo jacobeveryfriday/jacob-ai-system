@@ -99,32 +99,38 @@ async def login_page(request: Request, error: str = ""):
     """건¡그인 폼 페이지"""
     if not DASH_USER or not DASH_PASS:
         return RedirectResponse("/", status_code=302)
+    _login_title = "08L AI \ub300\uc2dc\ubcf4\ub4dc"
+    _login_sub = "\ucee4\ub9e8\ub4dc \uc13c\ud130"
+    _login_err = "\uc544\uc774\ub514 \ub610\ub294 \ube44\ubc00\ubc88\ud638\uac00 \ud2c0\ub838\uc2b5\ub2c8\ub2e4."
+    _login_id = "\uc544\uc774\ub514"
+    _login_pw = "\ube44\ubc00\ubc88\ud638"
+    _login_btn = "\ub85c\uadf8\uc778"
     html = f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Login â 08L_AI</title>
+<title>{_login_title}</title>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+body{{background:#F8F7F5;color:#1B2A4A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 display:flex;align-items:center;justify-content:center;min-height:100vh}}
-.card{{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px;width:360px;text-align:center}}
-h1{{font-size:24px;margin-bottom:8px;color:#f0883e}}
-.sub{{color:#8b949e;margin-bottom:24px;font-size:14px}}
-input{{width:100%;padding:12px 16px;margin-bottom:12px;background:#0d1117;border:1px solid #30363d;
-border-radius:8px;color:#e6edf3;font-size:15px;outline:none}}
-input:focus{{border-color:#f0883e}}
-button{{width:100%;padding:12px;background:#f0883e;color:#fff;border:none;border-radius:8px;
-font-size:16px;font-weight:600;cursor:pointer;margin-top:4px}}
-button:hover{{background:#d97706}}
-.err{{color:#f85149;font-size:13px;margin-bottom:12px}}
+.card{{background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:12px;padding:40px;width:360px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,0.06)}}
+h1{{font-size:22px;margin-bottom:8px;color:#1B2A4A;font-weight:800}}
+.sub{{color:#6B6B6B;margin-bottom:24px;font-size:13px}}
+input{{width:100%;padding:12px 16px;margin-bottom:12px;background:#F8F7F5;border:0.5px solid #E8E6E1;
+border-radius:8px;color:#1B2A4A;font-size:14px;outline:none}}
+input:focus{{border-color:#1B2A4A}}
+button{{width:100%;padding:12px;background:#1B2A4A;color:#fff;border:none;border-radius:8px;
+font-size:15px;font-weight:600;cursor:pointer;margin-top:4px}}
+button:hover{{background:#2D4A7A}}
+.err{{color:#C4332B;font-size:12px;margin-bottom:12px}}
 </style></head><body>
 <div class="card">
-<h1>â¡ 08L_AI</h1>
-<p class="sub">Command Center</p>
-{"<p class='err'>아이건 건건 건¹건°건²호가 틀건 ¸습건건¤.</p>" if error else ""}
+<h1>08L_AI</h1>
+<p class="sub">{_login_sub}</p>
+{"<p class='err'>" + _login_err + "</p>" if error else ""}
 <form method="post" action="/login">
-<input name="username" placeholder="아이건" required autocomplete="username">
-<input name="password" type="password" placeholder="건¹건°건²호" required autocomplete="current-password">
-<button type="submit">건¡그인</button>
+<input name="username" placeholder="{_login_id}" required autocomplete="username">
+<input name="password" type="password" placeholder="{_login_pw}" required autocomplete="current-password">
+<button type="submit">{_login_btn}</button>
 </form></div></body></html>"""
     return HTMLResponse(html)
 
@@ -163,6 +169,8 @@ ALERTS_FILE = DATA_DIR / "alerts.json"
 PROPOSALS_FILE = DATA_DIR / "proposals.json"
 CYCLE_LOG_FILE = DATA_DIR / "cycle_log.json"
 AGENT_PERF_FILE = DATA_DIR / "agent_performance.json"
+BOUNCE_LOG_FILE = DATA_DIR / "bounce_log.json"
+MISTAKE_LOG_FILE = DATA_DIR / "mistake_log.json"
 BENCHMARKS_FILE = DATA_DIR / "benchmarks.json"
 EMAIL_QUEUE_FILE = DATA_DIR / "email_queue.json"
 AGENT_AUTO_SEND_FILE = DATA_DIR / "agent_auto_send.json"
@@ -290,9 +298,9 @@ AGENT_EMAILS = {
 
 # ===== 월간 건ª©표 (기건³¸값, /api/goals건¡ 수정 가건¥) =====
 DEFAULT_GOALS = {
-    "revenue": 160000000, "contracts": 38, "inbound_db": 500,
-    "valid_db": 150, "cpa": 50000, "influencer_pool": 1550000,
-    "alert_threshold": 0.3,
+    "revenue": 500000000, "contracts": 100, "inbound_db": 2000,
+    "valid_db": 600, "cpa": 10000, "influencer_pool": 1550000,
+    "alert_threshold": 0.3, "avg_price": 5000000,
 }
 
 # ===== 에이전트건³ 건ª©표 (일/주/월) =====
@@ -4429,6 +4437,81 @@ async def api_execute_proposal(request: Request):
     return {"status": "ok", "result": result_text}
 
 
+# ===== Email Bounce Log =====
+def _load_bounce_log() -> list:
+    if BOUNCE_LOG_FILE.exists():
+        return json.loads(BOUNCE_LOG_FILE.read_text(encoding="utf-8"))
+    return []
+
+def _save_bounce_log(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    BOUNCE_LOG_FILE.write_text(json.dumps(data[-500:], ensure_ascii=False, indent=2), encoding="utf-8")
+
+@app.post("/api/email-bounce")
+async def api_email_bounce(request: Request):
+    body = await request.json()
+    bounced = body.get("bounced", [])
+    if not bounced:
+        return {"status": "ok", "recorded": 0}
+    log = _load_bounce_log()
+    for b in bounced:
+        log.append({
+            "email": b.get("email", ""),
+            "date": b.get("date", datetime.now(KST).isoformat()),
+            "subject": b.get("subject", ""),
+            "recorded_at": datetime.now(KST).isoformat(),
+        })
+    _save_bounce_log(log)
+    return {"status": "ok", "recorded": len(bounced)}
+
+@app.get("/api/email-bounce")
+async def api_get_bounces():
+    return {"bounces": _load_bounce_log()[-100:]}
+
+# ===== Mistake Log =====
+def _load_mistake_log() -> dict:
+    if MISTAKE_LOG_FILE.exists():
+        return json.loads(MISTAKE_LOG_FILE.read_text(encoding="utf-8"))
+    return {"errors": [], "prevention_rules": []}
+
+def _save_mistake_log(data: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    MISTAKE_LOG_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _record_mistake(agent: str, error_type: str, detail: str):
+    log = _load_mistake_log()
+    now_str = datetime.now(KST).isoformat()
+    existing = [e for e in log["errors"] if e.get("agent") == agent and e.get("type") == error_type]
+    if existing:
+        existing[0]["count"] = existing[0].get("count", 1) + 1
+        existing[0]["last_occurred"] = now_str
+        existing[0].setdefault("details", []).append(detail)
+        existing[0]["details"] = existing[0]["details"][-20:]
+    else:
+        log["errors"].append({
+            "agent": agent, "type": error_type, "count": 1,
+            "first_occurred": now_str, "last_occurred": now_str,
+            "details": [detail], "prevention": "",
+        })
+    _save_mistake_log(log)
+
+@app.get("/api/mistake-log")
+async def api_get_mistake_log():
+    return _load_mistake_log()
+
+# ===== Calendar API (prep) =====
+@app.get("/api/calendar/meetings")
+async def api_calendar_meetings():
+    creds = os.environ.get("GOOGLE_CALENDAR_CREDENTIALS")
+    cal_id = os.environ.get("GOOGLE_CALENDAR_ID")
+    if not creds or not cal_id:
+        return {
+            "status": "not_configured",
+            "message": "GOOGLE_CALENDAR_CREDENTIALS, GOOGLE_CALENDAR_ID \ud658\uacbd\ubcc0\uc218 \uc124\uc815 \ud544\uc694",
+            "fallback": "buly.kr \ud074\ub9ad \uc218 \uc0ac\uc6a9 \uc911",
+        }
+    return {"status": "configured", "today_meetings": 0, "month_meetings": 0, "source": "Google Calendar"}
+
 @app.get("/api/cycle-log")
 async def api_get_cycle_log():
     """에이전트 사이클 히스토건¦¬ 조회."""
@@ -5411,6 +5494,34 @@ _cache_warm()
 _bg_thread = threading.Thread(target=_cache_refresh_loop, daemon=True)
 _bg_thread.start()
 
+# Template rotation helpers
+def _pitch_template_today() -> str:
+    """Pitch A/B/C rotation by week+day."""
+    now = datetime.now(KST)
+    wk = now.isocalendar()[1]
+    day = now.weekday()
+    return ["A", "B", "C"][(wk * 5 + day) % 3]
+
+def _luna_kr_template_today() -> str:
+    """Luna KR A/B: Mon/Wed/Fri=A, Tue/Thu=B."""
+    return "KR_A" if datetime.now(KST).weekday() in (0, 2, 4) else "KR_B"
+
+def _luna_us_template_today() -> str:
+    """Luna US A/B: Mon/Wed/Fri=A, Tue/Thu=B."""
+    return "US_A" if datetime.now(KST).weekday() in (0, 2, 4) else "US_B"
+
+def _pitch_send_job():
+    tpl = _pitch_template_today()
+    req_lib.post("http://localhost:8000/api/agents/pitch/daily", json={"trigger": "scheduled", "action": "full", "template": tpl}, timeout=60)
+
+def _luna_kr_send_job():
+    tpl = _luna_kr_template_today()
+    req_lib.post("http://localhost:8000/api/luna/send-na", json={"template": tpl, "limit": 50}, timeout=60)
+
+def _luna_us_send_job():
+    tpl = _luna_us_template_today()
+    req_lib.post("http://localhost:8000/api/luna/send-na", json={"template": tpl, "limit": 50}, timeout=60)
+
 # APScheduler
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
@@ -5418,14 +5529,14 @@ try:
     _scheduler = BackgroundScheduler(timezone="Asia/Seoul")
     _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/pitch/daily", json={"trigger":"scheduled","action":"collect_only"}, timeout=60), CronTrigger(hour="*/2"), id="pitch_collect", replace_existing=True)
     _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/luna/collect-northamerica", json={"target_count":100}, timeout=60), CronTrigger(hour="*/2"), id="luna_collect", replace_existing=True)
-    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/pitch/daily", json={"trigger":"scheduled","action":"full"}, timeout=60), CronTrigger(day_of_week="mon-fri", hour=9, minute=0), id="pitch_send", replace_existing=True)
+    _scheduler.add_job(_pitch_send_job, CronTrigger(day_of_week="mon-fri", hour=9, minute=0), id="pitch_send", replace_existing=True)
     _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/send-review-email", timeout=60), CronTrigger(day_of_week="mon", hour=8, minute=30), id="weekly_review", replace_existing=True)
-    # Luna KR send: Mon-Fri 10:00 KST
-    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/luna/send-na", json={"template":"A","limit":50}, timeout=60), CronTrigger(day_of_week="mon-fri", hour=10, minute=0), id="luna_kr_send", replace_existing=True)
-    # Luna US send: Mon-Fri 10:00 EST (= 23:00 KST previous day, or use timezone)
-    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/luna/send-na", json={"template":"A","limit":50}, timeout=60), CronTrigger(day_of_week="mon-fri", hour=23, minute=0), id="luna_us_send", replace_existing=True)
+    # Luna KR send: Mon-Fri 10:00 KST (A/B rotation)
+    _scheduler.add_job(_luna_kr_send_job, CronTrigger(day_of_week="mon-fri", hour=10, minute=0), id="luna_kr_send", replace_existing=True)
+    # Luna US send: Mon-Fri 23:00 KST (A/B rotation)
+    _scheduler.add_job(_luna_us_send_job, CronTrigger(day_of_week="mon-fri", hour=23, minute=0), id="luna_us_send", replace_existing=True)
     _scheduler.start()
-    print("[SCHEDULER] Started")
+    print("[SCHEDULER] Started - pitch(A/B/C rotation), luna_kr(A/B), luna_us(A/B)")
 except ImportError:
     print("[SCHEDULER] APScheduler not installed")
 except Exception as e:

@@ -96,7 +96,102 @@ function checkCEOApproval() {
 function setupTriggers() {
   ScriptApp.getProjectTriggers().forEach(function(t) { ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger('checkCEOApproval').timeBased().everyMinutes(5).create();
-  Logger.log('Triggers set');
+  ScriptApp.newTrigger('checkBounces').timeBased().everyHours(1).create();
+  Logger.log('Triggers set: checkCEOApproval(5min), checkBounces(1h)');
+}
+```
+
+## checkBounces (bounce detection - NEW)
+
+```javascript
+function checkBounces() {
+  var RAILWAY = 'https://dashboard-production-b2bd.up.railway.app';
+  try {
+    var threads = GmailApp.search(
+      'subject:(Delivery Status Notification) OR subject:(Mail Delivery Failed) OR subject:(Undeliverable) newer_than:1d',
+      0, 50
+    );
+    var bounced = [];
+    threads.forEach(function(thread) {
+      var msg = thread.getMessages()[0];
+      var body = msg.getPlainBody();
+      var emailMatch = body.match(/[\w.-]+@[\w.-]+\.\w+/g);
+      if (emailMatch) {
+        bounced.push({
+          email: emailMatch[0],
+          date: msg.getDate().toISOString(),
+          subject: msg.getSubject()
+        });
+      }
+    });
+    if (bounced.length > 0) {
+      UrlFetchApp.fetch(RAILWAY + '/api/email-bounce', {
+        method: 'POST',
+        contentType: 'application/json',
+        payload: JSON.stringify({bounced: bounced}),
+        muteHttpExceptions: true
+      });
+      Logger.log('Bounce detected: ' + bounced.length);
+    }
+  } catch(e) { Logger.log('checkBounces error: ' + e); }
+}
+```
+
+## checkCEOApproval (updated - Luna support added)
+
+```javascript
+function checkCEOApproval() {
+  var RAILWAY = 'https://dashboard-production-b2bd.up.railway.app';
+  try {
+    // Pitch approval
+    var pitchThreads = GmailApp.search('subject:(피치 검수) from:jacob is:unread', 0, 5);
+    pitchThreads.forEach(function(thread) {
+      var msgs = thread.getMessages();
+      var latest = msgs[msgs.length - 1];
+      var body = latest.getPlainBody().trim().substring(0, 20).toUpperCase();
+      var variant = null;
+      if (body.match(/^A\b/)) variant = 'A';
+      else if (body.match(/^B\b/)) variant = 'B';
+      else if (body.match(/^C\b/)) variant = 'C';
+      if (variant) {
+        UrlFetchApp.fetch(RAILWAY + '/api/pitch/send', {
+          method: 'POST', contentType: 'application/json',
+          payload: JSON.stringify({template: variant, source: 'ceo_approval'})
+        });
+        latest.markRead();
+      }
+    });
+    // Luna approval (NEW)
+    var lunaThreads = GmailApp.search('subject:(루나 검수) from:jacob is:unread', 0, 5);
+    lunaThreads.forEach(function(thread) {
+      var msgs = thread.getMessages();
+      var latest = msgs[msgs.length - 1];
+      var body = latest.getPlainBody().trim().substring(0, 20).toUpperCase();
+      if (body.indexOf('APPLY') !== -1 || body.match(/KR_A|KR_B|US_A|US_B/)) {
+        var variant = body.match(/KR_A|KR_B|US_A|US_B/) ?
+          body.match(/KR_A|KR_B|US_A|US_B/)[0] : 'KR_A';
+        UrlFetchApp.fetch(RAILWAY + '/api/luna/send-na', {
+          method: 'POST', contentType: 'application/json',
+          payload: JSON.stringify({template: variant, source: 'ceo_approval'})
+        });
+        latest.markRead();
+      }
+    });
+    // Improvement approval
+    var applyThreads = GmailApp.search('subject:(개선안) from:jacob is:unread', 0, 5);
+    applyThreads.forEach(function(thread) {
+      var msgs = thread.getMessages();
+      var latest = msgs[msgs.length - 1];
+      var body = latest.getPlainBody().trim().toUpperCase();
+      if (body.indexOf('APPLY') !== -1) {
+        UrlFetchApp.fetch(RAILWAY + '/api/apply-improvements', {
+          method: 'POST', contentType: 'application/json',
+          payload: JSON.stringify({source: 'ceo_approval'})
+        });
+        latest.markRead();
+      }
+    });
+  } catch(e) { Logger.log('checkCEOApproval: ' + e); }
 }
 ```
 
@@ -104,4 +199,5 @@ function setupTriggers() {
 1. Open script.google.com
 2. Edit Code.gs
 3. Deploy > Manage deployments > Edit > New version > Deploy
-4. Test: curl EMAIL_WEBHOOK_URL -d '{"to":"jacob@08liter.com","subject":"test","body":"test"}'
+4. Run setupTriggers() once to register new triggers
+5. Test: curl EMAIL_WEBHOOK_URL -d '{"to":"jacob@08liter.com","subject":"test","body":"test"}'
