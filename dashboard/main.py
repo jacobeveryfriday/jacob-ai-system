@@ -3027,13 +3027,17 @@ async def api_pitch_pipeline_daily():
     target = max(len(rows) - 1, 0) if rows else 0
     replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
     meeting = tp.get("reply_meeting", 0)
+    goals = load_goals()
+    pg = goals.get("agent_goals", {}).get("pitch", {})
+    db_goal = pg.get("daily_db", 100)
+    meeting_goal = pg.get("meeting", 10)
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "피치_클로드 탭"},
-        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "이메일 큐"},
-        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "발송 성공 (반송 제외)"},
-        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com 수신"},
-        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr 클릭 기준"},
+        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": PITCH_SHEET_URL, "source": "\ud53c\uce58_\ud074\ub85c\ub4dc \ud0ed"},
+        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "\uc774\uba54\uc77c \ud050"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "\ubc1c\uc1a1 \uc131\uacf5 (\ubc18\uc1a1 \uc81c\uc678)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com \uc218\uc2e0"},
+        "meeting": {"value": meeting, "goal": meeting_goal, "pct": min(round(meeting / max(meeting_goal, 1) * 100), 999), "link": "https://buly.kr/1c9NOdW", "source": "buly.kr \ud074\ub9ad \uae30\uc900"},
         "conversion": {
             "pending_rate": f"{round(pending/max(target,1)*100)}%" if target else "0%",
             "sent_rate": f"{round(sent/max(target,1)*100)}%" if target else "0%",
@@ -3080,13 +3084,17 @@ async def api_luna_pipeline_daily():
     sent = tp.get("email_sent", 0) + tp.get("na_email_sent", 0)
     replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
     contract = tp.get("reply_meeting", 0)
+    goals = load_goals()
+    lg = goals.get("agent_goals", {}).get("luna", {})
+    db_goal = lg.get("monthly_db", 150)
+    ct_goal = lg.get("contract", 80)
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
-        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "이메일 큐"},
-        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
-        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
-        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "계약 완료"},
+        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "\uc778\ud50c\ub8e8\uc5b8\uc11c DB"},
+        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "\uc774\uba54\uc77c \ud050"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "\ubc1c\uc1a1 \uc131\uacf5 (\ubc18\uc1a1 \uc81c\uc678)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com \uc218\uc2e0"},
+        "contract": {"value": contract, "goal": ct_goal, "pct": min(round(contract / max(ct_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "\uacc4\uc57d \uc644\ub8cc"},
     }
 
 @app.get("/api/luna/pipeline/monthly")
@@ -3539,9 +3547,51 @@ async def api_get_goals():
 async def api_set_goals(request: Request):
     body = await request.json()
     goals = load_goals()
-    goals.update(body)
+    # Update monthly section
+    if "monthly" in body:
+        if "monthly" not in goals:
+            goals["monthly"] = {}
+        goals["monthly"].update(body["monthly"])
+    # Update agent_goals if provided
+    if "agent_goals" in body:
+        if "agent_goals" not in goals:
+            goals["agent_goals"] = {}
+        for ag, ag_goals in body["agent_goals"].items():
+            if ag not in goals["agent_goals"]:
+                goals["agent_goals"][ag] = {}
+            goals["agent_goals"][ag].update(ag_goals)
+    # Legacy flat keys support
+    flat_keys = {"revenue", "contracts", "contract", "inbound_db", "valid_db",
+                 "cpa", "influencer_pool", "alert_threshold",
+                 "monthly_revenue", "monthly_contracts", "contract_unit_price",
+                 "daily_inbound_db", "daily_valid_db", "cpa_target"}
+    for k, v in body.items():
+        if k in flat_keys:
+            goals[k] = v
+    # Auto-distribute to agent_goals from monthly
+    m = goals.get("monthly", {})
+    if "agent_goals" not in goals:
+        goals["agent_goals"] = {}
+    ag = goals["agent_goals"]
+    if m.get("revenue"):
+        ag.setdefault("kyle", {})["revenue"] = m["revenue"]
+    if m.get("contract"):
+        ag.setdefault("kyle", {})["contract"] = m["contract"]
+    if m.get("inbound_db"):
+        ag.setdefault("pitch", {})["monthly_db"] = m["inbound_db"]
+        ag.setdefault("pitch", {}).setdefault("daily_db", max(1, m["inbound_db"] // 20))
+    if m.get("valid_db"):
+        ag.setdefault("luna", {})["monthly_db"] = m["valid_db"]
+        ag.setdefault("luna", {}).setdefault("daily_db", max(1, m["valid_db"] // 20))
+    if m.get("cpa"):
+        ag.setdefault("max", {})["cpa"] = m["cpa"]
+    goals["updated_at"] = datetime.now(KST).isoformat()
     save_goals(goals)
-    return {"status": "ok", "goals": goals}
+    # Clear caches
+    _cache.clear()
+    _cache_time.clear()
+    synced = list(ag.keys()) if ag else []
+    return {"status": "ok", "synced_agents": synced, "updated_at": goals["updated_at"], "goals": goals}
 
 
 # ===== 알건¦¼센터 API (게시판 형태) =====
@@ -3624,21 +3674,26 @@ async def _agent_auto_cycle():
         brand = await api_brand_pipeline()
         m = brand.get("month", {})
         t = brand.get("today", {})
-        threshold = goals.get("alert_threshold", 0.2)  # 80% 건¯¸건§ = 건¬성건¥  0.8 건¯¸건§
+        monthly_goals = goals.get("monthly", {})
+        ag_goals = goals.get("agent_goals", {})
+        threshold_pct = monthly_goals.get("alert_threshold_pct", 30) / 100
+        rev_target = ag_goals.get("kyle", {}).get("revenue", monthly_goals.get("revenue", goals.get("revenue", 160000000)))
+        ct_target = ag_goals.get("kyle", {}).get("contract", monthly_goals.get("contract", goals.get("contracts", 38)))
+        inb_target = ag_goals.get("pitch", {}).get("monthly_db", monthly_goals.get("inbound_db", goals.get("inbound_db", 500)))
+        val_target = ag_goals.get("luna", {}).get("monthly_db", monthly_goals.get("valid_db", goals.get("valid_db", 150)))
 
-        # 2. 카일 â KPI 건ª©표 건건¹ 건¶석
         checks = [
-            ("건§¤출", m.get("revenue", 0), goals.get("revenue", 160000000), "카일"),
-            ("계약건수", m.get("contract", 0), goals.get("contracts", 38), "카일"),
-            ("인입DB", m.get("inbound", 0), goals.get("inbound_db", 500), "루나"),
-            ("유효DB", m.get("valid", 0), goals.get("valid_db", 150), "루나"),
+            ("매출", m.get("revenue", 0), rev_target, "카일"),
+            ("계약건수", m.get("contract", 0), ct_target, "카일"),
+            ("인입DB", m.get("inbound", 0), inb_target, "피치"),
+            ("유효DB", m.get("valid", 0), val_target, "루나"),
         ]
         for label, val, target, agent in checks:
             if target > 0 and val / target < 0.8:  # 80% 건¯¸건§건§ 알건¦¼
                 alerts_posted.append({
                     "id": _id(), "agent": agent, "severity": "critical",
                     "summary": f"â ï¸ {label} AT RISK: {val:,} / 건ª©표 {target:,} ({val/target*100:.0f}%)",
-                    "detail": f"건ª©표 건건¹ {threshold*100:.0f}% 건¯¸건¬ â 카일 지시: 즉시 건응 필요",
+                    "detail": f"건ª©표 건건¹ {threshold_pct*100:.0f}% 건¯¸건¬ â 카일 지시: 즉시 건응 필요",
                     "timestamp": now_ts, "resolved": False})
 
         # 3. 카일 â 건¬´건응 건 감지

@@ -231,18 +231,22 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-settings">
-<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 설정</div></div>
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> \uc124\uc815</div></div>
+<!-- \ub3d9\uae30\ud654 \uc548\ub0b4 \ubc30\ub108 -->
+<div style="background:rgba(184,134,11,0.06);border-left:3px solid #B8860B;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#1B2A4A;line-height:1.6">\ubaa9\ud45c\ub97c \uc800\uc7a5\ud558\uba74 \uce74\uc77c\u00b7\ud53c\uce58\u00b7\ub8e8\ub098\u00b7\ub9e5\uc2a4\u00b7\uc18c\ud53c\u00b7\ub808\uc774\u00b7\ud558\ub098 \uc804 \uc5d0\uc774\uc804\ud2b8\uc758 \uc9c4\ud589\ub960 \ubc14\uc640 KPI \ubaa9\ud45c\uac00 \uc989\uc2dc \ub3d9\uae30\ud654\ub429\ub2c8\ub2e4.</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월간 목표 설정</p>
+<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">\uc6d4\uac04 \ubaa9\ud45c \uc124\uc815</p>
 <div id="goals-form" style="display:flex;flex-direction:column;gap:10px"></div>
-<button onclick="saveGoals()" style="margin-top:12px;padding:8px 20px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장</button>
+<button onclick="saveGoals()" id="goals-save-btn" style="margin-top:12px;padding:8px 20px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">\uc800\uc7a5 \ubc0f \uc804 \uc5d0\uc774\uc804\ud2b8 \ub3d9\uae30\ud654</button>
 <p id="goals-msg" style="font-size:10px;color:#1A7A4C;margin-top:6px"></p>
 </div>
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">알림 기준</p>
-<p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">KPI 목표 대비 아래 비율 이하 시 전체 알림 발생</p>
-<div style="display:flex;align-items:center;gap:8px"><input id="goal-threshold" type="number" value="30" min="10" max="90" step="5" style="width:60px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px"><span style="font-size:12px;color:#6B6B6B">%</span></div>
+<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">\uc54c\ub9bc \uae30\uc900</p>
+<p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">KPI \ubaa9\ud45c \ub300\ube44 \uc544\ub798 \ube44\uc728 \uc774\ud558 \uc2dc \uc804\uccb4 \uc54c\ub9bc \ubc1c\uc0dd</p>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input id="goal-threshold" type="number" value="30" min="10" max="90" step="5" style="width:60px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px"><span style="font-size:12px;color:#6B6B6B">%</span></div>
+<p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">\uce74\uc77c \ubaa8\ub2c8\ud130\ub9c1 \uc8fc\uae30</p>
+<select id="goal-monitor-interval" style="padding:6px 10px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px"><option value="1">1\uc2dc\uac04</option><option value="2" selected>2\uc2dc\uac04</option><option value="4">4\uc2dc\uac04</option></select>
 </div>
 </div>
 </div>
@@ -1161,24 +1165,29 @@ var grid=document.getElementById('agentGrid');var sumBar=document.getElementById
 if(!grid||!sumBar)return;while(grid.firstChild)grid.removeChild(grid.firstChild);while(sumBar.firstChild)sumBar.removeChild(sumBar.firstChild);
 var ovM=kpiData.month||{};var ovT=kpiData.today||{};
 var revenue=ovM.revenue||0;var contract=(ovM.new||0)+(ovM.renewal||0);
-// Fetch pitch + luna pipeline data
+// Fetch goals + pitch + luna pipeline data
 Promise.all([
+fetch('/api/goals').then(function(r){return r.json()}).catch(function(){return{}}),
 fetch('/api/sheet-pipeline?agent=\ud53c\uce58').then(function(r){return r.json()}).catch(function(){return{}}),
 fetch('/api/luna/pipeline/daily').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).catch(function(){return{}})
 ]).then(function(results){
-var pitchData=results[0];var lunaData=results[1];
+var goalsData=results[0];var pitchData=results[1];var lunaData=results[2];
+var ag=goalsData.agent_goals||{};var mg=goalsData.monthly||{};
+var kyleRevTarget=((ag.kyle||{}).revenue)||mg.revenue||160000000;
+var pitchDbTarget=((ag.pitch||{}).monthly_db)||mg.inbound_db||500;
+var lunaDbTarget=((ag.luna||{}).monthly_db)||mg.valid_db||150;
 var month_db=(pitchData.month&&pitchData.month.inbound)||0;
 var today_db=(pitchData.today&&pitchData.today.inbound)||0;
 var meeting=(pitchData.total&&pitchData.total.meeting)||0;
 var lunaTarget=(lunaData.target&&lunaData.target.value)||0;
 var lunaConnected=lunaTarget>0;
 var agents=[
-{name:'\uce74\uc77c',role:'\ucd1d\uad04 \ub9e4\ub2c8\uc800',status:'\uc815\uc0c1\uc6b4\uc601',active:true,pct:Math.round(revenue/160000000*100),today:0,
-badges:[{label:'\ub9e4\ucd9c',value:Math.round(revenue/10000).toLocaleString()+'\uc6d0'},{label:'\ubaa9\ud45c',value:'1.6\uc5b5'},{label:'\uacc4\uc57d',value:contract+'\uac74'}]},
-{name:'\ud53c\uce58',role:'\ube0c\ub79c\ub4dc\uc601\uc5c5',status:'\uc815\uc0c1\uc6b4\uc601',active:true,pct:Math.min(Math.round(month_db/100*100),100),today:today_db,
-badges:[{label:'\uc774\ubc88\ub2ec DB',value:month_db+'\uac74'},{label:'\uc624\ub298',value:'+'+today_db+'\uac74'},{label:'\ubbf8\ud305(\ub204\uc801)',value:meeting+'\uac74'}]},
-{name:'\ub8e8\ub098',role:'\uc778\ud50c\ub8e8\uc5b8\uc11c\uc601\uc5c5',status:lunaConnected?'\uc815\uc0c1\uc6b4\uc601':'\ub370\uc774\ud130 \uc5f0\ub3d9 \uc900\ube44\uc911',active:true,pct:lunaConnected?Math.min(Math.round(lunaTarget/1000*100),100):0,today:0,
-badges:[{label:'DB',value:lunaConnected?lunaTarget.toLocaleString()+'\uba85':'\uc5f0\ub3d9 \uc900\ube44\uc911'}]},
+{name:'\uce74\uc77c',role:'\ucd1d\uad04 \ub9e4\ub2c8\uc800',status:'\uc815\uc0c1\uc6b4\uc601',active:true,pct:Math.round(revenue/kyleRevTarget*100),today:0,
+badges:[{label:'\ub9e4\ucd9c',value:Math.round(revenue/10000).toLocaleString()+'\uc6d0'},{label:'\ubaa9\ud45c',value:Math.round(kyleRevTarget/100000000*10)/10+'\uc5b5'},{label:'\uacc4\uc57d',value:contract+'\uac74'}]},
+{name:'\ud53c\uce58',role:'\ube0c\ub79c\ub4dc\uc601\uc5c5',status:'\uc815\uc0c1\uc6b4\uc601',active:true,pct:Math.min(Math.round(month_db/pitchDbTarget*100),100),today:today_db,
+badges:[{label:'\uc774\ubc88\ub2ec DB',value:month_db+'/'+pitchDbTarget+'\uac74'},{label:'\uc624\ub298',value:'+'+today_db+'\uac74'},{label:'\ubbf8\ud305(\ub204\uc801)',value:meeting+'\uac74'}]},
+{name:'\ub8e8\ub098',role:'\uc778\ud50c\ub8e8\uc5b8\uc11c\uc601\uc5c5',status:lunaConnected?'\uc815\uc0c1\uc6b4\uc601':'\ub370\uc774\ud130 \uc5f0\ub3d9 \uc900\ube44\uc911',active:true,pct:lunaConnected?Math.min(Math.round(lunaTarget/lunaDbTarget*100),100):0,today:0,
+badges:[{label:'DB',value:lunaConnected?lunaTarget.toLocaleString()+'/'+lunaDbTarget+'\uba85':'\uc5f0\ub3d9 \uc900\ube44\uc911'}]},
 {name:'\ub808\uc774',role:'\uacbd\uc601\uc9c0\uc6d0',status:'\uc810\uac80\uc911',active:true,pct:-1,today:0,
 badges:[{label:'\uacc4\uc57d',value:contract+'\uac74'},{label:'\ubc1c\ud589 \uc810\uac80',value:'\uc9c4\ud589\uc911'}]},
 {name:'\uc18c\ud53c',role:'\ucf58\ud150\uce20\ub9c8\ucf00\ud130',status:'\uc5f0\ub3d9 \ub300\uae30',active:false,pct:0,today:0,badges:[]},
@@ -1850,6 +1859,7 @@ var card=document.createElement('a');card.href=item.link||'#';card.target='_blan
 card.style.cssText='text-align:center;background:#F8F7F5;border-radius:6px;padding:10px 6px;text-decoration:none;cursor:pointer';
 var num=document.createElement('p');num.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:'+colors[i%colors.length];num.textContent=item.value||0;card.appendChild(num);
 var label=document.createElement('p');label.style.cssText='font-size:8px;color:#6B6B6B;margin-top:2px';label.textContent=labelMap[k]||k;card.appendChild(label);
+if(item.goal){var goalEl=document.createElement('p');goalEl.style.cssText='font-size:11px;color:var(--text-muted,#9B9B9B);margin-top:1px';goalEl.textContent='\ubaa9\ud45c '+item.goal+'\uac74';card.appendChild(goalEl)}
 var src=document.createElement('p');src.style.cssText='font-size:7px;color:#BFBFBF;margin-top:1px';src.textContent=item.source||'';card.appendChild(src);
 el.appendChild(card)});
 if(data.conversion){var cv=data.conversion;var cvEl=document.createElement('div');cvEl.style.cssText='grid-column:1/-1;font-size:8px;color:#9B9B9B;margin-top:4px';
@@ -1984,19 +1994,34 @@ function runAgentCycle(){fetch('/api/agent-cycle').then(function(r){return r.jso
 function loadGoals(){
 fetch('/api/goals').then(function(r){return r.json()}).then(function(g){
 var el=document.getElementById('goals-form');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
-var fields=[['revenue','매출 목표 (원)',g.revenue||160000000],['contracts','계약 건수',g.contracts||38],['inbound_db','인입DB 목표',g.inbound_db||500],['valid_db','유효DB 목표',g.valid_db||150],['cpa','CPA 목표 (원)',g.cpa||50000]];
+var m=g.monthly||{};
+var fields=[
+['revenue','\ub9e4\ucd9c \ubaa9\ud45c (\uc6d0)',m.revenue||g.revenue||160000000,['\uce74\uc77c','\ub808\uc774']],
+['contract','\uacc4\uc57d \uac74\uc218',m.contract||g.contracts||38,['\ud53c\uce58','\ub8e8\ub098']],
+['inbound_db','\uc778\uc785DB \ubaa9\ud45c',m.inbound_db||g.inbound_db||500,['\ud53c\uce58']],
+['valid_db','\uc720\ud6a8DB \ubaa9\ud45c',m.valid_db||g.valid_db||150,['\ub8e8\ub098']],
+['cpa','CPA \ubaa9\ud45c (\uc6d0)',m.cpa||g.cpa||10000,['\ub9e5\uc2a4']]
+];
 fields.forEach(function(f){
-var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center';
-var lbl=document.createElement('span');lbl.style.cssText='font-size:11px;color:#6B6B6B';lbl.textContent=f[1];row.appendChild(lbl);
+var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:8px';
+var leftDiv=document.createElement('div');leftDiv.style.cssText='display:flex;align-items:center;gap:6px;flex:1';
+var lbl=document.createElement('span');lbl.style.cssText='font-size:11px;color:#6B6B6B';lbl.textContent=f[1];leftDiv.appendChild(lbl);
+if(f[3]){f[3].forEach(function(ag){var tag=document.createElement('span');tag.style.cssText='font-size:9px;padding:1px 6px;border-radius:3px;background:rgba(27,42,74,0.06);color:#1B2A4A;font-weight:600';tag.textContent=ag;leftDiv.appendChild(tag)})}
+row.appendChild(leftDiv);
 var inp=document.createElement('input');inp.id='goal-'+f[0];inp.type='number';inp.value=f[2];inp.style.cssText='width:120px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px;text-align:right;font-family:monospace';row.appendChild(inp);
 el.appendChild(row)});
-var th=document.getElementById('goal-threshold');if(th)th.value=Math.round((g.alert_threshold||0.3)*100)
+var th=document.getElementById('goal-threshold');if(th)th.value=m.alert_threshold_pct||Math.round((g.alert_threshold||0.3)*100);
+var mi=document.getElementById('goal-monitor-interval');if(mi)mi.value=String(m.kyle_monitor_interval_hours||2)
 }).catch(function(){})}
 
 function saveGoals(){
-var data={};['revenue','contracts','inbound_db','valid_db','cpa'].forEach(function(k){var el=document.getElementById('goal-'+k);if(el)data[k]=parseInt(el.value)||0});
-var th=document.getElementById('goal-threshold');if(th)data.alert_threshold=parseInt(th.value)/100;
-fetch('/api/goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){var m=document.getElementById('goals-msg');if(m)m.textContent='저장 완료!';setTimeout(function(){if(m)m.textContent=''},2000)}).catch(function(){})}
+var monthly={};
+['revenue','contract','inbound_db','valid_db','cpa'].forEach(function(k){var el=document.getElementById('goal-'+k);if(el)monthly[k]=parseInt(el.value)||0});
+var th=document.getElementById('goal-threshold');if(th)monthly.alert_threshold_pct=parseInt(th.value)||30;
+var mi=document.getElementById('goal-monitor-interval');if(mi)monthly.kyle_monitor_interval_hours=parseInt(mi.value)||2;
+fetch('/api/goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monthly:monthly})}).then(function(r){return r.json()}).then(function(d){
+var m=document.getElementById('goals-msg');if(m){m.style.color='#1A7A4C';m.textContent='\u2713 \uc804 \uc5d0\uc774\uc804\ud2b8 \ubaa9\ud45c \ub3d9\uae30\ud654 \uc644\ub8cc ('+(d.updated_at||'')+')'}
+}).catch(function(){var m=document.getElementById('goals-msg');if(m){m.style.color='#C4332B';m.textContent='\uc624\ub958 \ubc1c\uc0dd'}})}
 
 // ===== 인플루언서 국가 필터 (탭1 회원현황) =====
 var _infCountryFilter='';
