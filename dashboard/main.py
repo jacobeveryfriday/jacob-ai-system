@@ -2994,6 +2994,149 @@ async def api_luna_send_na(request: Request):
     _record_perf("루나", "na_email_sent", sent)
     return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped}
 
+# ===== Quality Check + Batch Send + Pipeline APIs =====
+
+PITCH_SHEET_URL = "https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit?gid=1333794047"
+LUNA_SHEET_URL = "https://docs.google.com/spreadsheets/d/1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs/edit?gid=1722455708"
+VALID_TEMPLATES = {"A", "B", "C", "A_EN", "B_EN"}
+LUNA_VALID_TEMPLATES = {"A", "B"}
+BATCH_SIZE = 50
+
+def _email_quality_check(to: str, subject: str, body: str, template: str, country: str = "KR", agent: str = "pitch") -> list:
+    """Pre-send quality check. Returns list of failures (empty = pass)."""
+    errors = []
+    if not subject:
+        errors.append("empty subject")
+    if not body:
+        errors.append("empty body")
+    if not to or "@" not in to:
+        errors.append("invalid email")
+    if "{" in subject or "{" in body:
+        errors.append("unsubstituted variable")
+    valid = VALID_TEMPLATES if agent == "pitch" else LUNA_VALID_TEMPLATES
+    if template not in valid:
+        errors.append(f"invalid template: {template}")
+    if not _is_business_hours(country):
+        errors.append(f"outside business hours ({country})")
+    return errors
+
+@app.get("/api/email-quality-check")
+async def api_email_quality_check(agent: str = "pitch"):
+    """Pre-send quality check status."""
+    links = {
+        "promo": "https://buly.kr/AF24dn7",
+        "meeting": "https://buly.kr/1c9NOdW",
+    }
+    checks = {}
+    for name, url in links.items():
+        try:
+            r = req_lib.head(url, timeout=5, allow_redirects=True)
+            checks[name] = {"status": "ok" if r.status_code < 400 else "error", "code": r.status_code}
+        except Exception:
+            checks[name] = {"status": "error", "code": 0}
+    return {"agent": agent, "link_checks": checks, "batch_size": BATCH_SIZE, "valid_templates": list(VALID_TEMPLATES if agent == "pitch" else LUNA_VALID_TEMPLATES)}
+
+@app.get("/api/pitch/pipeline/daily")
+async def api_pitch_pipeline_daily():
+    """Pitch daily pipeline stats."""
+    perf = load_agent_perf()
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    tp = perf.get(today, {}).get("\ud53c\uce58", perf.get(today, {}).get("pitch", {}))
+    queue = load_email_queue()
+    pending = sum(1 for q in queue if q.get("agent") in ("\ud53c\uce58", "pitch") and q.get("status") == "pending")
+    sent = tp.get("email_sent", 0) + tp.get("email_sent_batch", 0)
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+    target = max(len(rows) - 1, 0) if rows else 0
+    replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
+    meeting = tp.get("reply_meeting", 0)
+    return {
+        "period": "daily", "date": today,
+        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "Pitch Claude tab"},
+        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "Email queue"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "Sent (excl. bounced)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com replies"},
+        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr clicks"},
+        "conversion": {
+            "pending_rate": f"{round(pending/max(target,1)*100)}%" if target else "0%",
+            "sent_rate": f"{round(sent/max(target,1)*100)}%" if target else "0%",
+            "reply_rate": f"{round(replied/max(sent,1)*100)}%" if sent else "0%",
+            "meeting_rate": f"{round(meeting/max(sent,1)*100)}%" if sent else "0%",
+        },
+    }
+
+@app.get("/api/pitch/pipeline/monthly")
+async def api_pitch_pipeline_monthly():
+    """Pitch monthly pipeline stats."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    mp = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["\ud53c\uce58", "pitch"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        mp[mk] = mp.get(mk, 0) + mv
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+    target = max(len(rows) - 1, 0) if rows else 0
+    sent = mp.get("email_sent", 0) + mp.get("email_sent_batch", 0)
+    replied = mp.get("reply_info", 0) + mp.get("reply_meeting", 0)
+    meeting = mp.get("reply_meeting", 0)
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "Pitch Claude tab"},
+        "pending": {"value": 0, "link": PITCH_SHEET_URL, "source": "Email queue"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "Sent (excl. bounced)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com replies"},
+        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr clicks"},
+    }
+
+@app.get("/api/luna/pipeline/daily")
+async def api_luna_pipeline_daily():
+    """Luna daily pipeline stats."""
+    perf = load_agent_perf()
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    tp = perf.get(today, {}).get("\ub8e8\ub098", perf.get(today, {}).get("luna", {}))
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
+    target = max(len(rows) - 1, 0) if rows else 0
+    sent = tp.get("email_sent", 0) + tp.get("na_email_sent", 0)
+    replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
+    contract = tp.get("reply_meeting", 0)
+    return {
+        "period": "daily", "date": today,
+        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "Influencer DB"},
+        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "Email queue"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "Sent (excl. bounced)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com replies"},
+        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "Contract completed"},
+    }
+
+@app.get("/api/luna/pipeline/monthly")
+async def api_luna_pipeline_monthly():
+    """Luna monthly pipeline stats."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    mp = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["\ub8e8\ub098", "luna"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        mp[mk] = mp.get(mk, 0) + mv
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
+    target = max(len(rows) - 1, 0) if rows else 0
+    sent = mp.get("email_sent", 0) + mp.get("na_email_sent", 0)
+    replied = mp.get("reply_info", 0) + mp.get("reply_meeting", 0)
+    contract = mp.get("reply_meeting", 0)
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "Influencer DB"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "Sent (excl. bounced)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com replies"},
+        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "Contract completed"},
+    }
+
 async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
     """재접촉 캠페인 건´건¶ 실행 함수."""
     limit = min(limit, 50)

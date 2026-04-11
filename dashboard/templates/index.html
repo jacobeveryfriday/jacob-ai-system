@@ -255,18 +255,16 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="bd-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="bd-token-month">0</span></p></div>
   </div>
   <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
-  <!-- 3. 아웃바운드 퍼널 -->
+  <!-- Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">아웃바운드 파이프라인</p>
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px" id="pitch-pipeline-nums">
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">타겟</p><p id="pp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">대기</p><p id="pp-queued" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">발송</p><p id="pp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">오픈</p><p id="pp-opened" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">답변</p><p id="pp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">미팅</p><p id="pp-meetings" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-    </div>
-    <div id="bd-bench-compare" style="font-size:9px;color:#9B9B9B;margin-top:8px"></div>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">Today Outbound Pipeline</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="pitch-pipeline-daily"></div>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">Click numbers to open sheet</p>
+  </div>
+  <!-- Monthly Pipeline -->
+  <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">This Month (cumulative)</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="pitch-pipeline-monthly"></div>
   </div>
   <!-- 피치 성과 보고 -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
@@ -361,17 +359,16 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
     <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="inf-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="inf-token-month">0</span></p></div>
   </div>
   <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
-  <!-- 3. 인플루언서 확보 퍼널 -->
+  <!-- Luna Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">인플루언서 확보 파이프라인</p>
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">크롤링</p><p id="lp-crawled" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">이메일발견</p><p id="lp-emails" style="font-family:monospace;font-size:16px;font-weight:700;color:#B8860B">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">발송</p><p id="lp-sent" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">오픈</p><p id="lp-opened" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">답변</p><p id="lp-replied" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:8px"><p style="font-size:8px;color:#6B6B6B">확보</p><p id="lp-secured" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">—</p></div>
-    </div>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">Today Influencer Pipeline</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="luna-pipeline-daily"></div>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">Click numbers to open sheet</p>
+  </div>
+  <!-- Luna Monthly -->
+  <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">This Month (cumulative)</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="luna-pipeline-monthly"></div>
   </div>
   <!-- KPI + 파이프라인만 (승인은 이메일로) -->
   <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
@@ -1637,6 +1634,26 @@ detail:'타겟: 뷰티 인플루언서 (팔로워 1만~100만)\n채널: Instagra
 expected_impact:'DB 50명 → 유효 35명 → 협찬확정 5건 예상',
 action_type:'luna_db_collect'
 })}).then(function(r){return r.json()}).then(function(){alert('승인 요청이 CEO 큐에 등록되었습니다.')}).catch(function(){alert('오류')})}
+function renderPipeline(containerId, data, lastLabel) {
+var el=document.getElementById(containerId);if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
+var keys=['target','pending','sent','replied',lastLabel||'meeting'];
+var colors=['#1B2A4A','#B8860B','#2D4A7A','#1A7A4C','#1A7A4C'];
+keys.forEach(function(k,i){
+var item=data[k]||{value:0,link:'',source:''};
+var card=document.createElement('a');card.href=item.link||'#';card.target='_blank';card.rel='noopener';
+card.style.cssText='text-align:center;background:#F8F7F5;border-radius:6px;padding:10px 6px;text-decoration:none;cursor:pointer';
+var num=document.createElement('p');num.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:'+colors[i];num.textContent=item.value||0;card.appendChild(num);
+var label=document.createElement('p');label.style.cssText='font-size:8px;color:#6B6B6B;margin-top:2px';label.textContent=k.charAt(0).toUpperCase()+k.slice(1);card.appendChild(label);
+var src=document.createElement('p');src.style.cssText='font-size:7px;color:#BFBFBF;margin-top:1px';src.textContent=item.source||'';card.appendChild(src);
+el.appendChild(card)});
+if(data.conversion){var cv=data.conversion;var cvEl=document.createElement('div');cvEl.style.cssText='grid-column:1/-1;font-size:8px;color:#9B9B9B;margin-top:4px';
+cvEl.textContent='Conversion: '+(cv.sent_rate||'0%')+' sent | '+(cv.reply_rate||'0%')+' reply | '+(cv.meeting_rate||'0%')+' meeting';el.appendChild(cvEl)}}
+function loadPipelineData(){
+fetch('/api/pitch/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-daily',JSON.parse(t),'meeting')}).catch(function(){});
+fetch('/api/pitch/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-monthly',JSON.parse(t),'meeting')}).catch(function(){});
+fetch('/api/luna/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('luna-pipeline-daily',JSON.parse(t),'contract')}).catch(function(){});
+fetch('/api/luna/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('luna-pipeline-monthly',JSON.parse(t),'contract')}).catch(function(){});}
+loadPipelineData();
 function loadPitchPerf(){
 fetch('/api/pitch/performance').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).then(function(d){
 var k=d.kpi||{},rt=d.reply_types||{};
