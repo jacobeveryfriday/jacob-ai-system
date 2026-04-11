@@ -20,7 +20,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 load_dotenv(override=False)  # OS 환경건³수(Railway)가 .env건³´건¤ 우선
-app = FastAPI(title="Command Center")
+from fastapi.responses import JSONResponse as _OrigJSONResponse
+
+class KoreanJSONResponse(_OrigJSONResponse):
+    """FastAPI JSON response that preserves Korean characters (no ascii escape)."""
+    media_type = "application/json; charset=utf-8"
+    def render(self, content) -> bytes:
+        return json.dumps(content, ensure_ascii=False, default=str).encode("utf-8")
+
+app = FastAPI(title="Command Center", default_response_class=KoreanJSONResponse)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 KST = ZoneInfo("Asia/Seoul")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
