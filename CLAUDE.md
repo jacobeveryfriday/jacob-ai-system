@@ -1,304 +1,65 @@
-# CLAUDE.md — Jacob AI System
+# CLAUDE.md — jacob-ai-system
 
-## 프로젝트 소유자
-- **이름**: 제이콥 (Jacob)
-- **역할**: CEO — 공팔리터글로벌 (08liter Global) + 밀리밀리 (Mili Mili, 법인명 ㈜밀리어스)
-- **기술 수준**: 비개발자. 코드를 직접 작성하지 않고 Claude Code에게 지시하는 방식으로 작업.
+## 프로젝트 개요
+- 회사: 공팔리터글로벌 (인플루언서 마케팅) + 밀리밀리 (K-뷰티)
+- 대시보드: https://dashboard-production-b2bd.up.railway.app/
+- GitHub: jacobeveryfriday/jacob-ai-system
+- 스택: Python(Railway) + Google Sheets + GAS 웹훅 + Slack
 
-## 두 회사 개요
-- **공팔리터글로벌**: 인플루언서 마케팅 회사. 글로벌 인플루언서 네트워크 운영.
-- **밀리밀리 (㈜밀리어스)**: K-뷰티 브랜드. 자체 제품 개발 및 글로벌 유통.
-- **핵심 시너지**: 인플루언서 네트워크 + 뷰티 브랜드를 동시에 보유한 것이 최대 경쟁 우위.
-- **타깃 시장**: 동남아, 미국, 일본.
+## 에이전트 구조
+| 에이전트 | 이메일 | 담당 KPI |
+|---------|--------|---------|
+| 카일(총괄) | kyle@08liter.com | 전체 KPI + 에이전트 감독 |
+| 루나(브랜드) | luna@08liter.com | 매출·계약·파이프라인 |
+| 피치(인플루언서) | pitch@08liter.com | 인플루언서 풀·발송 |
+| 맥스(광고) | max@08liter.com | CPA·오가닉 리드 |
+| 소피(콘텐츠) | sophie@08liter.com | SNS·팔로워 |
+| 레이(경영) | ray@08liter.com | 세금계산서·입금 |
+| 하나(CS) | hana@08liter.com | CS·재계약률 |
 
-## 프로젝트 목적
-이 저장소(jacob-ai-system)는 두 회사의 업무 자동화 시스템을 구축하는 프로젝트다.
-- 세금계산서 자동 발행 (Popbill API + Google Apps Script + Slack 웹훅)
-- 바이어 아웃리치 자동화
-- 인플루언서 데이터 관리
-- 내부 대시보드
+## 구글시트 연동
+환경변수로만 관리 — 코드에 한국어 하드코딩 절대 금지
 
-## 작업 원칙
-1. **실행 중심**: 이론보다 바로 적용 가능한 코드를 우선시.
-2. **한국어 우선**: 코드 주석, 커밋 메시지, 문서 모두 한국어.
-3. **시너지 관점**: 두 회사 간 데이터/프로세스 연결을 항상 고려.
-4. **안전 우선**: 파일 수정 전 반드시 확인 요청. 기존 코드를 임의로 삭제하지 않기.
-5. **단계적 진행**: 한 번에 큰 변경보다 작은 단위로 나눠서 진행.
-6. **상태 추적**: API 연동이나 외부 서비스 관련 작업을 할 때마다 STATUS.md를 반드시 업데이트할 것. 새 채팅에서 작업을 이어받을 때는 STATUS.md를 먼저 읽고 시작할 것.
+| 환경변수 | 값 |
+|---------|-----|
+| SHEET_TAB_CONTRACT | 계산서발행 |
+| SHEET_TAB_INBOUND | 현황시트(수동매칭) |
+| SHEET_TAB_PITCH | 피치_클로드 |
+| SHEET_TAB_LUNA | 루나_클로드 |
+| SHEET_TAB_SOPHIE | 소피_클로드 |
 
-## 기술 스택
-- **언어**: Python, JavaScript/TypeScript
-- **자동화**: Google Apps Script, Slack Webhooks
-- **API**: Popbill, Naver Works
-- **인프라**: macOS 기반 개발
-- **데이터**: Google Sheets, Excel
+시트 ID:
+- GOOGLE_SHEETS_ID: 세금계산서 (1j_3IYME...)
+- INBOUND_SHEET_ID: 인바운드/피치 (1ISL7s9...)
+- LUNA_SHEET_ID: 루나 (1xLkrml...)
+- SOPHIE_SHEET_ID: 소피 (1FOnGv2...)
 
-## 커밋 규칙
-- 한국어 커밋 메시지
-- 형식: [카테고리] 변경 내용 요약
-  - 예: [자동화] 세금계산서 발행 스크립트 Slack 알림 추가
-  - 예: [대시보드] 인플루언서 현황 차트 컴포넌트 생성
+## 이메일 발송 구조
+Railway → GAS 웹훅(EMAIL_WEBHOOK_URL) → Naver Works SMTP
+- GAS 계정: rollpie@gmail.com
+- 발신: pitch@08liter.com / luna@08liter.com
+- GAS에 시안 하드코딩 방식 사용 (인코딩 문제 방지)
 
-## 주의사항
-- 비개발자 CEO가 사용하므로 에러 시 쉬운 말로 설명할 것.
-- 변경사항이 크면 Git 커밋을 나눠서 진행할 것.
-- .env 파일이나 API 키를 절대 커밋하지 않을 것.
+## 인코딩 원칙 (위반 시 데이터 깨짐)
+1. 모든 json.dumps → ensure_ascii=False 필수
+2. 한국어 문자열을 Python 코드에 직접 작성 금지
+3. 한국어는 반드시 환경변수 또는 GAS 내부에서 관리
+4. requests.post 시 Content-Type: application/json; charset=utf-8 명시
 
-## 대시보드 개발 체크리스트 (반복 실수 방지)
+## 배포 전 필수 체크리스트
+배포할 때마다 아래 4개 확인 후 railway up 실행:
+1. /api/health → google_sheets: connected 확인
+2. /api/kpi-summary → source: "live" + 수치 정상 확인
+3. /api/pitch/performance → total_db 정상 확인
+4. testEmail() 실행 → 한국어 정상 수신 확인
 
-### Google Sheets API 연동 규칙
-- GOOGLE_SHEETS_API_KEY가 .env에 있는지 먼저 확인
-- API 키 없으면 더미 데이터 자동 폴백 (오류 없이 작동)
-- fetch_sheet() 함수는 캐시 TTL 1800초 (30분) 적용
-- 연동 시트 4개:
-  - SHEET_INBOUND = 1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8 (인바운드)
-  - SHEET_CONTRACT = 1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q (계산서)
-  - SHEET_INFLUENCER = 1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs (인플루언서)
-  - SHEET_ADS = 1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU (광고)
+## KPI 목표 (2026년 4월 기준)
+- 월 매출 목표: 1.6억
+- 월 계약 목표: 38건
+- 인플루언서 풀 목표: 155만명
+- 광고 CPA 목표: 5만원 이하
+- 오가닉 리드: 15건/일
 
-### HTML 함수 구현 규칙
-- 새 페이지 추가 시 반드시 아래 함수 구현:
-  - loadXxxData() -- API 호출 및 데이터 로드
-  - renderXxxTable() -- 테이블 렌더링
-  - applyXxxFilter() -- 필터 적용
-- showPage() 함수에 페이지별 loadXxxData() 연동 필수
-- HTML element ID와 JS getElementById() ID 반드시 일치 확인
-- Chart.js canvas: 반드시 position:relative; height:200px 컨테이너 사용
-
-### 파이프라인 보드 구현 규칙
-- pipeline-board element 반드시 존재 확인 후 DOM 조작
-- 오류 발생 시 재시도 버튼 포함한 에러 UI 표시
-- API 데이터 source 필드로 live/dummy 표시
-
-### 인플루언서 DB 규칙
-- 국가 코드: KR/US/JP/CN/MY/SG/TH/ID/VT(베트남)/VN(베트남)
-- 팔로워 수: K/M 단위 파싱 -> followers_num(숫자) 저장
-- 필터: country/platform/category/followers/status/search 6개
-- CSV 내보내기: BOM(\uFEFF) 포함으로 한글 깨짐 방지
-- 타겟 리스트: 이메일+연락처 포함 50명 미리보기 + 전체 CSV
-
-### 사이드바 메뉴 연결 확인 방법
-```
-curl http://localhost:8000/api/brand-pipeline | python3 -m json.tool | head -5
-curl http://localhost:8000/api/influencer-db | python3 -m json.tool | head -5
-curl http://localhost:8000/api/ads-performance | python3 -m json.tool | head -5
-```
-source=live -> 구글시트 연동 / source=dummy -> API 키 미입력
-
-## 매출 데이터 컬럼 확인 (2026-04-06 직접 확인)
-
-계산서발행 탭에서 B열부터 데이터 시작
-- fetch_sheet 범위: "B:U"
-- 공급가액 = T열 = 인덱스 18 (B=0, C=1, ... T=18)
-- 음수값(환불/취소)은 매출에서 제외
-- 신규/재계약 구분: G열(idx5)
-  - "신규" 포함 -> 신규
-  - "확인필요" -> 제외
-  - 나머지 -> 재계약
-
-인바운드 파센문의 탭
-- fetch_sheet 범위: "A:R"
-- 오늘 날짜 비교: B열="YYYY.MM", C열="M/D"
-- 유효DB 기준: P열(idx15) 컨택현황에 "워킹" 포함
-- 헤더 스킵: 국가/주의사항/본 리스트 키워드 체크
-
-## 공유/배포 스크립트
-- 즉시 공유: sh share-now.sh (ngrok)
-- 클라우드: sh deploy.sh (Railway)
-- 동료 설치: sh setup-for-colleague.sh
-- WiFi 공유: http://192.168.0.6:8000
-
-## 반복 실수 방지
-- 공급가액 = T열(idx18), 세액 = U열(idx19)
-- 인바운드 A:R 전체 범위 (A3:R 아님 - 헤더 스킵은 코드에서 처리)
-- 계산서 B:U 전체 범위 (B2:N 아님 - T열 공급가액 포함 필요)
-- 음수 매출 제외 필수 (환불/취소)
-- 날짜 비교: 인바운드 C열 = "M/D" 형식, 계산서 B열 = "YYYYMMDD" 형식
-- python-multipart는 FastAPI request.form() 사용 시 필수 (requirements.txt에 반드시 포함)
-- Railway 배포: GitHub App 설치 후에도 "GitHub Repo not found" 시 Settings에서 Disconnect → Connect Repo 재연결 필요
-- 인바운드 실제 컬럼 인덱스: J(9)=유입채널, O(14)=담당자, Q(16)=컨택현황 (N/P 아님!)
-
-## 미처리 인바운드 비즈니스 로직 (2026-04-06 확정)
-
-정의: 금일 인바운드 중 담당자(O열) 없거나 컨택현황(Q열) 없으면 "미처리"
-- 미처리: 담당자 없음 OR 컨택현황 없음 -> 즉시 대응 필요
-- 처리중: 담당자 있고 컨택현황 있음 (워킹중/부적합 등)
-- 유효DB: 컨택현황 = "워킹중" 포함
-
-API 반환 필드:
-- today.unhandled: 오늘 미처리 건수
-- today.handled: 오늘 처리중 건수
-- month.unhandled: 이번 달 미처리 누적
-- unhandled_brands: 미처리 브랜드 목록 (이름/채널/사유)
-
-UI 표시:
-- 총괄KPI: 미처리 카드 (빨강, 점멸)
-- 브랜드: 미처리 알림 박스 (오늘 미처리 목록)
-
-## 날짜 파싱 반복 실수 방지 (2026-04-06 확인)
-
-인바운드 C열 날짜 형식 2가지 혼재:
-- 형식A: "4/6" or "04/06" (일반)
-- 형식B: "2026-04-06 11:50..." (타임스탬프)
-- 둘 다 처리 필수, 하나만 처리하면 카운트 오류
-
-오늘 비교: date_val==today_day or date_val==today_day2 or date_val.startswith(today_iso)
-이번 달: this_month in month_val, 또는 날짜에서 월 추출
-
-파이프라인 UI 원칙:
-- 카드 목록 나열 금지 -> 숫자 요약 바만 표시
-- 오늘/이번달 탭 구분
-- 미처리 알림은 오늘 탭에서만 표시
-
-## 캐시 TTL 항목별 분리 (2026-04-07 적용)
-
-CACHE_TTLS = {
-    "inbound": 300,      # 5분 - 인바운드 빠른 갱신
-    "contract": 3600,    # 1시간 - 계산서
-    "influencer": 21600, # 6시간 - 인플루언서
-    "ads": 3600,         # 1시간 - 광고
-    "default": 1800,     # 30분 폴백
-}
-
-fetch_sheet() 호출 시 ttl_key 파라미터 반드시 지정
-
-## API 엔드포인트 목록 (2026-04-07 최종)
-
-- GET  /health              — 헬스체크 (sheets/openai/slack 상태)
-- GET  /api/kpi-summary     — 총괄 KPI
-- GET  /api/brand-pipeline  — 브랜드 파이프라인 (인바운드+계약서)
-- GET  /api/brand-comparison — 기간별 비교표
-- GET  /api/influencer-db   — 인플루언서 DB (필터 지원)
-- GET  /api/ads-performance — 광고 성과
-- GET  /api/sns-performance — SNS 운영 현황 (더미, API 연동 예정)
-- POST /api/chat            — AI 채팅 (OpenAI GPT-4o-mini / 룰베이스 폴백)
-- POST /api/slack/test      — Slack 웹훅 테스트
-- GET  /api/slack/kpi-report — Slack KPI 리포트 발송
-- GET  /api/sheets-status   — Google Sheets 연동 상태
-- GET  /api/cache-clear     — 캐시 초기화
-- GET  /api/checklist       — 체크리스트 조회
-- POST /api/checklist       — 체크리스트 저장
-- POST /api/checklist/add   — 체크리스트 추가
-
-## Jacob 대표님 확인 필요 항목 (2026-04-07)
-
-1. OPENAI_API_KEY: Railway 환경변수에 추가하면 AI 채팅 GPT-4o-mini 활성화
-   - Railway Dashboard > Variables > OPENAI_API_KEY=sk-xxx 추가
-2. SLACK_WEBHOOK_URL: Slack 앱에서 Incoming Webhook 생성 후 URL 추가
-   - Railway Dashboard > Variables > SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx 추가
-3. 날짜 파싱 4가지 포맷 대응 완료 — 오늘 인바운드 카운트 확인 부탁드립니다
-4. SNS API는 Instagram/TikTok Business API 연동 시 실데이터 전환 예정
-
-## 날짜 파싱 포맷 (2026-04-07 최종)
-
-인바운드 C열 is_today 판단 5가지:
-- "4/7" (month/day)
-- "4/07" (month/day zero-padded)
-- "04/7" (month zero-padded/day)
-- "04/07" (both zero-padded)
-- "2026-04-07..." (ISO 타임스탬프 startswith)
-
-## 피치·루나 DB 수집 절대 원칙
-
-### CEO 승인 항목은 오직 2가지
-1. DB 수집 계획: 어디서 / 몇 명 / 언제까지 / 얼마 비용
-2. 이메일 내용: 누구에게 / 무슨 제안을 / 어떤 문구로
-
-### DB 수집 품질 원칙 (절대 위반 금지)
-- 숫자 채우기 금지: 100명 목표라도 기준 미달이면 50명만 수집
-- 수집 기준 미달 즉시 중단 후 CEO에게 보고
-- 중복 수집 금지: 이미 컨택한 대상 재수집 금지
-- 개인 SNS 이메일 금지: 비즈니스 공개 이메일만 수집
-- 허위 정보 금지: 확인 안 된 이메일 추측해서 넣지 말 것
-
-### 피치 수집 기준 (브랜드사)
-- ✅ 마케팅/PR/브랜드 담당자 직함 확인된 경우
-- ✅ 공식 홈페이지/LinkedIn 공개 비즈니스 이메일
-- ❌ 대기업 계열사 (아모레퍼시픽, LG생활건강 등)
-- ❌ 이미 DB에 있는 브랜드 / 이메일 추측 금지
-
-### 루나 수집 기준 (인플루언서)
-- ✅ 공개 비즈니스 이메일 필수 (없으면 수집 금지)
-- ✅ 인게이지먼트 3%+ / 최근 30일 내 포스팅 / 팔로워 1만+
-- ✅ 카테고리 명확 (뷰티/스킨케어/푸드/라이프/패션)
-- ❌ 이미 루나 시트에 있는 계정 / 기업계정 / 비공개
-- 국내 채널 우선: 인스타 → 블로그 → 틱톡 → 유튜브
-- 해외 채널 우선: 틱톡 → 인스타 → 유튜브
-- 수집 필수: 인플루언서명, 계정 링크(URL), 팔로워, 인게이지먼트율, 카테고리, 국가, 이메일, 최근 포스팅일
-
-### 모델 사용 원칙
-- DB 수집·분류·정제: claude-haiku-4-5 (비용 최적화)
-- 이메일 작성·전략판단: claude-sonnet-4-5
-- 작업 전 예상 토큰·원화 비용 반드시 CEO에게 제시
-
-## CEO 승인 절대 원칙
-- DB 수집 승인: jacob@08liter.com 이메일 회신으로만
-- 이메일 발송 승인: jacob@08liter.com 이메일 회신으로만
-- 대시보드 버튼으로 승인 불가 (버튼 제거됨)
-- 회신 없이는 단 1건도 실행 불가
-
-## 승인 요청 이메일 필수 포함 정보
-DB 수집 요청 시: ①출처 ②수집 건수 ③타겟 기준 ④제외 기준 ⑤예상 비용 ⑥완료 시한
-이메일 발송 요청 시: ①대상 N건 ②이메일 전문 (시안 A/B) ③예상 결과 ④비용
-
-## 승인 회신 방법
-- 피치 이메일 시안 선택: "피치A" 또는 "피치B" 또는 "피치수정: [내용]"
-- 루나 이메일 시안 선택: "루나A" 또는 "루나B" 또는 "루나수정: [내용]"
-- 복합 승인: "피치A, 루나B"
-- 전체 취소: "취소"
-
-## 피치 아웃바운드 이메일 스킬 (전 에이전트 공용)
-
-### 이메일 작성 원칙
-- 구조: 인사 1줄 → 핵심 1~2줄 → 행동 유도 1줄 → 링크 → 서명
-- 줄 사이 공백 1줄, 이모지는 링크 앞에만 (📎 📅)
-- 5줄 이내 / 짧고 전문적 / 궁금하게
-- 1:1 개인 발송 (1:다수 동시발송 금지)
-- 발송 전 제목·본문·서명·링크 전수 점검 필수
-- {담당자명}/{브랜드명} 치환 안 됐으면 발송 금지
-
-### 서명 표준 (피치)
-공팔리터 주니어 컨설턴트 / 피치 드림 / pitch@08liter.com / www.08liter.com
-
-### 핵심 링크
-- 상품소개서: https://buly.kr/AF24dn7
-- 30분 비대면 미팅: https://buly.kr/1c9NOdW
-
-### 퍼널: 신규 → 1차발송 → 답변수신 → 2차발송 → 미팅예약 → 계약
-### 답변 유형: 미팅수락(즉시링크) / 정보요청(안내+소개서) / 나중에(3주팔로업) / 거절(마무리)
-### 발송 규칙: 이메일 간 최소 2분 / 1회 최대 30건 / 발송 후 시트 즉시 업데이트
-
-## 피치 DB 소스 원칙
-- 발송 DB: 오직 피치 시트 "피치_클로드" 탭
-- 다른 시트(파센문의 등) 혼용 절대 금지
-- DB 수집 완료 → 피치_클로드 저장 확인 → 그 다음에만 이메일 제안 가능
-- 매일 09:00 순서: STEP1(DB확인) → STEP2(부족시수집) → STEP3(CEO검수)
-
-## 이메일 발송 시간 원칙 (절대 준수)
-
-### 국가별 발송 가능 시간 (현지 09:00~18:00)
-- 한국/일본: KST 09:00~18:00
-- 동남아(태국/인니/베트남): KST 10:00~19:00
-- 말레이시아/싱가포르: KST 09:00~18:00
-- 미국 동부: KST 22:00~07:00(다음날)
-- 미국 서부: KST 01:00~10:00(다음날)
-
-### 발송 금지: 현지 18:00 이후~09:00 이전 / 주말 / 공휴일
-### 언어: 한국→한국어 / 일본→일본어 / 그 외→영어
-
-## 루나 북미 특화 기준
-- 대상: US/CA, K-beauty 해시태그 보유 우선
-- 채널: 틱톡 50% + 인스타 50% = 매일 100명
-- K-beauty 해시태그: #kbeauty #kbeautyroutine #koreanskincare #koreanbeauty
-- 스케줄: 금~월 수집 → 월요일 09:00 CEO 승인 요청
-
-## 루나_클로드 시트 컬럼 (A~AS)
-- 기본: 수집일자/인플루언서명/본명/국가/언어
-- 채널: 주채널/링크/부채널/링크/팔로워/인게이지먼트/카테고리/최근포스팅일
-- 컨택: 이메일/출처/WhatsApp/기타
-- 발송: 발송일자/시안/유형/성공여부
-- 답변: 유형(긍정/조건협의/보류/거절/무응답)/수신일/요약
-- 정보수집: 본명/주소/정산방법/시작일
-- 계약: 2차발송/계약서발송/완료여부/완료일/상품명/원고료/기간/형식/2차저작권/스토리
-- 정산: 예정일/완료/금액
-- 최종: 상태/담당자/메모
+## 피치 발송 원칙
+- 발송 대상: 피치_클로드 탭 등록 DB만 (외부 수집 DB 제외)
+- CEO 승인 후 발송 (jacob@08liter.com 회신 감지)
