@@ -99,12 +99,12 @@ async def login_page(request: Request, error: str = ""):
     """건¡그인 폼 페이지"""
     if not DASH_USER or not DASH_PASS:
         return RedirectResponse("/", status_code=302)
-    _login_title = "08L AI \ub300\uc2dc\ubcf4\ub4dc"
-    _login_sub = "\ucee4\ub9e8\ub4dc \uc13c\ud130"
-    _login_err = "\uc544\uc774\ub514 \ub610\ub294 \ube44\ubc00\ubc88\ud638\uac00 \ud2c0\ub838\uc2b5\ub2c8\ub2e4."
-    _login_id = "\uc544\uc774\ub514"
-    _login_pw = "\ube44\ubc00\ubc88\ud638"
-    _login_btn = "\ub85c\uadf8\uc778"
+    _login_title = "08L AI 대시보드"
+    _login_sub = "커맨드 센터"
+    _login_err = "아이디 또는 비밀번호가 틀렸습니다."
+    _login_id = "아이디"
+    _login_pw = "비밀번호"
+    _login_btn = "로그인"
     html = f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{_login_title}</title>
@@ -410,12 +410,12 @@ SHEET_INFLUENCER = "1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs"
 SHEET_ADS = "1FOnGv2WMurqFo4Kpx0s4vltSkAeEEIm3yUTYhXSW2pU"
 
 # 시트 탭명 (환경변수 — 인코딩 깨짐 방지)
-TAB_CONTRACT = os.getenv("SHEET_TAB_CONTRACT", "\uacc4\uc0b0\uc11c\ubc1c\ud589")
-TAB_INBOUND = os.getenv("SHEET_TAB_INBOUND", "\ud30c\uc13c\ubb38\uc758")
-TAB_INFLUENCER = os.getenv("SHEET_TAB_INFLUENCER", "\ud604\ud669\uc2dc\ud2b8(\uc218\ub3d9\ub9e4\uce6d)")
-TAB_PITCH = os.getenv("SHEET_TAB_PITCH", "\ud53c\uce58_\ud074\ub85c\ub4dc")
-TAB_LUNA = os.getenv("SHEET_TAB_LUNA", "\ub8e8\ub098_\ud074\ub85c\ub4dc")
-TAB_SOPHIE = os.getenv("SHEET_TAB_SOPHIE", "\uc18c\ud53c_\ud074\ub85c\ub4dc")
+TAB_CONTRACT = os.getenv("SHEET_TAB_CONTRACT", "계산서발행")
+TAB_INBOUND = os.getenv("SHEET_TAB_INBOUND", "파센문의")
+TAB_INFLUENCER = os.getenv("SHEET_TAB_INFLUENCER", "현황시트(수동매칭)")
+TAB_PITCH = os.getenv("SHEET_TAB_PITCH", "피치_클로드")
+TAB_LUNA = os.getenv("SHEET_TAB_LUNA", "루나_클로드")
+TAB_SOPHIE = os.getenv("SHEET_TAB_SOPHIE", "소피_클로드")
 
 _cache: Dict[str, list] = {}
 _cache_time: Dict[str, float] = {}
@@ -2321,7 +2321,7 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: st
     from_email, sender_name = _get_from(agent_name)
     if not webhook_url:
         return {"status": "not_configured", "message": "EMAIL_WEBHOOK_URL 건¯¸설정 (Railway SMTP 차건¨으건¡ GAS 웹훅 필요)"}
-    agent_id = {"\ud53c\uce58": "pitch", "\ub8e8\ub098": "luna", "\uc18c\ud53c": "sophie", "\uce74\uc77c": "kyle"}.get(agent_name, "pitch")
+    agent_id = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle"}.get(agent_name, "pitch")
     payload = {"agent": agent_id, "to": to_email, "subject": subject, "body": body_text}
     if html_body:
         payload["htmlBody"] = html_body
@@ -2709,7 +2709,7 @@ async def api_pitch_send(request: Request):
             continue
         # GAS template mode: send action+template+vars only
         gas_payload = {"action": "send_pitch", "template": template_key, "to": email, "brand_name": brand, "contact_name": contact}
-        result = _send_email_smtp(email, subj, email_body, "\ud53c\uce58")
+        result = _send_email_smtp(email, subj, email_body, "피치")
         if result["status"] == "ok":
             sent += 1
         else:
@@ -3046,9 +3046,9 @@ async def api_pitch_pipeline_daily():
     """Pitch daily pipeline stats."""
     perf = load_agent_perf()
     today = datetime.now(KST).strftime("%Y-%m-%d")
-    tp = perf.get(today, {}).get("\ud53c\uce58", perf.get(today, {}).get("pitch", {}))
+    tp = perf.get(today, {}).get("피치", perf.get(today, {}).get("pitch", {}))
     queue = load_email_queue()
-    pending = sum(1 for q in queue if q.get("agent") in ("\ud53c\uce58", "pitch") and q.get("status") == "pending")
+    pending = sum(1 for q in queue if q.get("agent") in ("피치", "pitch") and q.get("status") == "pending")
     sent = tp.get("email_sent", 0) + tp.get("email_sent_batch", 0)
     rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
     target = max(len(rows) - 1, 0) if rows else 0
@@ -3060,11 +3060,11 @@ async def api_pitch_pipeline_daily():
     meeting_goal = pg.get("meeting", 10)
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": PITCH_SHEET_URL, "source": "\ud53c\uce58_\ud074\ub85c\ub4dc \ud0ed"},
-        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "\uc774\uba54\uc77c \ud050"},
-        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "\ubc1c\uc1a1 \uc131\uacf5 (\ubc18\uc1a1 \uc81c\uc678)"},
-        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com \uc218\uc2e0"},
-        "meeting": {"value": meeting, "goal": meeting_goal, "pct": min(round(meeting / max(meeting_goal, 1) * 100), 999), "link": "https://buly.kr/1c9NOdW", "source": "buly.kr \ud074\ub9ad \uae30\uc900"},
+        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": PITCH_SHEET_URL, "source": "피치_클로드 탭"},
+        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com 수신"},
+        "meeting": {"value": meeting, "goal": meeting_goal, "pct": min(round(meeting / max(meeting_goal, 1) * 100), 999), "link": "https://buly.kr/1c9NOdW", "source": "buly.kr 클릭 기준"},
         "conversion": {
             "pending_rate": f"{round(pending/max(target,1)*100)}%" if target else "0%",
             "sent_rate": f"{round(sent/max(target,1)*100)}%" if target else "0%",
@@ -3082,7 +3082,7 @@ async def api_pitch_pipeline_monthly():
     mp = {}
     for dk, ad in perf.items():
         if dk.startswith(month_prefix):
-            for key in ["\ud53c\uce58", "pitch"]:
+            for key in ["피치", "pitch"]:
                 if key in ad:
                     for mk, mv in ad[key].items():
                         mp[mk] = mp.get(mk, 0) + mv
@@ -3105,7 +3105,7 @@ async def api_luna_pipeline_daily():
     """Luna daily pipeline stats."""
     perf = load_agent_perf()
     today = datetime.now(KST).strftime("%Y-%m-%d")
-    tp = perf.get(today, {}).get("\ub8e8\ub098", perf.get(today, {}).get("luna", {}))
+    tp = perf.get(today, {}).get("루나", perf.get(today, {}).get("luna", {}))
     rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
     target = max(len(rows) - 1, 0) if rows else 0
     sent = tp.get("email_sent", 0) + tp.get("na_email_sent", 0)
@@ -3117,11 +3117,11 @@ async def api_luna_pipeline_daily():
     ct_goal = lg.get("contract", 80)
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "\uc778\ud50c\ub8e8\uc5b8\uc11c DB"},
-        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "\uc774\uba54\uc77c \ud050"},
-        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "\ubc1c\uc1a1 \uc131\uacf5 (\ubc18\uc1a1 \uc81c\uc678)"},
-        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com \uc218\uc2e0"},
-        "contract": {"value": contract, "goal": ct_goal, "pct": min(round(contract / max(ct_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "\uacc4\uc57d \uc644\ub8cc"},
+        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
+        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
+        "contract": {"value": contract, "goal": ct_goal, "pct": min(round(contract / max(ct_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "계약 완료"},
     }
 
 @app.get("/api/luna/pipeline/monthly")
@@ -3133,7 +3133,7 @@ async def api_luna_pipeline_monthly():
     mp = {}
     for dk, ad in perf.items():
         if dk.startswith(month_prefix):
-            for key in ["\ub8e8\ub098", "luna"]:
+            for key in ["루나", "luna"]:
                 if key in ad:
                     for mk, mv in ad[key].items():
                         mp[mk] = mp.get(mk, 0) + mv
@@ -3147,7 +3147,7 @@ async def api_luna_pipeline_monthly():
         "target": {"value": target, "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
         "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
         "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
-        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "\uacc4\uc57d \uc644\ub8cc"},
+        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "계약 완료"},
     }
 
 # ===== Max/Sophie/Ray/Hana Pipeline APIs =====
@@ -3157,14 +3157,14 @@ async def api_max_pipeline_daily():
     """Max daily ads pipeline: budget -> clicks -> visits -> CPA -> conversions."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
     perf = load_agent_perf()
-    tp = perf.get(today, {}).get("max", perf.get(today, {}).get("\ub9e5\uc2a4", {}))
+    tp = perf.get(today, {}).get("max", perf.get(today, {}).get("맥스", {}))
     return {
         "period": "daily", "date": today,
         "budget": {"value": tp.get("budget", 0), "source": "Meta+Kakao+Naver"},
-        "clicks": {"value": tp.get("clicks", 0), "source": "\ucd1d \ud074\ub9ad"},
-        "visits": {"value": tp.get("visits", 0), "source": "\uc720\uc785 \uc218"},
-        "cpa": {"value": tp.get("cpa", 0), "source": "\ubaa9\ud45c: \u20a910,000"},
-        "conversions": {"value": tp.get("conversions", 0), "source": "\uc804\ud658 \uac74\uc218"},
+        "clicks": {"value": tp.get("clicks", 0), "source": "총 클릭"},
+        "visits": {"value": tp.get("visits", 0), "source": "유입 수"},
+        "cpa": {"value": tp.get("cpa", 0), "source": "목표: ₩10,000"},
+        "conversions": {"value": tp.get("conversions", 0), "source": "전환 건수"},
     }
 
 @app.get("/api/max/pipeline/monthly")
@@ -3176,7 +3176,7 @@ async def api_max_pipeline_monthly():
     mp: Dict[str, int] = {}
     for dk, ad in perf.items():
         if dk.startswith(month_prefix):
-            for key in ["max", "\ub9e5\uc2a4"]:
+            for key in ["max", "맥스"]:
                 if key in ad:
                     for mk, mv in ad[key].items():
                         if isinstance(mv, (int, float)):
@@ -3184,10 +3184,10 @@ async def api_max_pipeline_monthly():
     return {
         "period": "monthly", "date": now.strftime("%Y-%m"),
         "budget": {"value": mp.get("budget", 0), "source": "Meta+Kakao+Naver"},
-        "clicks": {"value": mp.get("clicks", 0), "source": "\ucd1d \ud074\ub9ad"},
-        "visits": {"value": mp.get("visits", 0), "source": "\uc720\uc785 \uc218"},
-        "cpa": {"value": mp.get("cpa", 0), "source": "\ubaa9\ud45c: \u20a910,000"},
-        "conversions": {"value": mp.get("conversions", 0), "source": "\uc804\ud658 \uac74\uc218"},
+        "clicks": {"value": mp.get("clicks", 0), "source": "총 클릭"},
+        "visits": {"value": mp.get("visits", 0), "source": "유입 수"},
+        "cpa": {"value": mp.get("cpa", 0), "source": "목표: ₩10,000"},
+        "conversions": {"value": mp.get("conversions", 0), "source": "전환 건수"},
     }
 
 @app.get("/api/sophie/pipeline/daily")
@@ -3195,14 +3195,14 @@ async def api_sophie_pipeline_daily():
     """Sophie daily content pipeline."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
     perf = load_agent_perf()
-    tp = perf.get(today, {}).get("sophie", perf.get(today, {}).get("\uc18c\ud53c", {}))
+    tp = perf.get(today, {}).get("sophie", perf.get(today, {}).get("소피", {}))
     return {
         "period": "daily", "date": today,
-        "scheduled": {"value": tp.get("scheduled", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
-        "published": {"value": tp.get("published", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
-        "views": {"value": tp.get("views", 0), "source": "\uc870\ud68c\uc218"},
-        "engagement": {"value": tp.get("engagement", 0), "source": "\ucc38\uc5ec\uc728 (%)"},
-        "leads": {"value": tp.get("leads", 0), "source": "B2B+B2C \ub9ac\ub4dc"},
+        "scheduled": {"value": tp.get("scheduled", 0), "source": "발행 예정"},
+        "published": {"value": tp.get("published", 0), "source": "발행 완료"},
+        "views": {"value": tp.get("views", 0), "source": "조회수"},
+        "engagement": {"value": tp.get("engagement", 0), "source": "참여율 (%)"},
+        "leads": {"value": tp.get("leads", 0), "source": "B2B+B2C 리드"},
     }
 
 @app.get("/api/sophie/pipeline/monthly")
@@ -3214,18 +3214,18 @@ async def api_sophie_pipeline_monthly():
     mp: Dict[str, int] = {}
     for dk, ad in perf.items():
         if dk.startswith(month_prefix):
-            for key in ["sophie", "\uc18c\ud53c"]:
+            for key in ["sophie", "소피"]:
                 if key in ad:
                     for mk, mv in ad[key].items():
                         if isinstance(mv, (int, float)):
                             mp[mk] = mp.get(mk, 0) + mv
     return {
         "period": "monthly", "date": now.strftime("%Y-%m"),
-        "scheduled": {"value": mp.get("scheduled", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
-        "published": {"value": mp.get("published", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
-        "views": {"value": mp.get("views", 0), "source": "\uc870\ud68c\uc218"},
-        "engagement": {"value": mp.get("engagement", 0), "source": "\ucc38\uc5ec\uc728 (%)"},
-        "leads": {"value": mp.get("leads", 0), "source": "B2B+B2C \ub9ac\ub4dc"},
+        "scheduled": {"value": mp.get("scheduled", 0), "source": "발행 예정"},
+        "published": {"value": mp.get("published", 0), "source": "발행 완료"},
+        "views": {"value": mp.get("views", 0), "source": "조회수"},
+        "engagement": {"value": mp.get("engagement", 0), "source": "참여율 (%)"},
+        "leads": {"value": mp.get("leads", 0), "source": "B2B+B2C 리드"},
     }
 
 @app.get("/api/ray/pipeline/daily")
@@ -3233,13 +3233,13 @@ async def api_ray_pipeline_daily():
     """Ray daily invoice pipeline."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
     perf = load_agent_perf()
-    tp = perf.get(today, {}).get("ray", perf.get(today, {}).get("\ub808\uc774", {}))
+    tp = perf.get(today, {}).get("ray", perf.get(today, {}).get("레이", {}))
     return {
         "period": "daily", "date": today,
-        "issued": {"value": tp.get("issued", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
-        "collected": {"value": tp.get("collected", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
-        "paid": {"value": tp.get("paid", 0), "source": "\uc218\uae08 \uc644\ub8cc"},
-        "unpaid": {"value": tp.get("unpaid", 0), "source": "\ubbf8\uc218\uae08"},
+        "issued": {"value": tp.get("issued", 0), "source": "발행 예정"},
+        "collected": {"value": tp.get("collected", 0), "source": "발행 완료"},
+        "paid": {"value": tp.get("paid", 0), "source": "수금 완료"},
+        "unpaid": {"value": tp.get("unpaid", 0), "source": "미수금"},
     }
 
 @app.get("/api/ray/pipeline/monthly")
@@ -3251,17 +3251,17 @@ async def api_ray_pipeline_monthly():
     mp: Dict[str, int] = {}
     for dk, ad in perf.items():
         if dk.startswith(month_prefix):
-            for key in ["ray", "\ub808\uc774"]:
+            for key in ["ray", "레이"]:
                 if key in ad:
                     for mk, mv in ad[key].items():
                         if isinstance(mv, (int, float)):
                             mp[mk] = mp.get(mk, 0) + mv
     return {
         "period": "monthly", "date": now.strftime("%Y-%m"),
-        "issued": {"value": mp.get("issued", 0), "source": "\ubc1c\ud589 \uc608\uc815"},
-        "collected": {"value": mp.get("collected", 0), "source": "\ubc1c\ud589 \uc644\ub8cc"},
-        "paid": {"value": mp.get("paid", 0), "source": "\uc218\uae08 \uc644\ub8cc"},
-        "unpaid": {"value": mp.get("unpaid", 0), "source": "\ubbf8\uc218\uae08"},
+        "issued": {"value": mp.get("issued", 0), "source": "발행 예정"},
+        "collected": {"value": mp.get("collected", 0), "source": "발행 완료"},
+        "paid": {"value": mp.get("paid", 0), "source": "수금 완료"},
+        "unpaid": {"value": mp.get("unpaid", 0), "source": "미수금"},
     }
 
 @app.get("/api/hana/pipeline/daily")
@@ -3269,13 +3269,13 @@ async def api_hana_pipeline_daily():
     """Hana daily CS pipeline."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
     perf = load_agent_perf()
-    tp = perf.get(today, {}).get("hana", perf.get(today, {}).get("\ud558\ub098", {}))
+    tp = perf.get(today, {}).get("hana", perf.get(today, {}).get("하나", {}))
     return {
         "period": "daily", "date": today,
-        "new_inquiry": {"value": tp.get("new_inquiry", 0), "source": "\uc2e0\uaddc \ubb38\uc758"},
-        "in_progress": {"value": tp.get("in_progress", 0), "source": "\ucc98\ub9ac\uc911"},
-        "resolved": {"value": tp.get("resolved", 0), "source": "\uc644\ub8cc"},
-        "renewal": {"value": tp.get("renewal", 0), "source": "\uc7ac\uacc4\uc57d"},
+        "new_inquiry": {"value": tp.get("new_inquiry", 0), "source": "신규 문의"},
+        "in_progress": {"value": tp.get("in_progress", 0), "source": "처리중"},
+        "resolved": {"value": tp.get("resolved", 0), "source": "완료"},
+        "renewal": {"value": tp.get("renewal", 0), "source": "재계약"},
     }
 
 @app.get("/api/hana/pipeline/monthly")
@@ -3287,17 +3287,17 @@ async def api_hana_pipeline_monthly():
     mp: Dict[str, int] = {}
     for dk, ad in perf.items():
         if dk.startswith(month_prefix):
-            for key in ["hana", "\ud558\ub098"]:
+            for key in ["hana", "하나"]:
                 if key in ad:
                     for mk, mv in ad[key].items():
                         if isinstance(mv, (int, float)):
                             mp[mk] = mp.get(mk, 0) + mv
     return {
         "period": "monthly", "date": now.strftime("%Y-%m"),
-        "new_inquiry": {"value": mp.get("new_inquiry", 0), "source": "\uc2e0\uaddc \ubb38\uc758"},
-        "in_progress": {"value": mp.get("in_progress", 0), "source": "\ucc98\ub9ac\uc911"},
-        "resolved": {"value": mp.get("resolved", 0), "source": "\uc644\ub8cc"},
-        "renewal": {"value": mp.get("renewal", 0), "source": "\uc7ac\uacc4\uc57d"},
+        "new_inquiry": {"value": mp.get("new_inquiry", 0), "source": "신규 문의"},
+        "in_progress": {"value": mp.get("in_progress", 0), "source": "처리중"},
+        "resolved": {"value": mp.get("resolved", 0), "source": "완료"},
+        "renewal": {"value": mp.get("renewal", 0), "source": "재계약"},
     }
 
 async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
@@ -3566,6 +3566,19 @@ async def api_agent_performance(agent: Optional[str] = None):
 
 
 # ===== 건ª©표 설정 API =====
+LABELS_FILE = Path(__file__).parent / "labels.json"
+
+@app.get("/api/labels")
+async def api_get_labels():
+    if LABELS_FILE.exists():
+        return json.loads(LABELS_FILE.read_text(encoding="utf-8"))
+    return {}
+
+def _load_labels() -> dict:
+    if LABELS_FILE.exists():
+        return json.loads(LABELS_FILE.read_text(encoding="utf-8"))
+    return {}
+
 @app.get("/api/goals")
 async def api_get_goals():
     return load_goals()
@@ -4507,8 +4520,8 @@ async def api_calendar_meetings():
     if not creds or not cal_id:
         return {
             "status": "not_configured",
-            "message": "GOOGLE_CALENDAR_CREDENTIALS, GOOGLE_CALENDAR_ID \ud658\uacbd\ubcc0\uc218 \uc124\uc815 \ud544\uc694",
-            "fallback": "buly.kr \ud074\ub9ad \uc218 \uc0ac\uc6a9 \uc911",
+            "message": "GOOGLE_CALENDAR_CREDENTIALS, GOOGLE_CALENDAR_ID 환경변수 설정 필요",
+            "fallback": "buly.kr 클릭 수 사용 중",
         }
     return {"status": "configured", "today_meetings": 0, "month_meetings": 0, "source": "Google Calendar"}
 

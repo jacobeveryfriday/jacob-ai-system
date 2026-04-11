@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>08L_AI \ucee4\ub9e8\ub4dc \uc13c\ud130</title>
+<title>08L_AI 커맨드 센터</title>
 <link rel="stylesheet" href="/static/css/mckinsey.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -142,7 +142,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <body>
 <div class="app-layout">
 <aside class="sidebar" id="sidebar">
-<div class="sidebar-header"><a href="/" class="sidebar-logo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> 08L_AI</a><div class="sidebar-sub">\uacf5\ud314\ub9ac\ud130 \uae00\ub85c\ubc8c</div></div>
+<div class="sidebar-header"><a href="/" class="sidebar-logo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg> 08L_AI</a><div class="sidebar-sub">공팔리터 글로벌</div></div>
 <nav class="sidebar-nav">
 <div class="nav-group"><div class="nav-group-label" style="margin-top:8px">커맨드</div>
 <a href="#" class="nav-item active" data-page="overview"><i data-lucide="layout-dashboard"></i> 전체 현황</a>
@@ -173,27 +173,27 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <div id="page-overview" class="active">
 <div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 공팔리터 글로벌</div><div class="section-hdr-sub">이번 달 핵심 지표 (실시간)</div></div>
 <div id="overview-kpi-grid" class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">\uc774\ubc88\ub2ec \ub9e4\ucd9c</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">\ub9cc\uc6d0</span></div><div class="kpi-detail" id="ov-month-rev-sub">\ubaa9\ud45c 1.6\uc5b5 \u00b7 \ub2ec\uc131\ub960 -</div><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar" style="height:3px"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">\uc2e0\uaddc / \uc7ac\uacc4\uc57d</div></div><div class="kpi-value" id="ov-new-renew">-<span class="kpi-unit">\uac74</span></div><div class="kpi-detail" id="ov-new-renew-sub">\ucd1d \uacc4\uc57d -\uac74</div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">\uc778\ud50c\ub8e8\uc5b8\uc11c \ud480</div></div><div class="kpi-value" id="ov-inf-pool">-<span class="kpi-unit">\uba85</span></div><div class="kpi-detail" id="ov-inf-pool-sub">\uc774\ubc88\ub2ec \uc2e0\uaddc -\uba85</div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">\uc5d0\uc774\uc804\ud2b8 \uac00\ub3d9\ub960</div></div><div class="kpi-value" id="ov-agent-active">5 / 9</div><div class="kpi-detail" id="ov-agent-active-sub">\ud65c\uc131 5\uac1c \u00b7 \uc900\ube44\uc911 4\uac1c</div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 매출</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-month-rev-sub">목표 1.6억 · 달성률 -</div><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar" style="height:3px"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">신규 / 재계약</div></div><div class="kpi-value" id="ov-new-renew">-<span class="kpi-unit">건</span></div><div class="kpi-detail" id="ov-new-renew-sub">총 계약 -건</div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">인플루언서 풀</div></div><div class="kpi-value" id="ov-inf-pool">-<span class="kpi-unit">명</span></div><div class="kpi-detail" id="ov-inf-pool-sub">이번달 신규 -명</div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">에이전트 가동률</div></div><div class="kpi-value" id="ov-agent-active">5 / 9</div><div class="kpi-detail" id="ov-agent-active-sub">활성 5개 · 준비중 4개</div></div>
 </div>
-<!-- \uc5d0\uc774\uc804\ud2b8 \uc694\uc57d \ubc14 -->
+<!-- 에이전트 요약 바 -->
 <div id="agentSummaryBar" style="display:flex;gap:20px;background:var(--bg-tertiary);border-radius:8px;padding:10px 16px;margin-bottom:16px;align-items:center;flex-wrap:wrap"></div>
-<!-- \uc5d0\uc774\uc804\ud2b8 \ud604\ud669 \uce74\ub4dc -->
+<!-- 에이전트 현황 카드 -->
 <div id="agentGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px"></div>
-<!-- CEO \uc2b9\uc778 \ub300\uae30 -->
+<!-- CEO 승인 대기 -->
 <div style="margin-bottom:20px">
-<div class="section-hdr" style="margin-bottom:12px"><div class="section-hdr-title"><span class="section-hdr-dot"></span> CEO \uc2b9\uc778 \ub300\uae30</div><div class="section-hdr-sub" id="proposal-count">0\uac74</div></div>
+<div class="section-hdr" style="margin-bottom:12px"><div class="section-hdr-title"><span class="section-hdr-dot"></span> CEO 승인 대기</div><div class="section-hdr-sub" id="proposal-count">0건</div></div>
 <div id="proposalQueue" style="display:flex;flex-direction:column;gap:8px"></div>
 </div>
 <div style="margin-top:20px"><p style="font-size:14px;font-weight:700;color:#1B2A4A;margin-bottom:12px">전체현황 그래프 (구글시트 실데이터)</p>
 <div style="display:flex;gap:4px;margin-bottom:12px"><button onclick="loadOverviewCharts('daily')" id="ov-chart-daily" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#1B2A4A;color:#fff">일간</button><button onclick="loadOverviewCharts('monthly')" id="ov-chart-monthly" style="padding:4px 14px;border-radius:4px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:transparent;color:#9B9B9B">월간</button></div>
 <div id="ov-charts" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">매출 현황 (신규+재계약 스택)</p><div style="position:relative;height:180px"><canvas id="chart-ov-rev"></canvas></div><p id="ov-rev-basis" style="font-size:9px;color:#9B9B9B;margin-top:4px">\uad6c\uae00\uc2dc\ud2b8 \uc2e4\ub370\uc774\ud130 \u00b7 KST \uae30\uc900</p></div>
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">계약건수 현황 (신규+재계약)</p><div style="position:relative;height:180px"><canvas id="chart-ov-contracts"></canvas></div><p style="font-size:9px;color:#9B9B9B;margin-top:4px">\uad6c\uae00\uc2dc\ud2b8 \uc2e4\ub370\uc774\ud130 \u00b7 KST \uae30\uc900</p></div>
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">매출 현황 (신규+재계약 스택)</p><div style="position:relative;height:180px"><canvas id="chart-ov-rev"></canvas></div><p id="ov-rev-basis" style="font-size:9px;color:#9B9B9B;margin-top:4px">구글시트 실데이터 · KST 기준</p></div>
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">계약건수 현황 (신규+재계약)</p><div style="position:relative;height:180px"><canvas id="chart-ov-contracts"></canvas></div><p style="font-size:9px;color:#9B9B9B;margin-top:4px">구글시트 실데이터 · KST 기준</p></div>
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">계약상품별 분포</p><div style="position:relative;height:180px"><canvas id="chart-ov-products"></canvas></div></div>
-<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">충전금 vs 보상 비교</p><div style="position:relative;height:180px"><canvas id="chart-ov-payback"></canvas></div><p style="font-size:9px;color:#9B9B9B;margin-top:4px">\uc138\uae08\uacc4\uc0b0\uc11c \uc2dc\ud2b8 \uae30\uc900</p></div>
+<div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">충전금 vs 보상 비교</p><div style="position:relative;height:180px"><canvas id="chart-ov-payback"></canvas></div><p style="font-size:9px;color:#9B9B9B;margin-top:4px">세금계산서 시트 기준</p></div>
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;grid-column:1/3">
 <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:8px">충전금/보상 요약</p>
 <div id="payback-summary-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
@@ -231,34 +231,34 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-settings">
-<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> \uc124\uc815</div></div>
-<!-- \ub3d9\uae30\ud654 \uc548\ub0b4 \ubc30\ub108 -->
-<div style="background:rgba(184,134,11,0.06);border-left:3px solid #B8860B;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#1B2A4A;line-height:1.6">\ubaa9\ud45c\ub97c \uc800\uc7a5\ud558\uba74 \uce74\uc77c\u00b7\ud53c\uce58\u00b7\ub8e8\ub098\u00b7\ub9e5\uc2a4\u00b7\uc18c\ud53c\u00b7\ub808\uc774\u00b7\ud558\ub098 \uc804 \uc5d0\uc774\uc804\ud2b8\uc758 \uc9c4\ud589\ub960 \ubc14\uc640 KPI \ubaa9\ud45c\uac00 \uc989\uc2dc \ub3d9\uae30\ud654\ub429\ub2c8\ub2e4.</div>
+<div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 설정</div></div>
+<!-- 동기화 안내 배너 -->
+<div style="background:rgba(184,134,11,0.06);border-left:3px solid #B8860B;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#1B2A4A;line-height:1.6">목표를 저장하면 카일·피치·루나·맥스·소피·레이·하나 전 에이전트의 진행률 바와 KPI 목표가 즉시 동기화됩니다.</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">\uc6d4\uac04 \ubaa9\ud45c \uc124\uc815</p>
+<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">월간 목표 설정</p>
 <div id="goals-form" style="display:flex;flex-direction:column;gap:10px"></div>
-<button onclick="saveGoals()" id="goals-save-btn" style="margin-top:12px;padding:8px 20px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">\uc800\uc7a5 \ubc0f \uc804 \uc5d0\uc774\uc804\ud2b8 \ub3d9\uae30\ud654</button>
+<button onclick="saveGoals()" id="goals-save-btn" style="margin-top:12px;padding:8px 20px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">저장 및 전 에이전트 동기화</button>
 <p id="goals-msg" style="font-size:10px;color:#1A7A4C;margin-top:6px"></p>
 </div>
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">\uc54c\ub9bc \uae30\uc900</p>
-<p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">KPI \ubaa9\ud45c \ub300\ube44 \uc544\ub798 \ube44\uc728 \uc774\ud558 \uc2dc \uc804\uccb4 \uc54c\ub9bc \ubc1c\uc0dd</p>
+<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:14px">알림 기준</p>
+<p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">KPI 목표 대비 아래 비율 이하 시 전체 알림 발생</p>
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input id="goal-threshold" type="number" value="30" min="10" max="90" step="5" style="width:60px;padding:6px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px"><span style="font-size:12px;color:#6B6B6B">%</span></div>
-<p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">\uce74\uc77c \ubaa8\ub2c8\ud130\ub9c1 \uc8fc\uae30</p>
-<select id="goal-monitor-interval" style="padding:6px 10px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px"><option value="1">1\uc2dc\uac04</option><option value="2" selected>2\uc2dc\uac04</option><option value="4">4\uc2dc\uac04</option></select>
+<p style="font-size:11px;color:#6B6B6B;margin-bottom:8px">카일 모니터링 주기</p>
+<select id="goal-monitor-interval" style="padding:6px 10px;background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:6px;color:#1B2A4A;font-size:12px"><option value="1">1시간</option><option value="2" selected>2시간</option><option value="4">4시간</option></select>
 </div>
 </div>
-<!-- Google Calendar \uc5f0\ub3d9 -->
+<!-- Google Calendar 연동 -->
 <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:20px;margin-top:16px">
-<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:10px">Google Calendar \uc5f0\ub3d9</p>
-<div id="cal-status" style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="width:6px;height:6px;border-radius:50%;background:#9B9B9B;display:inline-block"></span><span style="font-size:11px;color:#6B6B6B">\ubbf8\uc5f0\ub3d9 (buly.kr \ud074\ub9ad \uc218 \ub300\uccb4)</span></div>
+<p style="font-size:13px;font-weight:700;color:#1B2A4A;margin-bottom:10px">Google Calendar 연동</p>
+<div id="cal-status" style="display:flex;align-items:center;gap:6px;margin-bottom:10px"><span style="width:6px;height:6px;border-radius:50%;background:#9B9B9B;display:inline-block"></span><span style="font-size:11px;color:#6B6B6B">미연동 (buly.kr 클릭 수 대체)</span></div>
 <div style="font-size:11px;color:#6B6B6B;line-height:1.8">
-<p style="font-weight:600;margin-bottom:4px">\uc5f0\ub3d9 \ubc29\ubc95:</p>
-<p>1. Google Cloud Console \u2192 Calendar API \ud65c\uc131\ud654</p>
-<p>2. \uc11c\ube44\uc2a4 \uacc4\uc815 JSON \ud0a4 \ubc1c\uae09</p>
-<p>3. Railway \ud658\uacbd\ubcc0\uc218 GOOGLE_CALENDAR_CREDENTIALS, GOOGLE_CALENDAR_ID \ucd94\uac00</p>
-<p>4. \uc800\uc7a5 \ud6c4 \uc790\ub3d9 \uc804\ud658</p>
+<p style="font-weight:600;margin-bottom:4px">연동 방법:</p>
+<p>1. Google Cloud Console → Calendar API 활성화</p>
+<p>2. 서비스 계정 JSON 키 발급</p>
+<p>3. Railway 환경변수 GOOGLE_CALENDAR_CREDENTIALS, GOOGLE_CALENDAR_ID 추가</p>
+<p>4. 저장 후 자동 전환</p>
 </div>
 </div>
 </div>
@@ -280,13 +280,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
   <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
   <!-- Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uc544\uc6c3\ubc14\uc6b4\ub4dc \ud30c\uc774\ud504\ub77c\uc778</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">오늘 아웃바운드 파이프라인</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="pitch-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uc22b\uc790 \ud074\ub9ad \uc2dc \uc2dc\ud2b8\ub85c \uc774\ub3d9</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">숫자 클릭 시 시트로 이동</p>
   </div>
   <!-- Monthly Pipeline -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">이번 달 성과 (누적)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="pitch-pipeline-monthly"></div>
   </div>
   <!-- 피치 성과 보고 -->
@@ -314,7 +314,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
   </div>
   <div id="brand-kpi-cards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
     <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #C4332B;border-radius:8px;padding:16px"><p style="font-size:10px;color:#6B6B6B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">금일 매출</p><p id="kpi-today-revenue" style="font-family:monospace;font-size:24px;font-weight:700;color:#C4332B">-</p><p id="kpi-today-revenue-sub" style="font-size:10px;color:#9B9B9B;margin-top:4px">-</p></div>
-    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:16px"><p style="font-size:10px;color:#6B6B6B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">이번달 매출</p><p id="kpi-month-revenue" style="font-family:monospace;font-size:24px;font-weight:700;color:#1B2A4A">-</p><p id="kpi-month-revenue-sub" style="font-size:10px;color:#9B9B9B;margin-top:4px">\ubaa9\ud45c 5\uc5b5</p><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" id="brand-rev-bar" style="width:0%"></div></div></div></div>
+    <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:16px"><p style="font-size:10px;color:#6B6B6B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">이번달 매출</p><p id="kpi-month-revenue" style="font-family:monospace;font-size:24px;font-weight:700;color:#1B2A4A">-</p><p id="kpi-month-revenue-sub" style="font-size:10px;color:#9B9B9B;margin-top:4px">목표 5억</p><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar"><div class="kpi-progress-fill watch" id="brand-rev-bar" style="width:0%"></div></div></div></div>
     <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:16px"><p style="font-size:10px;color:#6B6B6B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">계약 / 단가</p><p id="kpi-contract" style="font-family:monospace;font-size:24px;font-weight:700;color:#1A7A4C">-</p><p id="kpi-contract-sub" style="font-size:10px;color:#9B9B9B;margin-top:4px">평균 단가 -</p></div>
     <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #C4332B;border-radius:8px;padding:16px"><p style="font-size:10px;color:#6B6B6B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">미처리 파이프라인</p><p id="kpi-unhandled" style="font-family:monospace;font-size:24px;font-weight:700;color:#C4332B">-</p><p id="kpi-unhandled-sub" style="font-size:10px;color:#9B9B9B;margin-top:4px">즉시 대응 필요</p></div>
     <div style="background:#FFFFFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:16px"><p style="font-size:10px;color:#6B6B6B;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">전월 대비</p><p id="kpi-mom-change" style="font-family:monospace;font-size:24px;font-weight:700;color:#2D4A7A">-</p><p id="kpi-mom-change-sub" style="font-size:10px;color:#9B9B9B;margin-top:4px">매출 증감률</p></div>
@@ -384,13 +384,13 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
   <!-- 승인은 이메일(jacob@08liter.com 회신)로만 -->
   <!-- Luna Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uc778\ud50c\ub8e8\uc5b8\uc11c \ud30c\uc774\ud504\ub77c\uc778</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">오늘 인플루언서 파이프라인</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="luna-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uc22b\uc790 \ud074\ub9ad \uc2dc \uc2dc\ud2b8\ub85c \uc774\ub3d9</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">숫자 클릭 시 시트로 이동</p>
   </div>
   <!-- Luna Monthly -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">이번 달 성과 (누적)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="luna-pipeline-monthly"></div>
   </div>
   <!-- KPI + 파이프라인만 (승인은 이메일로) -->
@@ -467,112 +467,112 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <div id="page-ads">
   <!-- KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \uad11\uace0\ube44</p><p id="ads-budget-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">\u20a90</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ucc44\ub110\ubcc4 CPA</p><p id="ads-cpa-avg" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">\u20a90</p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\ubaa9\ud45c: \u20a910,000 \uc774\ud558</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \ud074\ub9ad</p><p id="ads-clicks-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc804\ud658 \uac74\uc218</p><p id="ads-conv-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="ads-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="ads-token-month">0</span></p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">오늘 광고비</p><p id="ads-budget-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">₩0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">채널별 CPA</p><p id="ads-cpa-avg" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">₩0</p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">목표: ₩10,000 이하</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">오늘 클릭</p><p id="ads-clicks-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">전환 건수</p><p id="ads-conv-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="ads-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="ads-token-month">0</span></p></div>
   </div>
   <!-- Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uad11\uace0 \ud30c\uc774\ud504\ub77c\uc778</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">오늘 광고 파이프라인</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="max-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uad11\uace0\ube44 \u2192 \ud074\ub9ad \u2192 \uc720\uc785 \u2192 CPA \u2192 \uc804\ud658</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">광고비 → 클릭 → 유입 → CPA → 전환</p>
   </div>
   <!-- Monthly Pipeline -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">이번 달 성과 (누적)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="max-pipeline-monthly"></div>
   </div>
   <!-- 채널별 성과 -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\ucc44\ub110\ubcc4 \uc131\uacfc</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">채널별 성과</p>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="ads-channel-cards">
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Meta</p><p id="ads-ch-meta" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">CPA \u20a9\u2014</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Kakao</p><p id="ads-ch-kakao" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">CPA \u20a9\u2014</p></div>
-      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Naver</p><p id="ads-ch-naver" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">CPA \u20a9\u2014</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Meta</p><p id="ads-ch-meta" style="font-family:monospace;font-size:16px;font-weight:700;color:#1B2A4A">CPA ₩—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Kakao</p><p id="ads-ch-kakao" style="font-family:monospace;font-size:16px;font-weight:700;color:#2D4A7A">CPA ₩—</p></div>
+      <div style="text-align:center;background:#F8F7F5;border-radius:6px;padding:10px"><p style="font-size:9px;color:#6B6B6B">Naver</p><p id="ads-ch-naver" style="font-family:monospace;font-size:16px;font-weight:700;color:#1A7A4C">CPA ₩—</p></div>
     </div>
-    <p style="font-size:9px;color:#9B9B9B;margin-top:8px">\ub9e5\uc2a4 \uc5d0\uc774\uc804\ud2b8 \uc790\ub3d9\ubd84\uc11d \u00b7 5\ubd84\ub9c8\ub2e4 \uac31\uc2e0</p>
+    <p style="font-size:9px;color:#9B9B9B;margin-top:8px">맥스 에이전트 자동분석 · 5분마다 갱신</p>
   </div>
 </div>
 
 <div id="page-sns">
   <!-- KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ube0c\ub79c\ub4dc \ub9ac\ub4dc (B2B)</p><p id="sns-b2b-leads" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">0 / 15</p><p style="font-size:8px;color:#9B9B9B">\uc77c\uc77c \ubaa9\ud45c</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc778\ud50c\ub8e8\uc5b8\uc11c \ub9ac\ub4dc (B2C)</p><p id="sns-b2c-leads" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">0 / 10</p><p style="font-size:8px;color:#9B9B9B">\uc77c\uc77c \ubaa9\ud45c</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \ucf58\ud150\uce20</p><p id="sns-today-content" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0 / 2</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ub9ac\ub4dc \uc804\ub2ec</p><p style="font-size:11px;color:#B8860B;margin-top:4px">Pitch 0 / Luna 0</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="sns-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="sns-token-month">0</span></p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">브랜드 리드 (B2B)</p><p id="sns-b2b-leads" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">0 / 15</p><p style="font-size:8px;color:#9B9B9B">일일 목표</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">인플루언서 리드 (B2C)</p><p id="sns-b2c-leads" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">0 / 10</p><p style="font-size:8px;color:#9B9B9B">일일 목표</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">오늘 콘텐츠</p><p id="sns-today-content" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0 / 2</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">리드 전달</p><p style="font-size:11px;color:#B8860B;margin-top:4px">Pitch 0 / Luna 0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="sns-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="sns-token-month">0</span></p></div>
   </div>
   <!-- Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \ucf58\ud150\uce20 \ud30c\uc774\ud504\ub77c\uc778</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">오늘 콘텐츠 파이프라인</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="sophie-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\ubc1c\ud589\uc608\uc815 \u2192 \ubc1c\ud589\uc644\ub8cc \u2192 \uc870\ud68c\uc218 \u2192 \ucc38\uc5ec\uc728 \u2192 \ub9ac\ub4dc</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">발행예정 → 발행완료 → 조회수 → 참여율 → 리드</p>
   </div>
   <!-- Monthly Pipeline -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">이번 달 성과 (누적)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px" id="sophie-pipeline-monthly"></div>
   </div>
   <!-- 콘텐츠 발행 현황 -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\ucf58\ud150\uce20 \ubc1c\ud589 \ud604\ud669</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">콘텐츠 발행 현황</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div style="background:#F8F7F5;border-radius:6px;padding:12px">
-        <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2B \ucf58\ud150\uce20</p>
-        <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">\ubc1c\ud589\uc644\ub8cc: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">\ub300\uae30\uc911: 0</span></div>
+        <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2B 콘텐츠</p>
+        <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">발행완료: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">대기중: 0</span></div>
       </div>
       <div style="background:#F8F7F5;border-radius:6px;padding:12px">
-        <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2C \ucf58\ud150\uce20</p>
-        <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">\ubc1c\ud589\uc644\ub8cc: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">\ub300\uae30\uc911: 0</span></div>
+        <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2C 콘텐츠</p>
+        <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">발행완료: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">대기중: 0</span></div>
       </div>
     </div>
-    <p style="font-size:9px;color:#9B9B9B;margin-top:8px">\uc18c\ud53c \uc5d0\uc774\uc804\ud2b8 \uc790\ub3d9\ubd84\uc11d \u00b7 5\ubd84\ub9c8\ub2e4 \uac31\uc2e0</p>
+    <p style="font-size:9px;color:#9B9B9B;margin-top:8px">소피 에이전트 자동분석 · 5분마다 갱신</p>
   </div>
 </div>
 
 <div id="page-management">
   <!-- KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc774\ubc88\ub2ec \ubc1c\ud589</p><p id="ray-issued-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">0\uac74</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc218\uae08\uc644\ub8cc</p><p id="ray-paid-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">\u20a90</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #C4332B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ubbf8\uc218\uae08</p><p id="ray-unpaid-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#C4332B;margin-top:4px">\u20a90</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc218\uae08\ub960</p><p id="ray-collect-rate" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0%</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="ray-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="ray-token-month">0</span></p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">이번달 발행</p><p id="ray-issued-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">0건</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">수금완료</p><p id="ray-paid-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">₩0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #C4332B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">미수금</p><p id="ray-unpaid-month" style="font-family:monospace;font-size:14px;font-weight:700;color:#C4332B;margin-top:4px">₩0</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">수금률</p><p id="ray-collect-rate" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0%</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="ray-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="ray-token-month">0</span></p></div>
   </div>
   <!-- Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 \uc138\uae08\uacc4\uc0b0\uc11c \ud30c\uc774\ud504\ub77c\uc778</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">오늘 세금계산서 파이프라인</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="ray-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\ubc1c\ud589\uc608\uc815 \u2192 \ubc1c\ud589\uc644\ub8cc \u2192 \uc218\uae08\uc644\ub8cc \u2192 \ubbf8\uc218\uae08</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">발행예정 → 발행완료 → 수금완료 → 미수금</p>
   </div>
   <!-- Monthly Pipeline -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">이번 달 성과 (누적)</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="ray-pipeline-monthly"></div>
   </div>
-  <p style="font-size:9px;color:#9B9B9B;margin-top:4px">\ub808\uc774 \uc5d0\uc774\uc804\ud2b8 \u00b7 \uad6c\uae00\uc2dc\ud2b8 \uc2e4\ub370\uc774\ud130 \uae30\ubc18 \u00b7 5\ubd84\ub9c8\ub2e4 \uac31\uc2e0</p>
+  <p style="font-size:9px;color:#9B9B9B;margin-top:4px">레이 에이전트 · 구글시트 실데이터 기반 · 5분마다 갱신</p>
 </div>
 <div id="page-cs">
   <!-- KPI 카드 -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px">
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc624\ub298 \ubb38\uc758 \uc811\uc218</p><p id="cs-inquiry-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0</p><p style="font-size:8px;color:#9B9B9B">\ube0c\ub79c\ub4dc+\uc778\ud50c\ub8e8\uc5b8\uc11c</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud574\uacb0 \uac74\uc218</p><p id="cs-resolved-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0</p><p style="font-size:8px;color:#9B9B9B">\uc624\ub298 \uae30\uc900</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud3c9\uade0 \uc751\ub2f5\uc2dc\uac04</p><p id="cs-avg-response" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">\u2014</p><p style="font-size:8px;color:#9B9B9B">\ubaa9\ud45c 15\ubd84 \uc774\ub0b4</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\uc5d0\uc774\uc804\ud2b8 \uc0c1\ud0dc</p><p id="cs-kakao-status" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">\ud655\uc778\uc911...</p></div>
-    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">\ud1a0\ud070 \ube44\uc6a9</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="cs-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">\uc774\ubc88\ub2ec $<span id="cs-token-month">0</span></p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">오늘 문의 접수</p><p id="cs-inquiry-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">0</p><p style="font-size:8px;color:#9B9B9B">브랜드+인플루언서</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">해결 건수</p><p id="cs-resolved-today" style="font-family:monospace;font-size:14px;font-weight:700;color:#1A7A4C;margin-top:4px">0</p><p style="font-size:8px;color:#9B9B9B">오늘 기준</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">평균 응답시간</p><p id="cs-avg-response" style="font-family:monospace;font-size:14px;font-weight:700;color:#2D4A7A;margin-top:4px">—</p><p style="font-size:8px;color:#9B9B9B">목표 15분 이내</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">에이전트 상태</p><p id="cs-kakao-status" style="font-family:monospace;font-size:14px;font-weight:700;color:#B8860B;margin-top:4px">확인중...</p></div>
+    <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #9B9B9B;border-radius:8px;padding:14px"><p style="font-size:9px;color:#6B6B6B">토큰 비용</p><p style="font-family:monospace;font-size:14px;font-weight:700;color:#1B2A4A;margin-top:4px">$<span id="cs-token-today">0</span></p><p style="font-size:8px;color:#9B9B9B;margin-top:2px">이번달 $<span id="cs-token-month">0</span></p></div>
   </div>
   <!-- Daily Pipeline -->
   <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc624\ub298 CS \ud30c\uc774\ud504\ub77c\uc778</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">오늘 CS 파이프라인</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="hana-pipeline-daily"></div>
-    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">\uc2e0\uaddc\ubb38\uc758 \u2192 \ucc98\ub9ac\uc911 \u2192 \uc644\ub8cc \u2192 \uc7ac\uacc4\uc57d</p>
+    <p style="font-size:8px;color:#9B9B9B;margin-top:6px">신규문의 → 처리중 → 완료 → 재계약</p>
   </div>
   <!-- Monthly Pipeline -->
   <div style="background:#F8F8F8;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">\uc774\ubc88 \ub2ec \uc131\uacfc (\ub204\uc801)</p>
+    <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">이번 달 성과 (누적)</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px" id="hana-pipeline-monthly"></div>
   </div>
 <div style="display:flex;gap:4px;background:#FFFFFF;padding:4px;border-radius:8px;width:fit-content;margin-bottom:16px">
@@ -670,7 +670,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 
 <script>
 var TITLES={overview:'전체 현황',alerts:'알림 센터',kpi:'카일 (총괄)',brand:'피치 (브랜드영업)',influencer:'루나 (인플루언서영업)',ads:'맥스 (광고운영)',sns:'소피 (콘텐츠마케터)',management:'레이 (경영지원)',cs:'하나 (CS)',settings:'설정','api-status':'API 상태'};
-var SL={on:'\uc815\uc0c1',watch:'\uc8fc\uc758',risk:'\uc704\ud5d8'};
+var SL={on:'정상',watch:'주의',risk:'위험'};
 var m8=['9월','10월','11월','12월','1월','2월','3월','4월'];
 var m6=['11월','12월','1월','2월','3월','4월'];
 var renderedPages={};var currentAgentId='overview';
@@ -737,8 +737,8 @@ mkKpi(dayDiv,[
 el.appendChild(dayDiv);
 // Month KPIs
 mkKpi(monDiv,[
-['매출',(m.revenue?(m.revenue/100000000).toFixed(2):'0'),'억원','watch','\ubaa9\ud45c 5\uc5b5'],
-['계약건수',String(m.contract||0),'건',m.contract>=20?'on':m.contract>=10?'watch':'risk','\ubaa9\ud45c 100\uac74 / '+Math.round((m.contract||0)/100*100)+'%'],
+['매출',(m.revenue?(m.revenue/100000000).toFixed(2):'0'),'억원','watch','목표 5억'],
+['계약건수',String(m.contract||0),'건',m.contract>=20?'on':m.contract>=10?'watch':'risk','목표 100건 / '+Math.round((m.contract||0)/100*100)+'%'],
 ['평균계약단가',((m.avg_price||0)/10000).toFixed(0),'만원',(m.avg_price||0)>=4200000?'on':'watch','목표 420만'],
 ['인입 DB',String(m.inbound_db||0),'건','on','유효 '+String(m.valid_db||0)+'건'],
 ['광고 ROAS',String(m.roas||0),'x',m.roas>=5?'on':'watch',''],
@@ -753,7 +753,7 @@ var boxData=[
 {title:'맞춤 인플루언서',id:'influencer-summary',page:'influencer',content:'총 풀: 140만명\n오늘 신규 확보: 28명\n이번 달 캠페인: 6건'},
 {title:'광고센터 현황',id:'ads-summary',page:'ads',content:'이번 달 ROAS: '+(m.roas||9.41)+'x\n총 DB: '+(m.total_db||43)+'건 / 광고비: '+((m.total_spend||24000000)/10000).toFixed(0)+'만원'},
 {title:'공식 SNS 현황',id:'sns-summary',page:'sns',content:'SNS 실데이터 연동 예정\nInstagram / TikTok / YouTube'},
-{title:'현금흐름 (이번 달)',id:'cashflow-summary',page:'management',content:'매출: '+(m.revenue?(m.revenue/100000000).toFixed(2):'0')+'억원\n\ubaa9\ud45c: 5\uc5b5\uc6d0\n달성률: '+Math.round((m.revenue||0)/500000000*100)+'%'},
+{title:'현금흐름 (이번 달)',id:'cashflow-summary',page:'management',content:'매출: '+(m.revenue?(m.revenue/100000000).toFixed(2):'0')+'억원\n목표: 5억원\n달성률: '+Math.round((m.revenue||0)/500000000*100)+'%'},
 {title:'CS & 경영지원',id:'cs-summary',page:'cs',content:'브랜드 CS: 오늘 5건 / 대기 2건\n인플루언서 CS: 오늘 3건 / 대기 1건\n정부지원: 진행 2건 / 신청예정 1건'}
 ];
 boxData.forEach(function(bd){
@@ -1058,7 +1058,7 @@ var lb=document.createElement('button');lb.className='ic-ex-btn';lb.textContent=
 var nb=document.createElement('button');nb.className='ic-ex-btn';nb.textContent='다음 액션 3가지';nb.addEventListener('click',function(){document.getElementById('chatInput').value='오늘/이번주/이번달 액션 각 1가지 알려줘';sendChat()});ab.appendChild(nb);
 g.appendChild(ab);
 msgs.appendChild(g);msgs.scrollTop=msgs.scrollHeight
-}).catch(function(){msgs.removeChild(loading);var g=document.createElement('div');g.className='ic-msg agent';g.textContent=a.name+' 에이전트입니다. 무엇을 도와드릴까요?';var ts=document.createElement('div');ts.className='ic-msg-time';ts.textContent='\uc2dc\uc2a4\ud15c';g.appendChild(ts);msgs.appendChild(g)})}
+}).catch(function(){msgs.removeChild(loading);var g=document.createElement('div');g.className='ic-msg agent';g.textContent=a.name+' 에이전트입니다. 무엇을 도와드릴까요?';var ts=document.createElement('div');ts.className='ic-msg-time';ts.textContent='시스템';g.appendChild(ts);msgs.appendChild(g)})}
 
 document.getElementById('chatSendBtn').addEventListener('click',sendChat);
 document.getElementById('chatInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}});
@@ -1123,19 +1123,19 @@ var cp=document.createElement('div');cp.style.cssText='font-size:11px;color:#6B6
 var as=document.createElement('div');as.style.cssText='font-size:9px;color:#9B9B9B;margin-top:4px';as.textContent='데이터: '+(adsData.source==='live'?'실시간':'샘플');ae.appendChild(as)}
 // Update overview KPI cards (실시간)
 var ovT=kpiData.today||{};var ovM=kpiData.month||{};
-// card1: \uc774\ubc88\ub2ec \ub9e4\ucd9c
-var e2=document.getElementById('ov-month-rev');if(e2)e2.innerHTML=Math.round((ovM.revenue||0)/10000).toLocaleString()+'<span class="kpi-unit">\ub9cc\uc6d0</span>';
+// card1: 이번달 매출
+var e2=document.getElementById('ov-month-rev');if(e2)e2.innerHTML=Math.round((ovM.revenue||0)/10000).toLocaleString()+'<span class="kpi-unit">만원</span>';
 var ovRevPct=Math.round((ovM.revenue||0)/500000000*100);
-var e2s=document.getElementById('ov-month-rev-sub');if(e2s)e2s.textContent='\ubaa9\ud45c 1.6\uc5b5 \u00b7 \ub2ec\uc131\ub960 '+ovRevPct+'%';
+var e2s=document.getElementById('ov-month-rev-sub');if(e2s)e2s.textContent='목표 1.6억 · 달성률 '+ovRevPct+'%';
 var e2b=document.getElementById('ov-month-rev-bar');if(e2b){e2b.style.width=Math.min(ovRevPct,100)+'%';e2b.className='kpi-progress-fill '+(ovRevPct>=80?'on':ovRevPct>=50?'watch':'risk')}
-// card2: \uc2e0\uaddc/\uc7ac\uacc4\uc57d
-var enr=document.getElementById('ov-new-renew');if(enr)enr.innerHTML=(ovM.new||0)+' / '+(ovM.renewal||0)+'<span class="kpi-unit">\uac74</span>';
+// card2: 신규/재계약
+var enr=document.getElementById('ov-new-renew');if(enr)enr.innerHTML=(ovM.new||0)+' / '+(ovM.renewal||0)+'<span class="kpi-unit">건</span>';
 var totalContract=(ovM.new||0)+(ovM.renewal||0);
-var enrs=document.getElementById('ov-new-renew-sub');if(enrs)enrs.textContent='\ucd1d \uacc4\uc57d '+totalContract+'\uac74';
-// card3: \uc778\ud50c\ub8e8\uc5b8\uc11c \ud480
-var eip=document.getElementById('ov-inf-pool');if(eip)eip.innerHTML=(infData.total||0).toLocaleString()+'<span class="kpi-unit">\uba85</span>';
-var eips=document.getElementById('ov-inf-pool-sub');if(eips)eips.textContent='\uc774\ubc88\ub2ec \uc2e0\uaddc '+(infData.month_new||0)+'\uba85';
-// card4: \uc5d0\uc774\uc804\ud2b8 \uac00\ub3d9\ub960 (\uace0\uc815)
+var enrs=document.getElementById('ov-new-renew-sub');if(enrs)enrs.textContent='총 계약 '+totalContract+'건';
+// card3: 인플루언서 풀
+var eip=document.getElementById('ov-inf-pool');if(eip)eip.innerHTML=(infData.total||0).toLocaleString()+'<span class="kpi-unit">명</span>';
+var eips=document.getElementById('ov-inf-pool-sub');if(eips)eips.textContent='이번달 신규 '+(infData.month_new||0)+'명';
+// card4: 에이전트 가동률 (고정)
 // agent cards + summary bar
 loadAgentCards(kpiData, brandData, infData);
 console.log('KPI data loaded:',kpiData.source);
@@ -1144,26 +1144,26 @@ loadKpiData();setInterval(loadKpiData,1800000);
 
 // ===== Agent Cards + Summary Bar (STEP 3+7) =====
 var goalLines={
-'\uce74\uc77c':'\uc774\ubc88\ub2ec \ub9e4\ucd9c 1.6\uc5b5 \ub2ec\uc131 \ubaa8\ub2c8\ud130\ub9c1',
-'\ud53c\uce58':'\uc774\ubc88\ub2ec \ube0c\ub79c\ub4dc DB 100\uac74 \ud655\ubcf4 \u2192 \ubbf8\ud305 10\uac74',
-'\ub8e8\ub098':'\ubdf0\ud2f0 \uc778\ud50c\ub8e8\uc5b8\uc11c 50\uba85 \ud655\ubcf4 \u2192 \ud611\ucc2c 5\uac74',
-'\ub808\uc774':'\uc774\ubc88\ub2ec \uc138\uae08\uacc4\uc0b0\uc11c \uc804\uac74 \ubc1c\ud589 \uc644\ub8cc',
-'\uc18c\ud53c':'SNS \ucf58\ud150\uce20 \uc8fc 3\ud68c \ubc1c\ud589 (\uc5f0\ub3d9 \ub300\uae30)',
-'\ud558\ub098':'CS \uc778\ubc14\uc6b4\ub4dc \ubb34\ub300\uc751 0\uac74 \uc720\uc9c0 (\uc5f0\ub3d9 \ub300\uae30)',
-'\ub9e5\uc2a4':'\uad11\uace0 ROAS 3.0 \uc774\uc0c1 \uc720\uc9c0 (\uc5f0\ub3d9 \ub300\uae30)'
+'카일':'이번달 매출 1.6억 달성 모니터링',
+'피치':'이번달 브랜드 DB 100건 확보 → 미팅 10건',
+'루나':'뷰티 인플루언서 50명 확보 → 협찬 5건',
+'레이':'이번달 세금계산서 전건 발행 완료',
+'소피':'SNS 콘텐츠 주 3회 발행 (연동 대기)',
+'하나':'CS 인바운드 무대응 0건 유지 (연동 대기)',
+'맥스':'광고 ROAS 3.0 이상 유지 (연동 대기)'
 };
 var conditions={
-'\uc18c\ud53c':'Instagram Business API \ud0a4 \ub4f1\ub85d \ud6c4 \ud65c\uc131\ud654',
-'\ud558\ub098':'\uce74\uce74\uc624\ud1a1 \ube44\uc988\ucc44\ub110 API \uc5f0\ub3d9 \ud6c4 \ud65c\uc131\ud654',
-'\ub9e5\uc2a4':'Meta Ads API \ud1a0\ud070 \uac31\uc2e0 \ud6c4 \ud65c\uc131\ud654',
-'\ub808\uc774':'(\ud604\uc7ac \uc138\uae08\uacc4\uc0b0\uc11c \uc810\uac80 \uc6b4\uc601 \uc911)'
+'소피':'Instagram Business API 키 등록 후 활성화',
+'하나':'카카오톡 비즈채널 API 연동 후 활성화',
+'맥스':'Meta Ads API 토큰 갱신 후 활성화',
+'레이':'(현재 세금계산서 점검 운영 중)'
 };
 function makeProgressBar(pct,todayCount){
 var wrap=document.createElement('div');wrap.style.cssText='margin:10px 0 8px';
 var topRow=document.createElement('div');topRow.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px';
 var pctEl=document.createElement('span');pctEl.style.cssText='font-family:var(--mono);font-size:18px;font-weight:700;color:'+(pct>=80?'var(--status-on)':pct>=50?'var(--status-watch)':'var(--status-risk)');
 pctEl.textContent=pct+'%';topRow.appendChild(pctEl);
-if(todayCount>0){var todayEl=document.createElement('span');todayEl.style.cssText='font-size:11px;color:var(--status-on);font-weight:600';todayEl.textContent='\uc624\ub298 +'+todayCount+'\uac74';topRow.appendChild(todayEl)}
+if(todayCount>0){var todayEl=document.createElement('span');todayEl.style.cssText='font-size:11px;color:var(--status-on);font-weight:600';todayEl.textContent='오늘 +'+todayCount+'건';topRow.appendChild(todayEl)}
 wrap.appendChild(topRow);
 var bar=document.createElement('div');bar.style.cssText='height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden';
 var fill=document.createElement('div');fill.style.cssText='height:100%;border-radius:3px;transition:width 0.6s ease;width:'+Math.min(pct,100)+'%;background:'+(pct>=80?'var(--status-on)':pct>=50?'var(--status-watch)':'var(--status-risk)');
@@ -1180,7 +1180,7 @@ var revenue=ovM.revenue||0;var contract=(ovM.new||0)+(ovM.renewal||0);
 // Fetch goals + pitch + luna pipeline data
 Promise.all([
 fetch('/api/goals').then(function(r){return r.json()}).catch(function(){return{}}),
-fetch('/api/sheet-pipeline?agent=\ud53c\uce58').then(function(r){return r.json()}).catch(function(){return{}}),
+fetch('/api/sheet-pipeline?agent=피치').then(function(r){return r.json()}).catch(function(){return{}}),
 fetch('/api/luna/pipeline/daily').then(function(r){return r.text()}).then(function(t){return JSON.parse(t)}).catch(function(){return{}})
 ]).then(function(results){
 var goalsData=results[0];var pitchData=results[1];var lunaData=results[2];
@@ -1194,24 +1194,24 @@ var meeting=(pitchData.total&&pitchData.total.meeting)||0;
 var lunaTarget=(lunaData.target&&lunaData.target.value)||0;
 var lunaConnected=lunaTarget>0;
 var agents=[
-{name:'\uce74\uc77c',role:'\ucd1d\uad04 \ub9e4\ub2c8\uc800',status:'\uc815\uc0c1\uc6b4\uc601',active:true,pct:Math.round(revenue/kyleRevTarget*100),today:0,
-badges:[{label:'\ub9e4\ucd9c',value:Math.round(revenue/10000).toLocaleString()+'\uc6d0'},{label:'\ubaa9\ud45c',value:Math.round(kyleRevTarget/100000000*10)/10+'\uc5b5'},{label:'\uacc4\uc57d',value:contract+'\uac74'}]},
-{name:'\ud53c\uce58',role:'\ube0c\ub79c\ub4dc\uc601\uc5c5',status:'\uc815\uc0c1\uc6b4\uc601',active:true,pct:Math.min(Math.round(month_db/pitchDbTarget*100),100),today:today_db,
-badges:[{label:'\uc774\ubc88\ub2ec DB',value:month_db+'/'+pitchDbTarget+'\uac74'},{label:'\uc624\ub298',value:'+'+today_db+'\uac74'},{label:'\ubbf8\ud305(\ub204\uc801)',value:meeting+'\uac74'}]},
-{name:'\ub8e8\ub098',role:'\uc778\ud50c\ub8e8\uc5b8\uc11c\uc601\uc5c5',status:lunaConnected?'\uc815\uc0c1\uc6b4\uc601':'\ub370\uc774\ud130 \uc5f0\ub3d9 \uc900\ube44\uc911',active:true,pct:lunaConnected?Math.min(Math.round(lunaTarget/lunaDbTarget*100),100):0,today:0,
-badges:[{label:'DB',value:lunaConnected?lunaTarget.toLocaleString()+'/'+lunaDbTarget+'\uba85':'\uc5f0\ub3d9 \uc900\ube44\uc911'}]},
-{name:'\ub808\uc774',role:'\uacbd\uc601\uc9c0\uc6d0',status:'\uc810\uac80\uc911',active:true,pct:-1,today:0,
-badges:[{label:'\uacc4\uc57d',value:contract+'\uac74'},{label:'\ubc1c\ud589 \uc810\uac80',value:'\uc9c4\ud589\uc911'}]},
-{name:'\uc18c\ud53c',role:'\ucf58\ud150\uce20\ub9c8\ucf00\ud130',status:'\uc5f0\ub3d9 \ub300\uae30',active:false,pct:0,today:0,badges:[]},
-{name:'\ud558\ub098',role:'CS',status:'\uc5f0\ub3d9 \ub300\uae30',active:false,pct:0,today:0,badges:[]},
-{name:'\ub9e5\uc2a4',role:'\uad11\uace0\uc6b4\uc601',status:'\uc5f0\ub3d9 \ub300\uae30',active:false,pct:0,today:0,badges:[]}
+{name:'카일',role:'총괄 매니저',status:'정상운영',active:true,pct:Math.round(revenue/kyleRevTarget*100),today:0,
+badges:[{label:'매출',value:Math.round(revenue/10000).toLocaleString()+'원'},{label:'목표',value:Math.round(kyleRevTarget/100000000*10)/10+'억'},{label:'계약',value:contract+'건'}]},
+{name:'피치',role:'브랜드영업',status:'정상운영',active:true,pct:Math.min(Math.round(month_db/pitchDbTarget*100),100),today:today_db,
+badges:[{label:'이번달 DB',value:month_db+'/'+pitchDbTarget+'건'},{label:'오늘',value:'+'+today_db+'건'},{label:'미팅(누적)',value:meeting+'건'}]},
+{name:'루나',role:'인플루언서영업',status:lunaConnected?'정상운영':'데이터 연동 준비중',active:true,pct:lunaConnected?Math.min(Math.round(lunaTarget/lunaDbTarget*100),100):0,today:0,
+badges:[{label:'DB',value:lunaConnected?lunaTarget.toLocaleString()+'/'+lunaDbTarget+'명':'연동 준비중'}]},
+{name:'레이',role:'경영지원',status:'점검중',active:true,pct:-1,today:0,
+badges:[{label:'계약',value:contract+'건'},{label:'발행 점검',value:'진행중'}]},
+{name:'소피',role:'콘텐츠마케터',status:'연동 대기',active:false,pct:0,today:0,badges:[]},
+{name:'하나',role:'CS',status:'연동 대기',active:false,pct:0,today:0,badges:[]},
+{name:'맥스',role:'광고운영',status:'연동 대기',active:false,pct:0,today:0,badges:[]}
 ];
 agents.forEach(function(ag){
 // Card
 var card=document.createElement('div');card.style.cssText='background:var(--bg-secondary);border:0.5px solid var(--border);border-radius:8px;padding:16px;border-left:3px solid '+(ag.active?'var(--status-on)':'var(--border)');
 // Header
 var hdr=document.createElement('div');hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px';
-var nameEl=document.createElement('span');nameEl.style.cssText='font-size:13px;font-weight:700;color:var(--text-primary)';nameEl.textContent=ag.name+' \u2014 '+ag.role;hdr.appendChild(nameEl);
+var nameEl=document.createElement('span');nameEl.style.cssText='font-size:13px;font-weight:700;color:var(--text-primary)';nameEl.textContent=ag.name+' — '+ag.role;hdr.appendChild(nameEl);
 var pill=document.createElement('span');pill.style.cssText='font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;background:'+(ag.active?'rgba(26,122,76,0.1)':'rgba(155,155,155,0.1)')+';color:'+(ag.active?'#1A7A4C':'#9B9B9B');
 pill.textContent=ag.status;hdr.appendChild(pill);card.appendChild(hdr);
 // Goal line
@@ -1219,17 +1219,17 @@ var goal=document.createElement('p');goal.style.cssText='font-size:11px;color:va
 goal.textContent='\ud83c\udfaf '+(goalLines[ag.name]||'');card.appendChild(goal);
 // Progress bar or condition text
 if(ag.active&&ag.pct>=0){card.appendChild(makeProgressBar(ag.pct,ag.today))}
-else if(ag.pct===-1){var chk=document.createElement('p');chk.style.cssText='font-size:12px;color:var(--status-watch);font-weight:600;margin:8px 0';chk.textContent='\uc810\uac80\uc911';card.appendChild(chk)}
+else if(ag.pct===-1){var chk=document.createElement('p');chk.style.cssText='font-size:12px;color:var(--status-watch);font-weight:600;margin:8px 0';chk.textContent='점검중';card.appendChild(chk)}
 else if(conditions[ag.name]){var cond=document.createElement('p');cond.style.cssText='font-size:11px;color:var(--text-muted);margin:8px 0';cond.textContent=conditions[ag.name];card.appendChild(cond)}
 // Badges
 if(ag.badges.length)card.appendChild(makeBadgeRow(ag.badges));
 // Detail toggle
 var detailWrap=document.createElement('div');
 var detailContent=document.createElement('div');detailContent.style.cssText='display:none;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);font-size:11px;color:var(--text-secondary);line-height:1.6';
-detailContent.innerHTML='\ubaa9\ud45c: '+(goalLines[ag.name]||'-')+'<br>\uc0c1\ud0dc: '+ag.status;
+detailContent.innerHTML='목표: '+(goalLines[ag.name]||'-')+'<br>상태: '+ag.status;
 var toggleBtn=document.createElement('button');toggleBtn.style.cssText='background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:4px 0';
-toggleBtn.textContent='\u25bc \uc0c1\uc138';
-toggleBtn.addEventListener('click',function(){var open=detailContent.style.display!=='none';detailContent.style.display=open?'none':'block';toggleBtn.textContent=open?'\u25bc \uc0c1\uc138':'\u25b2 \ub2eb\uae30'});
+toggleBtn.textContent='▼ 상세';
+toggleBtn.addEventListener('click',function(){var open=detailContent.style.display!=='none';detailContent.style.display=open?'none':'block';toggleBtn.textContent=open?'▼ 상세':'▲ 닫기'});
 detailWrap.appendChild(toggleBtn);detailWrap.appendChild(detailContent);card.appendChild(detailWrap);
 grid.appendChild(card);
 // Summary bar mini item
@@ -1241,7 +1241,7 @@ var mFill=document.createElement('div');mFill.style.cssText='height:100%;border-
 mBar.appendChild(mFill);mini.appendChild(mBar);
 var mPct=document.createElement('span');mPct.style.cssText='font-family:var(--mono);font-size:10px;font-weight:600;color:'+(ag.pct>=80?'var(--status-on)':ag.pct>=50?'var(--status-watch)':'var(--status-risk)');
 mPct.textContent=ag.pct+'%';mini.appendChild(mPct)}
-else{var mStat=document.createElement('span');mStat.style.cssText='font-size:10px;color:var(--text-muted)';mStat.textContent=ag.pct===-1?'\uc810\uac80\uc911':'\ub300\uae30';mini.appendChild(mStat)}
+else{var mStat=document.createElement('span');mStat.style.cssText='font-size:10px;color:var(--text-muted)';mStat.textContent=ag.pct===-1?'점검중':'대기';mini.appendChild(mStat)}
 sumBar.appendChild(mini)})})
 }
 
@@ -1251,9 +1251,9 @@ function loadProposalQueue(){
 fetch('/api/proposals').then(function(r){return r.json()}).then(function(resp){
 var list=resp.proposals||resp||[];
 var pending=(list).filter(function(p){return p.status==='pending'||p.status==='pending_approval'});
-var cntEl=document.getElementById('proposal-count');if(cntEl)cntEl.textContent=pending.length+'\uac74';
+var cntEl=document.getElementById('proposal-count');if(cntEl)cntEl.textContent=pending.length+'건';
 var el=document.getElementById('proposalQueue');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
-if(!pending.length){var empty=document.createElement('p');empty.style.cssText='font-size:11px;color:var(--text-muted);padding:8px';empty.textContent='\uc2b9\uc778 \ub300\uae30 \ud56d\ubaa9 \uc5c6\uc74c';el.appendChild(empty);return}
+if(!pending.length){var empty=document.createElement('p');empty.style.cssText='font-size:11px;color:var(--text-muted);padding:8px';empty.textContent='승인 대기 항목 없음';el.appendChild(empty);return}
 pending.forEach(function(p){
 var card=document.createElement('div');card.style.cssText='background:var(--bg-secondary);border:0.5px solid var(--border);border-radius:8px;padding:12px 16px';
 // header row
@@ -1268,16 +1268,16 @@ var badgeArea=document.createElement('div');badgeArea.style.cssText='display:fle
 if(p.expected_impact){var impact=document.createElement('span');impact.style.cssText='font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(26,122,76,0.08);color:#1A7A4C;font-weight:600';impact.textContent=p.expected_impact;badgeArea.appendChild(impact)}
 // more toggle
 var fullDetail=document.createElement('div');fullDetail.style.cssText='display:none;font-size:11px;color:var(--text-secondary);margin-top:6px;padding-top:6px;border-top:0.5px solid var(--border);line-height:1.6;white-space:pre-line';
-fullDetail.textContent=(p.detail||'')+'\n\n\uc2dc\ud2b8: '+(p.sheet_url||'-');
-var moreBtn=document.createElement('button');moreBtn.style.cssText='background:none;border:none;color:var(--text-muted);font-size:10px;cursor:pointer;padding:2px 4px';moreBtn.textContent='\u25bc \ub354\ubcf4\uae30';
-moreBtn.addEventListener('click',function(){var open=fullDetail.style.display!=='none';fullDetail.style.display=open?'none':'block';detail.style.maxHeight=open?'40px':'none';moreBtn.textContent=open?'\u25bc \ub354\ubcf4\uae30':'\u25b2 \uc811\uae30'});
+fullDetail.textContent=(p.detail||'')+'\n\n시트: '+(p.sheet_url||'-');
+var moreBtn=document.createElement('button');moreBtn.style.cssText='background:none;border:none;color:var(--text-muted);font-size:10px;cursor:pointer;padding:2px 4px';moreBtn.textContent='▼ 더보기';
+moreBtn.addEventListener('click',function(){var open=fullDetail.style.display!=='none';fullDetail.style.display=open?'none':'block';detail.style.maxHeight=open?'40px':'none';moreBtn.textContent=open?'▼ 더보기':'▲ 접기'});
 badgeArea.appendChild(moreBtn);row.appendChild(badgeArea);
 // action buttons
 var btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px';
-var approveBtn=document.createElement('button');approveBtn.style.cssText='padding:4px 12px;background:#1A7A4C;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer;font-weight:600';approveBtn.textContent='\uc2b9\uc778';
+var approveBtn=document.createElement('button');approveBtn.style.cssText='padding:4px 12px;background:#1A7A4C;border:none;border-radius:4px;color:#fff;font-size:10px;cursor:pointer;font-weight:600';approveBtn.textContent='승인';
 approveBtn.addEventListener('click',function(){fetch('/api/proposals/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id})}).then(function(){loadProposalQueue()})});btns.appendChild(approveBtn);
-var editBtn=document.createElement('button');editBtn.style.cssText='padding:4px 12px;background:var(--bg-tertiary);border:0.5px solid var(--border);border-radius:4px;color:var(--text-secondary);font-size:10px;cursor:pointer;font-weight:600';editBtn.textContent='\uc218\uc815\uc694\uccad';btns.appendChild(editBtn);
-var rejectBtn=document.createElement('button');rejectBtn.style.cssText='padding:4px 12px;background:rgba(196,51,43,0.08);border:none;border-radius:4px;color:#C4332B;font-size:10px;cursor:pointer;font-weight:600';rejectBtn.textContent='\uac70\uc808';
+var editBtn=document.createElement('button');editBtn.style.cssText='padding:4px 12px;background:var(--bg-tertiary);border:0.5px solid var(--border);border-radius:4px;color:var(--text-secondary);font-size:10px;cursor:pointer;font-weight:600';editBtn.textContent='수정요청';btns.appendChild(editBtn);
+var rejectBtn=document.createElement('button');rejectBtn.style.cssText='padding:4px 12px;background:rgba(196,51,43,0.08);border:none;border-radius:4px;color:#C4332B;font-size:10px;cursor:pointer;font-weight:600';rejectBtn.textContent='거절';
 rejectBtn.addEventListener('click',function(){fetch('/api/proposals/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:p.id})}).then(function(){loadProposalQueue()})});btns.appendChild(rejectBtn);
 row.appendChild(btns);card.appendChild(row);card.appendChild(fullDetail);
 el.appendChild(card)})}).catch(function(){})}
@@ -1370,7 +1370,7 @@ if(revSub)revSub.textContent='계약 '+(t.contract||0)+'건';
 var mRevEl=document.getElementById('kpi-month-revenue');var mRevSub=document.getElementById('kpi-month-revenue-sub');
 var monthRev=m.revenue||0;var revPct=Math.round(monthRev/500000000*100);
 if(mRevEl)mRevEl.textContent=Math.round(monthRev/10000).toLocaleString()+'만원';
-if(mRevSub)mRevSub.textContent='\ubaa9\ud45c 5\uc5b5 / 달성률 '+revPct+'%';
+if(mRevSub)mRevSub.textContent='목표 5억 / 달성률 '+revPct+'%';
 var revBar=document.getElementById('brand-rev-bar');
 if(revBar){revBar.style.width=Math.min(revPct,100)+'%';revBar.className='kpi-progress-fill '+(revPct>=70?'on':revPct>=40?'watch':'risk')}
 // 3. 계약 / 단가
@@ -1528,7 +1528,7 @@ document.getElementById('inf-tab-monthly').style.color=tab==='monthly'?'#fff':'#
 function toggleTask(el){var span=el.parentElement.querySelector('span');
 if(el.checked){span.style.textDecoration='line-through';span.style.color='#4A5568'}
 else{span.style.textDecoration='none';span.style.color='#94A3B8'}}
-function toggleMobileChat(){var cp=document.getElementById('rightChat');if(!cp)return;cp.classList.toggle('open');var btn=document.getElementById('chatFloatBtn');if(btn)btn.textContent=cp.classList.contains('open')?'\u2715':'\uD83D\uDCAC'}
+function toggleMobileChat(){var cp=document.getElementById('rightChat');if(!cp)return;cp.classList.toggle('open');var btn=document.getElementById('chatFloatBtn');if(btn)btn.textContent=cp.classList.contains('open')?'✕':'\uD83D\uDCAC'}
 
 // ===== showPage hook =====
 // ===== 인플루언서 차트 + KPI =====
@@ -1861,11 +1861,11 @@ function renderPipeline(containerId, data, lastLabel, customKeys, customLabels) 
 var el=document.getElementById(containerId);if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
 var keys=customKeys||['target','pending','sent','replied',lastLabel||'meeting'];
 var colors=['#1B2A4A','#B8860B','#2D4A7A','#1A7A4C','#1A7A4C'];
-var defaultLabelMap={target:'\ud0c0\uac9f',pending:'\ub300\uae30',sent:'\ubc1c\uc1a1 \uc131\uacf5',replied:'\ub2f5\ubcc0',meeting:'\ubbf8\ud305',contract:'\uacc4\uc57d',
-budget:'\uad11\uace0\ube44',clicks:'\ud074\ub9ad',visits:'\uc720\uc785',cpa:'CPA',conversions:'\uc804\ud658',
-scheduled:'\ubc1c\ud589\uc608\uc815',published:'\ubc1c\ud589\uc644\ub8cc',views:'\uc870\ud68c\uc218',engagement:'\ucc38\uc5ec\uc728',leads:'\ub9ac\ub4dc',
-issued:'\ubc1c\ud589\uc608\uc815',collected:'\ubc1c\ud589\uc644\ub8cc',paid:'\uc218\uae08\uc644\ub8cc',unpaid:'\ubbf8\uc218\uae08',
-new_inquiry:'\uc2e0\uaddc\ubb38\uc758',in_progress:'\ucc98\ub9ac\uc911',resolved:'\uc644\ub8cc',renewal:'\uc7ac\uacc4\uc57d'};
+var defaultLabelMap={target:'타겟',pending:'대기',sent:'발송 성공',replied:'답변',meeting:'미팅',contract:'계약',
+budget:'광고비',clicks:'클릭',visits:'유입',cpa:'CPA',conversions:'전환',
+scheduled:'발행예정',published:'발행완료',views:'조회수',engagement:'참여율',leads:'리드',
+issued:'발행예정',collected:'발행완료',paid:'수금완료',unpaid:'미수금',
+new_inquiry:'신규문의',in_progress:'처리중',resolved:'완료',renewal:'재계약'};
 var labelMap=customLabels?Object.assign({},defaultLabelMap,customLabels):defaultLabelMap;
 keys.forEach(function(k,i){
 var item=data[k]||{value:0,link:'',source:''};
@@ -1873,11 +1873,11 @@ var card=document.createElement('a');card.href=item.link||'#';card.target='_blan
 card.style.cssText='text-align:center;background:#F8F7F5;border-radius:6px;padding:10px 6px;text-decoration:none;cursor:pointer';
 var num=document.createElement('p');num.style.cssText='font-family:monospace;font-size:18px;font-weight:700;color:'+colors[i%colors.length];num.textContent=item.value||0;card.appendChild(num);
 var label=document.createElement('p');label.style.cssText='font-size:8px;color:#6B6B6B;margin-top:2px';label.textContent=labelMap[k]||k;card.appendChild(label);
-if(item.goal){var goalEl=document.createElement('p');goalEl.style.cssText='font-size:11px;color:var(--text-muted,#9B9B9B);margin-top:1px';goalEl.textContent='\ubaa9\ud45c '+item.goal+'\uac74';card.appendChild(goalEl)}
+if(item.goal){var goalEl=document.createElement('p');goalEl.style.cssText='font-size:11px;color:var(--text-muted,#9B9B9B);margin-top:1px';goalEl.textContent='목표 '+item.goal+'건';card.appendChild(goalEl)}
 var src=document.createElement('p');src.style.cssText='font-size:7px;color:#BFBFBF;margin-top:1px';src.textContent=item.source||'';card.appendChild(src);
 el.appendChild(card)});
 if(data.conversion){var cv=data.conversion;var cvEl=document.createElement('div');cvEl.style.cssText='grid-column:1/-1;font-size:8px;color:#9B9B9B;margin-top:4px';
-cvEl.textContent='\uc804\ud658\uc728: \ubc1c\uc1a1\ub960 '+(cv.sent_rate||'0%')+' | \ub2f5\ubcc0\ub960 '+(cv.reply_rate||'0%')+' | \ubbf8\ud305\ub960 '+(cv.meeting_rate||'0%');el.appendChild(cvEl)}}
+cvEl.textContent='전환율: 발송률 '+(cv.sent_rate||'0%')+' | 답변률 '+(cv.reply_rate||'0%')+' | 미팅률 '+(cv.meeting_rate||'0%');el.appendChild(cvEl)}}
 function loadPipelineData(){
 fetch('/api/pitch/pipeline/daily').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-daily',JSON.parse(t),'meeting')}).catch(function(){});
 fetch('/api/pitch/pipeline/monthly').then(function(r){return r.text()}).then(function(t){renderPipeline('pitch-pipeline-monthly',JSON.parse(t),'meeting')}).catch(function(){});
@@ -2010,11 +2010,11 @@ fetch('/api/goals').then(function(r){return r.json()}).then(function(g){
 var el=document.getElementById('goals-form');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
 var m=g.monthly||{};
 var fields=[
-['revenue','\ub9e4\ucd9c \ubaa9\ud45c (\uc6d0)',m.revenue||g.revenue||500000000,['\uce74\uc77c','\ub808\uc774']],
-['contract','\uacc4\uc57d \uac74\uc218',m.contract||g.contracts||100,['\ud53c\uce58','\ub8e8\ub098']],
-['inbound_db','\uc778\uc785DB \ubaa9\ud45c',m.inbound_db||g.inbound_db||2000,['\ud53c\uce58']],
-['valid_db','\uc720\ud6a8DB \ubaa9\ud45c',m.valid_db||g.valid_db||600,['\ub8e8\ub098']],
-['cpa','CPA \ubaa9\ud45c (\uc6d0)',m.cpa||g.cpa||10000,['\ub9e5\uc2a4']]
+['revenue','매출 목표 (원)',m.revenue||g.revenue||500000000,['카일','레이']],
+['contract','계약 건수',m.contract||g.contracts||100,['피치','루나']],
+['inbound_db','인입DB 목표',m.inbound_db||g.inbound_db||2000,['피치']],
+['valid_db','유효DB 목표',m.valid_db||g.valid_db||600,['루나']],
+['cpa','CPA 목표 (원)',m.cpa||g.cpa||10000,['맥스']]
 ];
 fields.forEach(function(f){
 var row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:8px';
@@ -2034,8 +2034,8 @@ var monthly={};
 var th=document.getElementById('goal-threshold');if(th)monthly.alert_threshold_pct=parseInt(th.value)||30;
 var mi=document.getElementById('goal-monitor-interval');if(mi)monthly.kyle_monitor_interval_hours=parseInt(mi.value)||2;
 fetch('/api/goals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({monthly:monthly})}).then(function(r){return r.json()}).then(function(d){
-var m=document.getElementById('goals-msg');if(m){m.style.color='#1A7A4C';m.textContent='\u2713 \uc804 \uc5d0\uc774\uc804\ud2b8 \ubaa9\ud45c \ub3d9\uae30\ud654 \uc644\ub8cc ('+(d.updated_at||'')+')'}
-}).catch(function(){var m=document.getElementById('goals-msg');if(m){m.style.color='#C4332B';m.textContent='\uc624\ub958 \ubc1c\uc0dd'}})}
+var m=document.getElementById('goals-msg');if(m){m.style.color='#1A7A4C';m.textContent='✓ 전 에이전트 목표 동기화 완료 ('+(d.updated_at||'')+')'}
+}).catch(function(){var m=document.getElementById('goals-msg');if(m){m.style.color='#C4332B';m.textContent='오류 발생'}})}
 
 // ===== 인플루언서 국가 필터 (탭1 회원현황) =====
 var _infCountryFilter='';
