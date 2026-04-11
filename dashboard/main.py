@@ -357,9 +357,28 @@ def save_alerts(data: list):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     ALERTS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
+def _fix_korean(s: str) -> str:
+    """Fix latin-1 mis-encoded Korean strings."""
+    if not s or not isinstance(s, str):
+        return s
+    try:
+        return s.encode("latin-1").decode("utf-8")
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        return s
+
 def load_proposals() -> list:
     if PROPOSALS_FILE.exists():
-        return json.loads(PROPOSALS_FILE.read_text(encoding="utf-8"))
+        proposals = json.loads(PROPOSALS_FILE.read_text(encoding="utf-8"))
+        for p in proposals:
+            if "agent" in p:
+                p["agent"] = _fix_korean(p["agent"])
+            if "proposal" in p:
+                p["proposal"] = _fix_korean(p["proposal"])
+            if "detail" in p:
+                p["detail"] = _fix_korean(p["detail"])
+            if "expected_impact" in p:
+                p["expected_impact"] = _fix_korean(p["expected_impact"])
+        return proposals
     return []
 
 def save_proposals(data: list):

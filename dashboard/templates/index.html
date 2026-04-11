@@ -1234,9 +1234,11 @@ sumBar.appendChild(mini)})})
 }
 
 // ===== CEO Approval Queue (STEP 4) =====
+function fixKorean(str){try{return decodeURIComponent(escape(str))}catch(e){return str}}
 function loadProposalQueue(){
-fetch('/api/proposals').then(function(r){return r.json()}).then(function(list){
-var pending=(list||[]).filter(function(p){return p.status==='pending'});
+fetch('/api/proposals').then(function(r){return r.json()}).then(function(resp){
+var list=resp.proposals||resp||[];
+var pending=(list).filter(function(p){return p.status==='pending'||p.status==='pending_approval'});
 var cntEl=document.getElementById('proposal-count');if(cntEl)cntEl.textContent=pending.length+'\uac74';
 var el=document.getElementById('proposalQueue');if(!el)return;while(el.firstChild)el.removeChild(el.firstChild);
 if(!pending.length){var empty=document.createElement('p');empty.style.cssText='font-size:11px;color:var(--text-muted);padding:8px';empty.textContent='\uc2b9\uc778 \ub300\uae30 \ud56d\ubaa9 \uc5c6\uc74c';el.appendChild(empty);return}
@@ -1244,7 +1246,7 @@ pending.forEach(function(p){
 var card=document.createElement('div');card.style.cssText='background:var(--bg-secondary);border:0.5px solid var(--border);border-radius:8px;padding:12px 16px';
 // header row
 var hdr=document.createElement('div');hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px';
-var left=document.createElement('span');left.style.cssText='font-size:12px;font-weight:600;color:var(--text-primary)';left.textContent='['+(p.agent||'')+'] '+(p.proposal||'');hdr.appendChild(left);
+var left=document.createElement('span');left.style.cssText='font-size:12px;font-weight:600;color:var(--text-primary)';left.textContent='['+fixKorean(p.agent||'')+'] '+fixKorean(p.proposal||'');hdr.appendChild(left);
 var time=document.createElement('span');time.style.cssText='font-size:10px;color:var(--text-muted)';time.textContent=p.created_at||'';hdr.appendChild(time);card.appendChild(hdr);
 // detail (2-line truncated)
 var detail=document.createElement('div');detail.style.cssText='font-size:11px;color:var(--text-secondary);overflow:hidden;max-height:40px;line-height:1.5;margin-bottom:6px';detail.textContent=p.detail||'';card.appendChild(detail);
