@@ -1,0 +1,10 @@
+{
+  "monthly_revenue": 500000000,
+  "monthly_contracts": 100,
+  "contract_unit_price": 5000000,
+  "daily_inbound_db": 100,
+  "daily_valid_db": 30,
+  "cpa_target": 10000,
+  "influencer_pool": 1550000,
+  "alert_threshold": 0.3
+}

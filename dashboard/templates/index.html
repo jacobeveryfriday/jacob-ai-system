@@ -455,40 +455,27 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 
 <div id="page-sns">
-<!-- 소피 리드 현황 KPI -->
+<!-- SNS Content Performance -->
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">B2B 리드</p><p id="sns-b2b-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">0 / 300</p></div>
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">B2C 리드</p><p id="sns-b2c-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">0 / 500</p></div>
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">오늘 콘텐츠</p><p id="sns-today-content" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">0 / 2</p></div>
-  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">리드 전달</p><p style="font-size:11px;color:#B8860B;margin-top:4px">→ 피치 0건 / → 루나 0건</p></div>
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1B2A4A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Brand Leads (B2B)</p><p id="sns-b2b-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#1B2A4A">0 / 15</p><p style="font-size:8px;color:#9B9B9B">daily target</p></div>
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #2D4A7A;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Influencer Leads (B2C)</p><p id="sns-b2c-leads" style="font-family:monospace;font-size:20px;font-weight:700;color:#2D4A7A">0 / 10</p><p style="font-size:8px;color:#9B9B9B">daily target</p></div>
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #1A7A4C;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Today Content</p><p id="sns-today-content" style="font-family:monospace;font-size:20px;font-weight:700;color:#1A7A4C">0 / 2</p></div>
+  <div style="background:#FFF;border:0.5px solid #E8E6E1;border-top:2px solid #B8860B;border-radius:8px;padding:14px;text-align:center"><p style="font-size:9px;color:#6B6B6B">Lead Transfer</p><p style="font-size:11px;color:#B8860B;margin-top:4px">Pitch 0 / Luna 0</p></div>
 </div>
-<!-- 오늘의 콘텐츠 승인 -->
+<!-- Content Publish Status -->
 <div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <span style="font-size:13px;font-weight:700;color:#1B2A4A">오늘의 콘텐츠 — CEO 승인</span>
-    <button onclick="generateSnsContent()" style="padding:5px 12px;background:#1B2A4A;border:none;border-radius:6px;color:#fff;font-size:10px;cursor:pointer;font-weight:600">콘텐츠 생성</button>
-  </div>
-  <div id="sns-content-queue" style="font-size:11px;color:#9B9B9B">[콘텐츠 생성] 버튼을 눌러 오늘의 B2B/B2C 콘텐츠를 생성하세요.</div>
-</div>
-<!-- 콘텐츠 주제 설정 -->
-<div style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:16px;margin-bottom:16px">
-  <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:10px">콘텐츠 설정</p>
+  <p style="font-size:12px;font-weight:700;color:#1B2A4A;margin-bottom:12px">Content Status</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <div>
-      <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">B2B 주제</p>
-      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2b-topic" value="인플루언서 마케팅 성공사례" checked style="width:12px;height:12px"> 성공사례</label>
-      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2b-topic" value="4월 프로모션 안내" style="width:12px;height:12px"> 프로모션 안내</label>
-      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2b-topic" value="리뷰의 중요성 데이터 기반" style="width:12px;height:12px"> 리뷰 데이터</label>
+    <div style="background:#F8F7F5;border-radius:6px;padding:12px">
+      <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2B Content</p>
+      <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">Published: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">Pending: 0</span></div>
     </div>
-    <div>
-      <p style="font-size:10px;color:#6B6B6B;margin-bottom:6px">B2C 주제</p>
-      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2c-topic" value="무료 협찬 모집" checked style="width:12px;height:12px"> 무료 협찬 모집</label>
-      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2c-topic" value="K-뷰티 트렌드" style="width:12px;height:12px"> K-뷰티 트렌드</label>
-      <label style="display:block;font-size:10px;color:#1B2A4A;margin-bottom:3px"><input type="checkbox" class="sns-b2c-topic" value="인플루언서 수익화 팁" style="width:12px;height:12px"> 수익화 팁</label>
+    <div style="background:#F8F7F5;border-radius:6px;padding:12px">
+      <p style="font-size:10px;font-weight:600;color:#1B2A4A;margin-bottom:6px">B2C Content</p>
+      <div style="display:flex;gap:8px"><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(26,122,76,0.1);color:#1A7A4C">Published: 0</span><span style="padding:2px 8px;border-radius:4px;font-size:9px;background:rgba(184,134,11,0.1);color:#B8860B">Pending: 0</span></div>
     </div>
   </div>
 </div>
-<div id="sophie-gauge" style="background:#FFF;border:0.5px solid #E8E6E1;border-radius:8px;padding:14px;margin-bottom:16px"></div>
 </div>
 
 <div id="page-management">
@@ -1830,8 +1817,10 @@ while(barsEl.firstChild)barsEl.removeChild(barsEl.firstChild);
 var colors={'카일':'#1B2A4A','루나':'#2D4A7A','피치':'#3D6A9A','맥스':'#C4332B','소피':'#7A5C3A','레이':'#1A7A4C','하나':'#B8860B'};
 Object.entries(d.agents||{}).forEach(function(e){
 var name=e[0],info=e[1];
+var nameMap={'카일':'Kyle','루나':'Luna','피치':'Pitch','맥스':'Max','소피':'Sophie','레이':'Ray','하나':'Hana'};
+var displayName=nameMap[name]||name;
 var col=document.createElement('div');col.style.cssText='text-align:center';
-var nm=document.createElement('p');nm.style.cssText='font-size:10px;color:#6B6B6B;margin-bottom:4px';nm.textContent=name;col.appendChild(nm);
+var nm=document.createElement('p');nm.style.cssText='font-size:10px;color:#6B6B6B;margin-bottom:4px';nm.textContent=displayName;col.appendChild(nm);
 var barBg=document.createElement('div');barBg.style.cssText='height:6px;background:#EDEBE7;border-radius:3px;overflow:hidden;margin-bottom:4px';
 var barFill=document.createElement('div');barFill.style.cssText='height:100%;border-radius:3px;background:'+(colors[name]||'#1B2A4A')+';width:'+Math.min(info.kpi||0,100)+'%';barBg.appendChild(barFill);col.appendChild(barBg);
 var pct=document.createElement('p');pct.style.cssText='font-family:monospace;font-size:11px;font-weight:700;color:'+(info.kpi>=80?'#1A7A4C':'#C4332B');pct.textContent=(info.kpi||0)+'%';col.appendChild(pct);

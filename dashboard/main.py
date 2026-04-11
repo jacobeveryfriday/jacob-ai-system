@@ -2315,7 +2315,7 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: st
     from_email, sender_name = _get_from(agent_name)
     if not webhook_url:
         return {"status": "not_configured", "message": "EMAIL_WEBHOOK_URL 건¯¸설정 (Railway SMTP 차건¨으건¡ GAS 웹훅 필요)"}
-    agent_id = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle"}.get(agent_name, "pitch")
+    agent_id = {"\ud53c\uce58": "pitch", "\ub8e8\ub098": "luna", "\uc18c\ud53c": "sophie", "\uce74\uc77c": "kyle"}.get(agent_name, "pitch")
     payload = {"agent": agent_id, "to": to_email, "subject": subject, "body": body_text}
     if html_body:
         payload["htmlBody"] = html_body
@@ -2701,8 +2701,9 @@ async def api_pitch_send(request: Request):
             errors_list.append({"brand": brand, "errors": qc})
             _record_perf("피치", "quality_fail")
             continue
-        html = _build_pitch_html(brand, email_body)
-        result = _send_email(email, subj, html, "피치")
+        # GAS template mode: send action+template+vars only
+        gas_payload = {"action": "send_pitch", "template": template_key, "to": email, "brand_name": brand, "contact_name": contact}
+        result = _send_email_smtp(email, subj, email_body, "\ud53c\uce58")
         if result["status"] == "ok":
             sent += 1
         else:
