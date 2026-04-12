@@ -34,6 +34,8 @@ var L = {
 };
 </script>
 <style>
+.skeleton{display:inline-block;background:#f0f0f0;border-radius:4px;min-width:60px;height:1em;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 /* ===== Legacy Dashboard Layout (3-column) on McKinsey base ===== */
 :root {
   --sidebar-width: 200px;
@@ -200,7 +202,7 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 <div class="section-hdr"><div class="section-hdr-title"><span class="section-hdr-dot"></span> 공팔리터 글로벌</div><div class="section-hdr-sub">이번 달 핵심 지표 (실시간)</div></div>
 <div id="overview-kpi-grid" class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">이번달 매출</div></div><div class="kpi-value" id="ov-month-rev">-<span class="kpi-unit">만원</span></div><div class="kpi-detail" id="ov-month-rev-sub">목표 5억 · 달성률 -</div><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar" style="height:3px"><div class="kpi-progress-fill watch" id="ov-month-rev-bar" style="width:0%"></div></div></div></div>
-<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">신규 / 재계약</div></div><div class="kpi-value" id="ov-new-renew">-<span class="kpi-unit">건</span></div><div class="kpi-detail" id="ov-new-renew-sub">총 계약 -건</div></div>
+<div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">신규 / 재계약</div></div><div class="kpi-value" id="ov-new-renew">-<span class="kpi-unit">건</span></div><div class="kpi-detail" id="ov-new-renew-sub">총 계약 -건</div><div class="kpi-progress" style="margin-top:6px"><div class="kpi-progress-bar" style="height:3px"><div class="kpi-progress-fill watch" id="ov-contract-bar" style="width:0%"></div></div></div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">인플루언서 풀</div></div><div class="kpi-value" id="ov-inf-pool">-<span class="kpi-unit">명</span></div><div class="kpi-detail" id="ov-inf-pool-sub">이번달 신규 -명</div></div>
 <div class="kpi-card orange"><div class="kpi-card-header"><div class="kpi-label">에이전트 가동률</div></div><div class="kpi-value" id="ov-agent-active">5 / 9</div><div class="kpi-detail" id="ov-agent-active-sub">활성 5개 · 준비중 4개</div></div>
 </div>
@@ -1168,23 +1170,30 @@ var bx=document.createElement('div');var lb=document.createElement('div');lb.sty
 var vl=document.createElement('div');vl.style.cssText='font-size:16px;font-weight:700;font-family:monospace;color:'+d2[2];vl.textContent=d2[1];bx.appendChild(vl);g.appendChild(bx)});ae.appendChild(g);
 var cp=document.createElement('div');cp.style.cssText='font-size:11px;color:#6B6B6B';cp.textContent='평균 CPA: '+(total.cpa||558000).toLocaleString()+'원';ae.appendChild(cp);
 var as=document.createElement('div');as.style.cssText='font-size:9px;color:#9B9B9B;margin-top:4px';as.textContent='데이터: '+(adsData.source==='live'?'실시간':'샘플');ae.appendChild(as)}
-// Update overview KPI cards (실시간)
+// Fetch goals first, then update all
+fetch('/api/goals').then(function(r){return r.json()}).then(function(goalsData){
+window._goals=goalsData;var mg=goalsData.monthly||{};
 var ovT=kpiData.today||{};var ovM=kpiData.month||{};
-// card1: 이번달 매출
+// card1: 이번달 매출 (동적 목표)
+var revGoal=mg.revenue||500000000;
+var revDisplay=Math.round(revGoal/100000000)+'억';
 var e2=document.getElementById('ov-month-rev');if(e2)e2.innerHTML=Math.round((ovM.revenue||0)/10000).toLocaleString()+'<span class="kpi-unit">만원</span>';
-var ovRevPct=Math.round((ovM.revenue||0)/500000000*100);
-var e2s=document.getElementById('ov-month-rev-sub');if(e2s)e2s.textContent='목표 5억 · 달성률 '+ovRevPct+'%';
-var e2b=document.getElementById('ov-month-rev-bar');if(e2b){e2b.style.width=Math.min(ovRevPct,100)+'%';e2b.className='kpi-progress-fill '+(ovRevPct>=80?'on':ovRevPct>=50?'watch':'risk')}
-// card2: 신규/재계약
+var ovRevPct=Math.round((ovM.revenue||0)/revGoal*100);
+var e2s=document.getElementById('ov-month-rev-sub');if(e2s)e2s.textContent='목표 '+revDisplay+' \u00b7 달성률 '+ovRevPct+'%';
+var e2b=document.getElementById('ov-month-rev-bar');if(e2b){e2b.style.width=Math.min(ovRevPct,100)+'%';e2b.style.background=ovRevPct>=80?'#639922':ovRevPct>=50?'#BA7517':'#A32D2D'}
+// card2: 신규/재계약 (동적 목표 + 진행률 바)
+var ctGoal=mg.contract||100;
 var enr=document.getElementById('ov-new-renew');if(enr)enr.innerHTML=(ovM.new||0)+' / '+(ovM.renewal||0)+'<span class="kpi-unit">건</span>';
 var totalContract=(ovM.new||0)+(ovM.renewal||0);
-var enrs=document.getElementById('ov-new-renew-sub');if(enrs)enrs.textContent='총 계약 '+totalContract+'건';
+var ctPct=Math.round(totalContract/ctGoal*100);
+var enrs=document.getElementById('ov-new-renew-sub');if(enrs)enrs.textContent='달성률 '+ctPct+'% \u00b7 신규 '+(ovM.new||0)+'건 \u00b7 재계약 '+(ovM.renewal||0)+'건';
+var ctBar=document.getElementById('ov-contract-bar');if(ctBar){ctBar.style.width=Math.min(ctPct,100)+'%';ctBar.style.background=ctPct>=80?'#639922':ctPct>=50?'#BA7517':'#A32D2D'}
 // card3: 인플루언서 풀
 var eip=document.getElementById('ov-inf-pool');if(eip)eip.innerHTML=(infData.total||0).toLocaleString()+'<span class="kpi-unit">명</span>';
 var eips=document.getElementById('ov-inf-pool-sub');if(eips)eips.textContent='이번달 신규 '+(infData.month_new||0)+'명';
-// card4: 에이전트 가동률 (고정)
 // agent cards + summary bar
 loadAgentCards(kpiData, brandData, infData);
+}).catch(function(){loadAgentCards(kpiData, brandData, infData)});
 console.log('KPI data loaded:',kpiData.source);
 }catch(e){console.error('KPI load error:',e)}}
 loadKpiData();setInterval(loadKpiData,1800000);
