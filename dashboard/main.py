@@ -26,7 +26,8 @@ class KoreanJSONResponse(_OrigJSONResponse):
     """FastAPI JSON response that preserves Korean characters (no ascii escape)."""
     media_type = "application/json; charset=utf-8"
     def render(self, content) -> bytes:
-        return json.dumps(content, ensure_ascii=False, default=str).encode("utf-8")
+        text = json.dumps(content, ensure_ascii=False, default=str)
+        return text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace").encode("utf-8")
 
 app = FastAPI(title="Command Center", default_response_class=KoreanJSONResponse)
 app.add_middleware(GZipMiddleware, minimum_size=500)
