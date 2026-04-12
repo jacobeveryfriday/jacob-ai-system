@@ -3049,23 +3049,50 @@ async def api_email_quality_check(agent: str = "pitch"):
             checks[name] = {"status": "error", "code": 0}
     return {"agent": agent, "link_checks": checks, "batch_size": BATCH_SIZE, "valid_templates": list(VALID_TEMPLATES if agent == "pitch" else LUNA_VALID_TEMPLATES)}
 
+def _count_rows_by_date(rows, date_col_idx, now, mode="today"):
+    """Count rows matching today or this month. mode='today' or 'month'."""
+    count = 0
+    this_month = now.strftime("%Y-%m")
+    for row in rows:
+        if len(row) <= date_col_idx:
+            continue
+        dv = str(row[date_col_idx]).strip()
+        if not dv:
+            continue
+        if mode == "today" and _is_date_today(dv, now):
+            count += 1
+        elif mode == "month":
+            month_prefix_slash = str(now.month) + "/"
+            if dv.startswith(this_month) or dv.startswith(month_prefix_slash):
+                count += 1
+    return count
+
 @app.get("/api/pitch/pipeline/daily")
 async def api_pitch_pipeline_daily():
     """Pitch daily pipeline stats."""
     perf = load_agent_perf()
-    today = datetime.now(KST).strftime("%Y-%m-%d")
-    tp = perf.get(today, {}).get("피치", perf.get(today, {}).get("pitch", {}))
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    tp = perf.get(today, {}).get("\ud53c\uce58", perf.get(today, {}).get("pitch", {}))
     queue = load_email_queue()
-    pending = sum(1 for q in queue if q.get("agent") in ("피치", "pitch") and q.get("status") == "pending")
+    pending = sum(1 for q in queue if q.get("agent") in ("\ud53c\uce58", "pitch") and q.get("status") == "pending")
     sent = tp.get("email_sent", 0) + tp.get("email_sent_batch", 0)
     rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
-    target = max(len(rows) - 1, 0) if rows else 0
+    total_db = max(len(rows) - 1, 0) if rows else 0
+    # Date-filtered count for daily
+    today_db = 0
+    if rows and len(rows) > 1:
+        headers = [str(h).replace("\n", " ").strip() for h in rows[0]]
+        date_col = _auto_detect_date_col(headers, rows[1:6])
+        if date_col is not None:
+            today_db = _count_rows_by_date(rows[1:], date_col, now, "today")
+    target = today_db if today_db > 0 else total_db
     replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
     meeting = tp.get("reply_meeting", 0)
     goals = load_goals()
     pg = goals.get("agent_goals", {}).get("pitch", {})
-    db_goal = pg.get("daily_db", 100)
-    meeting_goal = pg.get("meeting", 10)
+    db_goal = pg.get("daily_lead_db", pg.get("daily_db", 20))
+    meeting_goal = pg.get("daily_meeting", pg.get("meeting", 5))
     return {
         "period": "daily", "date": today,
         "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": PITCH_SHEET_URL, "source": "피치_클로드 탭"},
@@ -3095,7 +3122,14 @@ async def api_pitch_pipeline_monthly():
                     for mk, mv in ad[key].items():
                         mp[mk] = mp.get(mk, 0) + mv
     rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
-    target = max(len(rows) - 1, 0) if rows else 0
+    total_db = max(len(rows) - 1, 0) if rows else 0
+    month_db = total_db
+    if rows and len(rows) > 1:
+        headers = [str(h).replace("\n", " ").strip() for h in rows[0]]
+        date_col = _auto_detect_date_col(headers, rows[1:6])
+        if date_col is not None:
+            month_db = _count_rows_by_date(rows[1:], date_col, now, "month")
+    target = month_db if month_db > 0 else total_db
     sent = mp.get("email_sent", 0) + mp.get("email_sent_batch", 0)
     replied = mp.get("reply_info", 0) + mp.get("reply_meeting", 0)
     meeting = mp.get("reply_meeting", 0)
@@ -4652,10 +4686,9 @@ async def _generate_agent_proposals():
     return new_proposals
 
 
-# ===== 카일 에이전트 개선제안 API =====
+# ===== Kyle Suggestions API =====
 @app.get("/api/kyle-suggestions")
 async def api_kyle_suggestions():
-    """카일 에이전트 개선제안 자건생성 â 실시간 KPI 기반."""
     now = datetime.now(KST)
     suggestions = []
     try:
@@ -4663,41 +4696,150 @@ async def api_kyle_suggestions():
         m = brand.get("month", {})
         t = brand.get("today", {})
         goals = load_goals()
-        rev_pct = m.get("revenue", 0) / max(goals.get("revenue", 160000000), 1) * 100
-        ct_pct = m.get("contract", 0) / max(goals.get("contracts", 38), 1) * 100
+        mg = goals.get("monthly", {})
+        rev_target = mg.get("revenue", 500000000)
+        ct_target = mg.get("contract", 100)
+        rev_pct = m.get("revenue", 0) / max(rev_target, 1) * 100
+        ct_pct = m.get("contract", 0) / max(ct_target, 1) * 100
+
+        lbl_high = "\ub192\uc74c"
+        lbl_mid = "\uc911\uac04"
+        lbl_low = "\ub0ae\uc74c"
+
         if rev_pct < 80:
-            suggestions.append({"urgency": "건음", "category": "건§¤출개선",
-                "title": f"건§¤출 건¬성건¥  {rev_pct:.0f}% â 긴급 건§¤출 건¶스팅 필요",
-                "detail": f"이건²건¬ 건§¤출 {m.get('revenue',0):,}원 / 건ª©표 {goals.get('revenue',160000000):,}원. 재계약 집중 + 고건¨가 패키지 제안 필요.",
-                "action": "루나 에이전트에 재접촉 캠페인 즉시 실행 지시"})
+            rev_label = "\ub9e4\ucd9c \ub2ec\uc131\ub960"
+            rev_action = "\uae34\uae09 \ub9e4\ucd9c \ubd80\uc2a4\ud305 \ud544\uc694"
+            rev_cat = "\ub9e4\ucd9c\uac1c\uc120"
+            rev_detail_tpl = "\uc774\ubc88\ub2ec \ub9e4\ucd9c {rev:,}\uc6d0 / \ubaa9\ud45c {target:,}\uc6d0. \uc7ac\uacc4\uc57d \uc9d1\uc911 + \uace0\ub2e8\uac00 \ud328\ud0a4\uc9c0 \uc81c\uc548 \ud544\uc694."
+            rev_action_text = "\ub8e8\ub098 \uc5d0\uc774\uc804\ud2b8\uc5d0 \uc7ac\uc811\ucd09 \uce90\ud398\uc778 \uc989\uc2dc \uc2e4\ud589 \uc9c0\uc2dc"
+            suggestions.append({
+                "urgency": lbl_high, "category": rev_cat,
+                "title": f"{rev_label} {rev_pct:.0f}% \u2014 {rev_action}",
+                "detail": rev_detail_tpl.format(rev=m.get("revenue", 0), target=rev_target),
+                "action": rev_action_text})
+
         if t.get("unhandled", 0) > 0:
-            suggestions.append({"urgency": "건음", "category": "시스템정상화",
-                "title": f"건¬´건응 {t['unhandled']}건 â 즉시 건´건¹자 건°°정",
-                "detail": "건¯¸처건¦¬ 인건°운건가 건°©치건건©´ 잠재 건§¤출 손실 건°생.",
-                "action": "건¬´건응 건 건´건¹자 자건건°°정 실행"})
-        # API 상태 점검
+            unh_cat = "\uc2dc\uc2a4\ud15c\uc815\uc0c1\ud654"
+            unh_title = "\ubb34\ub300\uc751 {cnt}\uac74 \u2014 \uc989\uc2dc \ub2f4\ub2f9\uc790 \ubc30\uc815"
+            unh_detail = "\ubbf8\ucc98\ub9ac \uc778\ubc14\uc6b4\ub4dc\uac00 \ubc29\uce58\ub418\uba74 \uc7a0\uc7ac \ub9e4\ucd9c \uc190\uc2e4 \ubc1c\uc0dd."
+            unh_action = "\ubb34\ub300\uc751 \uac74 \ub2f4\ub2f9\uc790 \uc790\ub3d9\ubc30\uc815 \uc2e4\ud589"
+            suggestions.append({
+                "urgency": lbl_high, "category": unh_cat,
+                "title": unh_title.format(cnt=t["unhandled"]),
+                "detail": unh_detail, "action": unh_action})
+
         api_issues = []
-        if not os.getenv("META_ACCESS_TOKEN"): api_issues.append("건©타 광고 API")
-        if not os.getenv("META_INSTAGRAM_TOKEN"): api_issues.append("인스타그건¨ API")
+        if not os.getenv("META_ACCESS_TOKEN"):
+            api_issues.append("\uba54\ud0c0 \uad11\uace0 API")
+        if not os.getenv("META_INSTAGRAM_TOKEN"):
+            api_issues.append("\uc778\uc2a4\ud0c0\uadf8\ub7a8 API")
         if api_issues:
-            suggestions.append({"urgency": "중간", "category": "API연건건³´완",
-                "title": f"건¯¸연건 API {len(api_issues)}개 â 건°이터 수집 건¶완전",
-                "detail": f"건¯¸연건: {', '.join(api_issues)}. 연건 시 자건 건°이터 수집 가건¥.",
-                "action": "Railway Variables에 API 키 추가"})
+            api_cat = "API\uc5f0\ub3d9\ubcf4\uc644"
+            api_title = "\ubbf8\uc5f0\ub3d9 API {cnt}\uac1c \u2014 \ub370\uc774\ud130 \uc218\uc9d1 \ubd88\uc644\uc804"
+            api_detail = "\ubbf8\uc5f0\ub3d9: {apis}. \uc5f0\ub3d9 \uc2dc \uc790\ub3d9 \ub370\uc774\ud130 \uc218\uc9d1 \uac00\ub2a5."
+            api_action = "Railway Variables\uc5d0 API \ud0a4 \ucd94\uac00"
+            suggestions.append({
+                "urgency": lbl_mid, "category": api_cat,
+                "title": api_title.format(cnt=len(api_issues)),
+                "detail": api_detail.format(apis=", ".join(api_issues)),
+                "action": api_action})
+
         if ct_pct < 50:
-            suggestions.append({"urgency": "중간", "category": "건§¤출개선",
-                "title": f"계약 건¬성건¥  {ct_pct:.0f}% â 파이프건¼인 가속 필요",
-                "detail": f"이건²건¬ {m.get('contract',0)}건 / 건ª©표 {goals.get('contracts',38)}건. 건¯¸팅전환율 개선 필요.",
-                "action": "루나에게 건¯¸팅 세팅 우선순위 지시"})
+            ct_cat = "\ub9e4\ucd9c\uac1c\uc120"
+            ct_title = "\uacc4\uc57d \ub2ec\uc131\ub960 {pct:.0f}% \u2014 \ud30c\uc774\ud504\ub77c\uc778 \uac00\uc18d \ud544\uc694"
+            ct_detail = "\uc774\ubc88\ub2ec {ct}\uac74 / \ubaa9\ud45c {target}\uac74. \ubbf8\ud305\uc804\ud658\ub960 \uac1c\uc120 \ud544\uc694."
+            ct_action = "\ub8e8\ub098\uc5d0\uac8c \ubbf8\ud305 \uc138\ud305 \uc6b0\uc120\uc21c\uc704 \uc9c0\uc2dc"
+            suggestions.append({
+                "urgency": lbl_mid, "category": ct_cat,
+                "title": ct_title.format(pct=ct_pct),
+                "detail": ct_detail.format(ct=m.get("contract", 0), target=ct_target),
+                "action": ct_action})
+
         if not suggestions:
-            suggestions.append({"urgency": "건®음", "category": "건시건³´건개선",
-                "title": "전체 KPI 양호 â 지속 건ª¨건터건§ 중",
-                "detail": f"건§¤출 건¬성건¥  {rev_pct:.0f}%, 계약 건¬성건¥  {ct_pct:.0f}%.",
-                "action": "현재 전건µ 유지"})
+            ok_cat = "\ub300\uc2dc\ubcf4\ub4dc\uac1c\uc120"
+            ok_title = "\uc804\uccb4 KPI \uc591\ud638 \u2014 \uc9c0\uc18d \ubaa8\ub2c8\ud130\ub9c1 \uc911"
+            ok_detail = "\ub9e4\ucd9c \ub2ec\uc131\ub960 {rev:.0f}%, \uacc4\uc57d \ub2ec\uc131\ub960 {ct:.0f}%."
+            ok_action = "\ud604\uc7ac \uc804\ub7b5 \uc720\uc9c0"
+            suggestions.append({
+                "urgency": lbl_low, "category": ok_cat,
+                "title": ok_title,
+                "detail": ok_detail.format(rev=rev_pct, ct=ct_pct),
+                "action": ok_action})
     except Exception as e:
-        suggestions.append({"urgency": "건음", "category": "시스템정상화",
-            "title": "건°이터 수집 오건¥", "detail": str(e), "action": "시스템 점검"})
-    return {"suggestions": suggestions, "timestamp": now.isoformat(), "agent": "카일"}
+        err_cat = "\uc2dc\uc2a4\ud15c\uc815\uc0c1\ud654"
+        err_title = "\ub370\uc774\ud130 \uc218\uc9d1 \uc624\ub958"
+        err_action = "\uc2dc\uc2a4\ud15c \uc810\uac80"
+        suggestions.append({"urgency": "\ub192\uc74c", "category": err_cat,
+            "title": err_title, "detail": str(e), "action": err_action})
+    return {"suggestions": suggestions, "timestamp": now.isoformat(), "agent": "\uce74\uc77c"}
+
+
+# ===== Auto Report APIs =====
+@app.get("/api/agent-auto-report")
+async def api_agent_auto_report():
+    """Generate periodic status reports for all active agents."""
+    now = datetime.now(KST)
+    ts = now.strftime("%H:%M KST")
+    reports = {}
+    try:
+        pitch_daily = await api_pitch_pipeline_daily()
+        pt = pitch_daily.get("target", {}).get("value", 0)
+        ps = pitch_daily.get("sent", {}).get("value", 0)
+        pr = pitch_daily.get("replied", {}).get("value", 0)
+        pg = pitch_daily.get("target", {}).get("goal", 20)
+        p_rate = round(ps / max(pt, 1) * 100) if pt > 0 else 0
+        p_status = "\u2705" if p_rate >= 50 else "\u26a0\ufe0f" if p_rate >= 20 else "\ud83d\udea8"
+        reports["pitch"] = f"[\ud53c\uce58 \uc815\uae30 \ubcf4\uace0] {ts}\n\uc624\ub298 \ud0c0\uac9f: {pt}\uac74 / \ubaa9\ud45c {pg}\uac74\n\uc624\ub298 \ubc1c\uc1a1: {ps}\uac74\n\uc624\ub298 \ub2f5\ubcc0: {pr}\uac74\n\ubc1c\uc1a1\ub960: {p_rate}% {p_status}"
+    except Exception:
+        reports["pitch"] = f"[\ud53c\uce58] \ub370\uc774\ud130 \uc218\uc9d1 \uc624\ub958"
+    try:
+        luna_daily = await api_luna_pipeline_daily()
+        lt = luna_daily.get("target", {}).get("value", 0)
+        lr = luna_daily.get("replied", {}).get("value", 0)
+        l_status = "\u2705" if lr >= 10 else "\u26a0\ufe0f"
+        reports["luna"] = f"[\ub8e8\ub098 \uc815\uae30 \ubcf4\uace0] {ts}\n\uc624\ub298 \uc544\uc6c3\ubc14\uc6b4\ub4dc: {lt}\uac74 / \ubaa9\ud45c 100\uac74\n\uc624\ub298 \ub2f5\ubcc0: {lr}\uac74 / \ubaa9\ud45c 20\uac74 {l_status}"
+    except Exception:
+        reports["luna"] = f"[\ub8e8\ub098] \ub370\uc774\ud130 \uc218\uc9d1 \uc624\ub958"
+    return {"reports": reports, "timestamp": now.isoformat()}
+
+
+@app.get("/api/kyle/auto-report")
+async def api_kyle_auto_report():
+    """Kyle integrated check report."""
+    now = datetime.now(KST)
+    ts = now.strftime("%H:%M KST")
+    lines = [f"[\uce74\uc77c \ud1b5\ud569 \uc810\uac80] {ts}", ""]
+    try:
+        pitch_daily = await api_pitch_pipeline_daily()
+        luna_daily = await api_luna_pipeline_daily()
+        kpi = await api_brand_pipeline()
+        m = kpi.get("month", {})
+        goals = load_goals()
+        mg = goals.get("monthly", {})
+        revenue = m.get("revenue", 0)
+        rev_target = mg.get("revenue", 500000000)
+        rev_pct = round(revenue / max(rev_target, 1) * 100)
+        contract = m.get("contract", 0)
+        ct_target = mg.get("contract", 100)
+        ct_pct = round(contract / max(ct_target, 1) * 100)
+        ps = pitch_daily.get("sent", {}).get("value", 0)
+        pg = pitch_daily.get("target", {}).get("goal", 20)
+        p_pct = round(ps / max(pg, 1) * 100)
+        p_icon = "\u2705" if p_pct >= 80 else "\u26a0\ufe0f" if p_pct >= 50 else "\ud83d\udea8"
+        lr = luna_daily.get("replied", {}).get("value", 0)
+        l_pct = round(lr / 20 * 100)
+        l_icon = "\u2705" if l_pct >= 80 else "\u26a0\ufe0f" if l_pct >= 50 else "\ud83d\udea8"
+        lines.append("\uc5d0\uc774\uc804\ud2b8 \ud604\ud669:")
+        lines.append(f"{p_icon} \ud53c\uce58: \ubc1c\uc1a1 {ps}\uac74 ({p_pct}%)")
+        lines.append(f"{l_icon} \ub8e8\ub098: \ub2f5\ubcc0 {lr}\uac74 ({l_pct}%)")
+        lines.append("\u23f8 \ub9e5\uc2a4/\uc18c\ud53c/\ud558\ub098: API \uc5f0\ub3d9 \ub300\uae30")
+        lines.append("")
+        lines.append("\uc774\ubc88\ub2ec \uc804\uccb4:")
+        lines.append(f"\ub9e4\ucd9c: {round(revenue/10000):,}\ub9cc\uc6d0 / {round(rev_target/100000000)}\uc5b5 \ubaa9\ud45c ({rev_pct}%)")
+        lines.append(f"\uacc4\uc57d: {contract}\uac74 / {ct_target}\uac74 \ubaa9\ud45c ({ct_pct}%)")
+    except Exception as e:
+        lines.append(f"\ub370\uc774\ud130 \uc218\uc9d1 \uc624\ub958: {e}")
+    return {"report": "\n".join(lines), "timestamp": now.isoformat()}
 
 
 @app.get("/api/agent-scoreboard")
@@ -5556,8 +5698,11 @@ try:
     _scheduler.add_job(_luna_kr_send_job, CronTrigger(day_of_week="mon-fri", hour=10, minute=0), id="luna_kr_send", replace_existing=True)
     # Luna US send: Mon-Fri 23:00 KST (A/B rotation)
     _scheduler.add_job(_luna_us_send_job, CronTrigger(day_of_week="mon-fri", hour=23, minute=0), id="luna_us_send", replace_existing=True)
+    # Auto reports: 09,12,15,18 KST weekdays
+    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/agent-auto-report", timeout=30), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="agent_auto_report", replace_existing=True)
+    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/kyle/auto-report", timeout=30), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
     _scheduler.start()
-    print("[SCHEDULER] Started - pitch(A/B/C rotation), luna_kr(A/B), luna_us(A/B)")
+    print("[SCHEDULER] Started - pitch(A/B/C), luna(A/B), auto-reports(9/12/15/18)")
 except ImportError:
     print("[SCHEDULER] APScheduler not installed")
 except Exception as e:
