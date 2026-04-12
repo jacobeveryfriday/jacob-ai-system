@@ -425,22 +425,68 @@ def _log_scheduler(job_id: str, result: str, count: int = 0):
 
 
 # ===== Sheet Write via GAS Webhook =====
-def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list):
-    """Write rows to Google Sheets via GAS webhook (read-only API key can't write)."""
+def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list) -> bool:
+    """Write rows to Google Sheets via GAS webhook."""
     webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
-    if not webhook or not rows:
+    if not webhook:
+        print("[SHEET_WRITE] EMAIL_WEBHOOK_URL not set")
+        _record_mistake("\uc2dc\uc2a4\ud15c", "config_error", "EMAIL_WEBHOOK_URL not set")
         return False
+    if not rows:
+        return True
     try:
-        payload = {
-            "action": "appendSheet",
-            "sheetId": sheet_id,
-            "range": tab_range,
-            "values": rows,
-        }
+        payload = {"action": "appendSheet", "sheetId": sheet_id, "range": tab_range, "values": rows}
         r = req_lib.post(webhook, json=payload, timeout=30)
-        return r.status_code == 200
-    except Exception:
+        if r.status_code == 200:
+            resp = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+            if resp.get("status") == "success":
+                print(f"[SHEET_WRITE] OK: {tab_range} {len(rows)} rows")
+                return True
+        print(f"[SHEET_WRITE] FAIL: {r.status_code} {r.text[:200]}")
+        _record_mistake("\uc2dc\uc2a4\ud15c", "sheet_write_fail", f"{tab_range}: {r.status_code}")
         return False
+    except Exception as e:
+        print(f"[SHEET_WRITE] ERROR: {e}")
+        _record_mistake("\uc2dc\uc2a4\ud15c", "sheet_write_error", str(e))
+        return False
+
+
+def _kyle_pre_check(agent: str) -> dict:
+    """Kyle pre-send checklist."""
+    checks = []
+    now = datetime.now(KST)
+    if agent in ("\ud53c\uce58", "pitch"):
+        rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+        pending = 0
+        if rows and len(rows) > 1:
+            for row in rows[1:]:
+                email = str(row[7]).strip() if len(row) > 7 else ""
+                sent_st = str(row[13]).strip() if len(row) > 13 else ""
+                if email and "@" in email and not sent_st:
+                    pending += 1
+        checks.append({"item": "\ubbf8\ubc1c\uc1a1 DB", "value": pending, "pass": pending >= 10,
+                        "reason": f"\ubbf8\ubc1c\uc1a1 DB {pending}\uac74 (\ucd5c\uc18c 10\uac74 \ud544\uc694)"})
+        checks.append({"item": "\uc5c5\ubb34\uc2dc\uac04", "value": now.hour, "pass": 9 <= now.hour < 18,
+                        "reason": f"\ud604\uc7ac {now.hour}\uc2dc (\ubc1c\uc1a1: 09~18\uc2dc)"})
+        mistakes = _load_mistake_log().get("errors", [])
+        recent = [m for m in mistakes if m.get("agent") in ("\ud53c\uce58", "pitch") and m.get("count", 0) >= 2]
+        checks.append({"item": "\ubc18\ubcf5 \uc2e4\uc218", "value": len(recent), "pass": len(recent) == 0,
+                        "reason": f"\ucd5c\uadfc \ubc18\ubcf5 \uc2e4\uc218 {len(recent)}\uac74"})
+    all_ok = all(c["pass"] for c in checks)
+    if not all_ok:
+        failed = [c["reason"] for c in checks if not c["pass"]]
+        _record_mistake(agent, "pre_check_fail", "; ".join(failed))
+    return {"passed": all_ok, "checks": checks}
+
+
+def _kyle_post_check(agent: str, result: dict):
+    """Kyle post-send verification."""
+    sent = result.get("sent_count", result.get("sent", 0))
+    if sent == 0:
+        _record_mistake(agent, "zero_sent", "\ubc1c\uc1a1 \uc2dc\ub3c4 0\uac74")
+    sheet_ok = result.get("sheet_updated", False)
+    if not sheet_ok:
+        _record_mistake(agent, "sheet_not_updated", "\ubc1c\uc1a1 \ud6c4 \uc2dc\ud2b8 \ubbf8\uc5c5\ub370\uc774\ud2b8")
 
 
 # ===== Google Sheets Config =====
@@ -2965,6 +3011,16 @@ async def api_luna_collect_na(request: Request):
                   f"누적 수집: {existing_na + total_collected}명 / 400명 목표\n\n"
                   f"월요일 오전 09:00 승인 요청 이메일 발송 예정.")
     _send_email_smtp("jacob@08liter.com", f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건", alert_body, "루나")
+    # Write new items to luna sheet
+    if new_items:
+        now_str = now.strftime("%Y-%m-%d %H:%M")
+        luna_rows = []
+        for item in new_items:
+            luna_rows.append([now_str, "", item.get("country", "US"), "",
+                              item.get("platform", "Instagram"), item.get("username", item.get("name", "")),
+                              "", "", item.get("email", ""), "", "", "", "", "", "", "", "", ""])
+        sheet_ok = _write_rows_to_sheet(LUNA_SHEET_ID, TAB_INFLUENCER + "!A:R", luna_rows)
+        _kyle_post_check("\ub8e8\ub098", {"sent_count": total_collected, "sheet_updated": sheet_ok})
     _log_scheduler("luna_collect_na", "done", total_collected)
     return {"status": "ok", "day": day_num, "collected": {"instagram": collected_ig, "tiktok": collected_tt},
             "total_na": existing_na + total_collected, "target": 400}
@@ -4921,10 +4977,38 @@ async def api_kyle_auto_report():
         lines.append("\uc774\ubc88\ub2ec \uc804\uccb4:")
         lines.append(f"\ub9e4\ucd9c: {round(revenue/10000):,}\ub9cc\uc6d0 / {round(rev_target/100000000)}\uc5b5 \ubaa9\ud45c ({rev_pct}%)")
         lines.append(f"\uacc4\uc57d: {contract}\uac74 / {ct_target}\uac74 \ubaa9\ud45c ({ct_pct}%)")
+        # Auto-create proposals for underperformance
+        if p_pct < 50:
+            proposals = load_proposals()
+            proposals.append({
+                "id": int(time.time() * 1000) % 10000000,
+                "agent": "\ud53c\uce58", "status": "pending_approval",
+                "proposal": f"\ubc1c\uc1a1\ub960 {p_pct}% \u2014 \ucd94\uac00 DB \uc218\uc9d1 + \ubc1c\uc1a1 \uac00\uc18d \ud544\uc694",
+                "detail": f"\ud53c\uce58 \ubc1c\uc1a1 {ps}\uac74 / \ubaa9\ud45c {pg}\uac74. \ucd94\uac00 DB \uc218\uc9d1 \uad8c\uc7a5.",
+                "expected_impact": "\ubc1c\uc1a1\ub960 80%+ \ub2ec\uc131",
+                "action_type": "pitch_boost", "created_at": now.isoformat(),
+            })
+            save_proposals(proposals[-200:])
+        if l_pct < 50:
+            proposals = load_proposals()
+            proposals.append({
+                "id": int(time.time() * 1000) % 10000000 + 1,
+                "agent": "\ub8e8\ub098", "status": "pending_approval",
+                "proposal": f"\ub2f5\ubcc0\ub960 {l_pct}% \u2014 \ucd94\uac00 \uc544\uc6c3\ubc14\uc6b4\ub4dc \ud544\uc694",
+                "detail": f"\ub8e8\ub098 \ub2f5\ubcc0 {lr}\uac74 / \ubaa9\ud45c 20\uac74. \uc81c\uc548 \uba54\uc2dc\uc9c0 \uac1c\uc120 \uad8c\uc7a5.",
+                "expected_impact": "\ub2f5\ubcc0\ub960 80%+ \ub2ec\uc131",
+                "action_type": "luna_boost", "created_at": now.isoformat(),
+            })
+            save_proposals(proposals[-200:])
     except Exception as e:
         lines.append(f"\ub370\uc774\ud130 \uc218\uc9d1 \uc624\ub958: {e}")
+    _log_scheduler("kyle_auto_report", "done")
     return {"report": "\n".join(lines), "timestamp": now.isoformat()}
 
+
+@app.get("/api/kyle/pre-check")
+async def api_kyle_pre_check(agent: str = "\ud53c\uce58"):
+    return _kyle_pre_check(agent)
 
 @app.get("/api/agent-scoreboard")
 async def api_agent_scoreboard():
