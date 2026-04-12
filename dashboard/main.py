@@ -102,6 +102,73 @@ async def api_sheets_health():
     return results
 
 
+def _test_gas_webhook() -> bool:
+    webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
+    if not webhook:
+        return False
+    try:
+        r = req_lib.post(webhook, json={"action": "test"}, timeout=10)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+def _test_sheet_access(sheet_id: str, tab: str) -> bool:
+    try:
+        rows = fetch_sheet(sheet_id, "A1:A2", tab, ttl_key="default")
+        return rows is not None
+    except Exception:
+        return False
+
+def _run_health_check() -> dict:
+    now = datetime.now(KST)
+    log = json.loads(SCHEDULER_LOG_FILE.read_text(encoding="utf-8")) if SCHEDULER_LOG_FILE.exists() else {"runs": []}
+    runs = log.get("runs", [])
+    def last_run(job):
+        found = [r for r in runs if r.get("job") == job]
+        return found[-1].get("time", "") if found else ""
+    gas = _test_gas_webhook()
+    pitch_sheet = _test_sheet_access(PITCH_SHEET_ID, TAB_PITCH)
+    luna_sheet = _test_sheet_access(LUNA_SHEET_ID, TAB_INFLUENCER)
+    api_key_ok = bool(os.getenv("ANTHROPIC_API_KEY"))
+    issues = []
+    if not gas:
+        issues.append("GAS webhook fail")
+    if not pitch_sheet:
+        issues.append("Pitch sheet fail")
+    if not luna_sheet:
+        issues.append("Luna sheet fail")
+    if not api_key_ok:
+        issues.append("Anthropic API key missing")
+    # Check yesterday scheduler runs
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday_jobs = set(r["job"] for r in runs if yesterday in r.get("time", ""))
+    for job in ["pitch_collect", "luna_collect"]:
+        if job not in yesterday_jobs:
+            issues.append(f"{job} no run yesterday")
+    return {
+        "gas_webhook": gas, "pitch_sheet": pitch_sheet, "luna_sheet": luna_sheet,
+        "anthropic_api": api_key_ok,
+        "last_pitch_collect": last_run("pitch_collect"),
+        "last_luna_collect": last_run("luna_collect"),
+        "last_pitch_send": last_run("pitch_daily_full"),
+        "issues": issues, "all_ok": len(issues) == 0,
+        "checked_at": now.isoformat(),
+    }
+
+@app.get("/api/health-check")
+async def api_health_check_full():
+    return _run_health_check()
+
+@app.api_route("/api/daily-health-check", methods=["GET", "POST"])
+async def api_daily_health_check():
+    result = _run_health_check()
+    _log_scheduler("daily_health_check", "done")
+    if not result["all_ok"]:
+        msg = "[Kyle Morning Check] Issues:\n" + "\n".join(result["issues"])
+        _record_mistake("\uce74\uc77c", "morning_check_fail", "; ".join(result["issues"]))
+    return result
+
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: str = ""):
     """건¡그인 폼 페이지"""
@@ -5869,8 +5936,10 @@ try:
     # Auto reports: 09,12,15,18 KST weekdays
     _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/agent-auto-report", timeout=30), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="agent_auto_report", replace_existing=True)
     _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/kyle/auto-report", timeout=30), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
+    # Daily health check: 06:00 KST weekdays
+    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/daily-health-check", timeout=30), CronTrigger(day_of_week="mon-fri", hour=6, minute=0), id="daily_health_check", replace_existing=True)
     _scheduler.start()
-    print("[SCHEDULER] Started - pitch(A/B/C), luna(A/B), auto-reports(9/12/15/18)")
+    print("[SCHEDULER] Started - pitch(A/B/C), luna(A/B), reports(9/12/15/18), health(06:00)")
 except ImportError:
     print("[SCHEDULER] APScheduler not installed")
 except Exception as e:
