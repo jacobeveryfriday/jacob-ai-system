@@ -2433,28 +2433,28 @@ def _build_pitch_html(brand_name: str, body_text: str) -> str:
 
 # 에이전트건³ 건°신 이건©일/이건¦ 건§¤핑
 AGENT_FROM_EMAILS = {
-    "피치": os.getenv("PITCH_FROM_EMAIL", "pitch@08liter.com"),
-    "루나": os.getenv("LUNA_FROM_EMAIL", "luna@08liter.com"),
-    "소피": os.getenv("SOPHIE_EMAIL", "sophie@08liter.com"),
-    "카일": os.getenv("KYLE_EMAIL", "kyle@08liter.com"),
-    "건 이": os.getenv("RAY_EMAIL", "ray@08liter.com"),
-    "하건": os.getenv("HANA_EMAIL", "hana@08liter.com"),
-    "건§¥스": os.getenv("MAX_EMAIL", "max@08liter.com"),
+    "pitch": os.getenv("PITCH_FROM_EMAIL", "pitch@08liter.com"),
+    "luna": os.getenv("LUNA_FROM_EMAIL", "luna@08liter.com"),
+    "sophie": os.getenv("SOPHIE_EMAIL", "sophie@08liter.com"),
+    "kyle": os.getenv("KYLE_EMAIL", "kyle@08liter.com"),
+    "ray": os.getenv("RAY_EMAIL", "ray@08liter.com"),
+    "hana": os.getenv("HANA_EMAIL", "hana@08liter.com"),
+    "max": os.getenv("MAX_EMAIL", "max@08liter.com"),
 }
 AGENT_FROM_NAMES = {
-    "피치": os.getenv("FROM_NAME_PITCH", "Pitch | 공팔건¦¬터글건¡건²"),
-    "루나": os.getenv("FROM_NAME_LUNA", "Luna | 공팔건¦¬터글건¡건²"),
-    "소피": "Sophie | 공팔건¦¬터글건¡건²",
-    "카일": "Kyle | 공팔건¦¬터글건¡건²",
-    "건 이": "Ray | 공팔건¦¬터글건¡건²",
-    "하건": "Hana | 공팔건¦¬터글건¡건²",
-    "건§¥스": "Max | 공팔건¦¬터글건¡건²",
+    "pitch": os.getenv("FROM_NAME_PITCH", "Pitch | 08liter"),
+    "luna": os.getenv("FROM_NAME_LUNA", "Luna | 08liter"),
+    "sophie": "Sophie | 08liter",
+    "kyle": "Kyle | 08liter",
+    "ray": "Ray | 08liter",
+    "hana": "Hana | 08liter",
+    "max": "Max | 08liter",
 }
 
 def _get_from(agent_name: str):
-    """에이전트건³ 건°신 이건©일+이건¦ 건°환."""
-    email = AGENT_FROM_EMAILS.get(agent_name, "pitch@08liter.com")
-    name = AGENT_FROM_NAMES.get(agent_name, f"{agent_name} | 공팔건¦¬터글건¡건²")
+    key = agent_name.lower() if agent_name in AGENT_FROM_EMAILS else agent_name
+    email = AGENT_FROM_EMAILS.get(key, "pitch@08liter.com")
+    name = AGENT_FROM_NAMES.get(key, f"{agent_name} | 08liter")
     return email, name
 
 def _get_smtp_creds(agent_name: str):
@@ -5048,8 +5048,14 @@ async def api_kyle_auto_report():
     ts = now.strftime("%H:%M KST")
     lines = [f"[\uce74\uc77c \ud1b5\ud569 \uc810\uac80] {ts}", ""]
     try:
-        pitch_daily = await api_pitch_pipeline_daily()
-        luna_daily = await api_luna_pipeline_daily()
+        try:
+            pitch_daily = await api_pitch_pipeline_daily()
+        except Exception:
+            pitch_daily = {"target": {"value": 0, "goal": 20}, "sent": {"value": 0}, "replied": {"value": 0}}
+        try:
+            luna_daily = await api_luna_pipeline_daily()
+        except Exception:
+            luna_daily = {"target": {"value": 0}, "replied": {"value": 0}}
         kpi = await api_brand_pipeline()
         m = kpi.get("month", {})
         goals = load_goals()
