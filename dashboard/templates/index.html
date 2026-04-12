@@ -1424,11 +1424,12 @@ if(revEl)revEl.textContent=Math.round((t.revenue||0)/10000).toLocaleString()+'�
 if(revSub)revSub.textContent='계약 '+(t.contract||0)+'건';
 // 2. 이번달 매출
 var mRevEl=document.getElementById('kpi-month-revenue');var mRevSub=document.getElementById('kpi-month-revenue-sub');
-var monthRev=m.revenue||0;var revPct=Math.round(monthRev/500000000*100);
+var monthRev=m.revenue||0;var bRevGoal=(window._goals&&window._goals.monthly)?window._goals.monthly.revenue:500000000;
+var revPct=Math.round(monthRev/bRevGoal*100);var bRevDisplay=Math.round(bRevGoal/100000000)+'억';
 if(mRevEl)mRevEl.textContent=Math.round(monthRev/10000).toLocaleString()+'만원';
-if(mRevSub)mRevSub.textContent='목표 5억 / 달성률 '+revPct+'%';
+if(mRevSub)mRevSub.textContent='목표 '+bRevDisplay+' / 달성률 '+revPct+'%';
 var revBar=document.getElementById('brand-rev-bar');
-if(revBar){revBar.style.width=Math.min(revPct,100)+'%';revBar.className='kpi-progress-fill '+(revPct>=70?'on':revPct>=40?'watch':'risk')}
+if(revBar){revBar.style.width=Math.min(revPct,100)+'%';revBar.style.background=revPct>=80?'#639922':revPct>=50?'#BA7517':'#A32D2D'}
 // 3. 계약 / 단가
 var ctEl=document.getElementById('kpi-contract');var ctSub=document.getElementById('kpi-contract-sub');
 var mContract=m.contract||0;var avgPrice=mContract>0?Math.round(monthRev/mContract/10000):0;

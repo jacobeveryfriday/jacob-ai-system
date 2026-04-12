@@ -3086,16 +3086,18 @@ async def api_pitch_pipeline_daily():
         date_col = _auto_detect_date_col(headers, rows[1:6])
         if date_col is not None:
             today_db = _count_rows_by_date(rows[1:], date_col, now, "today")
-    target = today_db if today_db > 0 else total_db
+    target = today_db  # daily = today only, never fallback to total
+    no_date_col = (today_db == 0 and total_db > 0)
     replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
     meeting = tp.get("reply_meeting", 0)
     goals = load_goals()
     pg = goals.get("agent_goals", {}).get("pitch", {})
     db_goal = pg.get("daily_lead_db", pg.get("daily_db", 20))
     meeting_goal = pg.get("daily_meeting", pg.get("meeting", 5))
+    src_text = "\ub0a0\uc9dc \ucee8\ub7fc \uc5c6\uc74c \u2014 \uc804\uccb4 DB " + str(total_db) + "\uac74" if no_date_col else "\ud53c\uce58_\ud074\ub85c\ub4dc \ud0ed"
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": PITCH_SHEET_URL, "source": "피치_클로드 탭"},
+        "target": {"value": target, "total_db": total_db, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": PITCH_SHEET_URL, "source": src_text},
         "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "이메일 큐"},
         "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "발송 성공 (반송 제외)"},
         "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com 수신"},
@@ -3146,20 +3148,30 @@ async def api_pitch_pipeline_monthly():
 async def api_luna_pipeline_daily():
     """Luna daily pipeline stats."""
     perf = load_agent_perf()
-    today = datetime.now(KST).strftime("%Y-%m-%d")
-    tp = perf.get(today, {}).get("루나", perf.get(today, {}).get("luna", {}))
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    tp = perf.get(today, {}).get("\ub8e8\ub098", perf.get(today, {}).get("luna", {}))
     rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
-    target = max(len(rows) - 1, 0) if rows else 0
+    total_db = max(len(rows) - 1, 0) if rows else 0
+    today_db = 0
+    if rows and len(rows) > 1:
+        headers = [str(h).replace("\n", " ").strip() for h in rows[0]]
+        date_col = _auto_detect_date_col(headers, rows[1:6])
+        if date_col is not None:
+            today_db = _count_rows_by_date(rows[1:], date_col, now, "today")
+    target = today_db  # daily = today only
+    no_date_col = (today_db == 0 and total_db > 0)
     sent = tp.get("email_sent", 0) + tp.get("na_email_sent", 0)
     replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
     contract = tp.get("reply_meeting", 0)
     goals = load_goals()
     lg = goals.get("agent_goals", {}).get("luna", {})
-    db_goal = lg.get("monthly_db", 150)
+    db_goal = lg.get("daily_outbound_db", lg.get("monthly_db", 100))
     ct_goal = lg.get("contract", 80)
+    src_text = "\ub0a0\uc9dc \ucee8\ub7fc \uc5c6\uc74c \u2014 \uc804\uccb4 DB " + str(total_db) + "\uba85" if no_date_col else "\uc778\ud50c\ub8e8\uc5b8\uc11c DB"
     return {
         "period": "daily", "date": today,
-        "target": {"value": target, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
+        "target": {"value": target, "total_db": total_db, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": src_text},
         "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "이메일 큐"},
         "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
         "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},

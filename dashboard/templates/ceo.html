@@ -41,7 +41,7 @@
       <div class="kpi-label">이번달 매출</div>
       <div class="kpi-value" id="kpi-revenue">—<span class="kpi-unit">원</span></div>
       <div class="kpi-delta" id="kpi-revenue-delta"></div>
-      <div class="kpi-sub" id="kpi-revenue-sub">목표 1.6억</div>
+      <div class="kpi-sub" id="kpi-revenue-sub">목표 5억</div>
       <div class="kpi-basis">출처: 구글시트 세금계산서 T열(공급가액) / 기준: 이번달 1일~오늘 KST 합산</div>
     </div>
     <div class="kpi-card">
@@ -301,7 +301,7 @@ function updateKpiCards(kpi, inf) {
     deltaEl.className = 'kpi-delta ' + (pct>=0?'up':'down');
     deltaEl.textContent = (pct>=0?'+':'')+pct+'% vs 전월';
   }
-  document.getElementById('kpi-revenue-sub').textContent = '목표 1.6억 · 달성률 '+Math.round(revVal/160000000*100)+'%';
+  document.getElementById('kpi-revenue-sub').textContent = '목표 5억 · 달성률 '+Math.round(revVal/500000000*100)+'%';
 
   /* New/Renew */
   document.getElementById('kpi-new').textContent = m.new||0;
@@ -388,7 +388,7 @@ function renderAgents(suggestions, alerts) {
   ]).then(function(res){
     var pitchData=res[0],lunaData=res[1],kpiData=res[2];
     var sheetStats={
-      '카일':{revenue:(kpiData.month||{}).revenue||0,target:160000000},
+      '카일':{revenue:(kpiData.month||{}).revenue||0,target:500000000},
       '피치':{db:(pitchData.total||{}).db||0,email:(pitchData.total||{}).with_email||0,working:(pitchData.total||{}).working||0,meeting:(pitchData.total||{}).meeting||0},
       '루나':{db:(lunaData.total||{}).total||0,proposed:(lunaData.total||{}).proposed||0,usable:(lunaData.total||{}).usable||0},
     };
@@ -838,7 +838,7 @@ Promise.all([
 ]).then(function(res){
   var kpi=res[0],pitch=res[1],luna=res[2],proposals=res[3];
   var m=kpi.month||{},t=kpi.today||{};
-  var rev=m.revenue||0,target=160000000;
+  var rev=m.revenue||0,target=500000000;
   var pct=Math.round(rev/target*100);
   var unhandled=t.unhandled_db||0;
   var pendingCount=(proposals.proposals||[]).length;
