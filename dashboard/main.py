@@ -257,6 +257,23 @@ SCHEDULER_LOG_FILE = DATA_DIR / "scheduler_log.json"
 # 건°송 속건 제한
 SEND_LIMITS = {"hourly": 50, "daily": 550, "interval_sec": 30}
 
+# Invalid email patterns (skip generic/role-based addresses)
+import re as _re
+INVALID_EMAIL_PATTERNS = [
+    r'^info@', r'^noreply@', r'^no-reply@', r'^support@',
+    r'^help@', r'^admin@', r'^webmaster@', r'^contact@',
+    r'^sales@', r'^marketing@', r'^hello@', r'^team@',
+]
+_INVALID_RE = _re.compile('|'.join(INVALID_EMAIL_PATTERNS), _re.IGNORECASE)
+
+def _is_valid_lead_email(email: str) -> bool:
+    if not email or "@" not in email:
+        return False
+    if _INVALID_RE.match(email):
+        return False
+    return True
+
+
 def load_crawled() -> list:
     if CRAWLED_DATA_FILE.exists():
         return json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8"))
@@ -2839,7 +2856,7 @@ async def api_pitch_send(request: Request):
         brand = body.get("brand_name", "Test Brand")
         subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", brand)
         email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", brand)
-        result = _send_email_smtp(test_recipient, subj, "", "\ud53c\uce58", email_body)
+        result = _send_email_smtp(test_recipient, subj, "", "pitch", email_body)
         _log_scheduler("pitch_send_test", "done", 1)
         return {"status": "ok", "test_mode": True, "sent_to": test_recipient, "template": template_key, "result": result}
     # DB 소스: 오직 피치 시트 "피치_클건¡건" 탭 (건¤건¥¸ 시트 혼용 금지)
@@ -2853,7 +2870,7 @@ async def api_pitch_send(request: Request):
             email = str(row[7]).strip() if len(row) > 7 else ""  # H열 = 이건©일
             brand = str(row[4]).strip() if len(row) > 4 else ""  # E열 = 건¸건건건ª
             sent_status = str(row[13]).strip() if len(row) > 13 else ""  # N열 = 건°송상태
-            if email and "@" in email and not sent_status:  # 건°송일자 건¹어있건 건건§
+            if _is_valid_lead_email(email) and not sent_status:  # 건°송일자 건¹어있건 건건§
                 leads.append({"name": brand, "email": email})
     if not leads:
         # 피치_클건¡건 탭이 건¹었으건©´ 파센건¬¸의 폴건°± (경고 포함)
@@ -3074,6 +3091,8 @@ async def api_luna_collect_na(request: Request):
                 if match:
                     items = json.loads(match.group())
                     _record_perf("luna", "ai_collect", len(items))
+                    # Filter: remove invalid emails
+                    items = [it for it in items if _is_valid_lead_email(it.get("email", ""))]
         except Exception as e:
             print(f"[LUNA_COLLECT] AI collection error: {e}")
     collected_ig, collected_tt = 0, 0
@@ -3197,7 +3216,7 @@ async def api_luna_send_na(request: Request):
         inf_name = body.get("influencer_name", "Test Influencer")
         subj = tmpl.get("subject", "").replace("{name}", inf_name).replace("{InfluencerName}", inf_name)
         email_body = tmpl.get("body", "").replace("{name}", inf_name).replace("{InfluencerName}", inf_name)
-        result = _send_email_smtp(test_recipient, subj, "", "\ub8e8\ub098", email_body)
+        result = _send_email_smtp(test_recipient, subj, "", "luna", email_body)
         _log_scheduler("luna_send_test", "done", 1)
         return {"status": "ok", "test_mode": True, "sent_to": test_recipient, "template": template_key, "result": result}
     rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
