@@ -1099,11 +1099,11 @@ def save_checklist(data: List[Dict]):
 
 # ===== Routes =====
 DAILY_AGENT_CARDS = [
-    {"agent": "피치", "action_type": "pitch_db_collect",
+    {"agent": "pitch", "action_type": "pitch_db_collect",
      "proposal": "브랜드 DB 수집 + 이메일 아웃리치",
      "detail": "출처: 링크드인 + 인스타그램\n타겟: K-뷰티 마케팅 담당자\n목표: 100건\n비용: Haiku ~294원",
      "expected_impact": "DB 100 → 유효 70 → 미팅 10"},
-    {"agent": "루나", "action_type": "luna_db_collect",
+    {"agent": "luna", "action_type": "luna_db_collect",
      "proposal": "인플루언서 DB 수집 + 협찬 제안",
      "detail": "출처: 인스타그램 #kbeauty\n타겟: 뷰티 인플루언서 1만~10만\n목표: 50명\n비용: Haiku ~196원",
      "expected_impact": "DB 50 → 유효 35 → 확보 5"},
@@ -1111,7 +1111,7 @@ DAILY_AGENT_CARDS = [
      "proposal": "메타 광고 최적화",
      "detail": "타겟팅 분석 및 최적화\n목표: ROAS 3.0+ / CPA 2만원 이하",
      "expected_impact": "인바운드 +30%"},
-    {"agent": "소피", "action_type": "sophie_content_plan",
+    {"agent": "sophie", "action_type": "sophie_content_plan",
      "proposal": "SNS 콘텐츠 캘린더",
      "detail": "인스타그램 + 틱톡\n주 3회 발행\n비용: Haiku ~122원",
      "expected_impact": "팔로워 +500 / 리드 25건"},
@@ -2469,19 +2469,29 @@ def _get_smtp_creds(agent_name: str):
 
 EMAIL_WEBHOOK_URL = os.getenv("EMAIL_WEBHOOK_URL", "")
 
-def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: str = "루나", html_body: str = "") -> dict:
+def _clean_surrogates(text: str) -> str:
+    """Remove surrogate characters to prevent UTF-8 encoding errors."""
+    if not text:
+        return ""
+    try:
+        return text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
+    except Exception:
+        return text.encode("ascii", errors="replace").decode("ascii")
+
+
+def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: str = "luna", html_body: str = "") -> dict:
     """이건©일 건°송: GAS 웹훅 (Railway SMTP 차건¨으건¡ 웹훅 사용)."""
     webhook_url = EMAIL_WEBHOOK_URL
     from_email, sender_name = _get_from(agent_name)
     if not webhook_url:
         return {"status": "not_configured", "message": "EMAIL_WEBHOOK_URL 건¯¸설정 (Railway SMTP 차건¨으건¡ GAS 웹훅 필요)"}
-    agent_id = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle"}.get(agent_name, "pitch")
+    agent_id = {"pitch": "pitch", "luna": "luna", "sophie": "sophie", "kyle": "kyle", "피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle"}.get(agent_name, agent_name if agent_name in ("pitch","luna","sophie","kyle") else "pitch")
     payload = {"agent": agent_id, "to": to_email, "subject": subject, "body": body_text}
     if html_body:
         payload["htmlBody"] = html_body
     try:
         resp = req_lib.post(webhook_url,
-                            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                            data=_clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8"),
                             timeout=30, allow_redirects=True,
                             headers={"Content-Type": "application/json; charset=utf-8"})
         if resp.status_code == 200:
@@ -2528,7 +2538,7 @@ async def api_send_email(request: Request):
 
 
 @app.get("/api/test-email")
-async def api_test_email(agent: str = "피치"):
+async def api_test_email(agent: str = "pitch"):
     """에이전트건³ 테스트 이건©일 â GAS 웹훅."""
     from_email, sender_name = _get_from(agent)
     to_email = "jacob@08liter.com"
@@ -2719,7 +2729,7 @@ KOL 건¼이건¸ â 2건¶ 30초에 1억 건§¤출
 <p style="margin:0;color:#dc3545"><strong>â» 회신 없이건 건¨ 1통건 건°송건지 않습건건¤.</strong></p>
 </div></div>'''
 
-    result = _send_email_smtp(ceo_email, subject, body, "피치", html_body=html)
+    result = _send_email_smtp(ceo_email, subject, body, "pitch", html_body=html)
     result["pitch_total"] = pitch_total
     result["luna_total"] = luna_total
     return result
@@ -2873,7 +2883,7 @@ async def api_pitch_send(request: Request):
             continue
         # GAS template mode: send action+template+vars only
         gas_payload = {"action": "send_pitch", "template": template_key, "to": email, "brand_name": brand, "contact_name": contact}
-        result = _send_email_smtp(email, subj, email_body, "피치")
+        result = _send_email_smtp(email, subj, email_body, "pitch")
         if result["status"] == "ok":
             sent += 1
         else:
@@ -2918,7 +2928,7 @@ async def api_pitch_daily(request: Request):
     if action == "collect_only":
         # DB 수집건§ (건°송은 월요일 09:00)
         notify_body = f"[피치] DB {unsent + collected}건 확인 완건£.\n신규 건¯¸건°송: {unsent}건\n추가 수집: {collected}건\n\n월요일 08:30에 검수 이건©일 건°송 예정입건건¤."
-        _send_email_smtp("jacob@08liter.com", "[피치] DB 수집 완건£ â 월요일 건°송 예정", notify_body, "피치")
+        _send_email_smtp("jacob@08liter.com", "[피치] DB 수집 완건£ â 월요일 건°송 예정", notify_body, "pitch")
         result["steps"].append({"step": "CEO 알건¦¼", "message": "월요일 건°송 예정"})
         return result
 
@@ -2986,7 +2996,7 @@ async def api_pitch_performance():
     monthly_p = {}
     for dk, ad in perf.items():
         if dk.startswith(month_prefix):
-            for agent_key in ["피치", "pitch", "피치"]:
+            for agent_key in ["pitch", "pitch", "피치"]:
                 if agent_key in ad:
                     for mk, mv in ad[agent_key].items():
                         monthly_p[mk] = monthly_p.get(mk, 0) + mv
@@ -3041,9 +3051,30 @@ async def api_luna_collect_na(request: Request):
                 existing_na += 1
             if email:
                 existing_emails.add(email.lower())
-    # 인플루언서 DB에서 수집 (시뮬레이션)
-    inf = await api_influencer_db()
-    items = inf.get("items", inf.get("rows", []))
+    # AI-based influencer collection using Anthropic API
+    items = []
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if api_key:
+        try:
+            import httpx as _hx
+            prompt = (f"Find {target_count} beauty influencers on Instagram and TikTok "
+                      f"from US and Canada with 10K-50K followers who post about "
+                      f"#kbeauty #skincare #beauty. Return ONLY a JSON array: "
+                      f'[{{"username":"name","email":"email@example.com","platform":"Instagram","country":"US","followers":15000}}]. '
+                      f"No other text.")
+            resp = _hx.post("https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 4000,
+                      "messages": [{"role": "user", "content": prompt}]}, timeout=60)
+            if resp.status_code == 200:
+                import re as _re
+                text = resp.json().get("content", [{}])[0].get("text", "")
+                match = _re.search(r'\[.*\]', text, _re.DOTALL)
+                if match:
+                    items = json.loads(match.group())
+                    _record_perf("luna", "ai_collect", len(items))
+        except Exception as e:
+            print(f"[LUNA_COLLECT] AI collection error: {e}")
     collected_ig, collected_tt = 0, 0
     new_items = []
     for item in items:
@@ -3077,7 +3108,7 @@ async def api_luna_collect_na(request: Request):
                   f"오늘 수집: 인스타 {collected_ig}명 / 틱톡 {collected_tt}명\n"
                   f"누적 수집: {existing_na + total_collected}명 / 400명 목표\n\n"
                   f"월요일 오전 09:00 승인 요청 이메일 발송 예정.")
-    _send_email_smtp("jacob@08liter.com", f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건", alert_body, "루나")
+    _send_email_smtp("jacob@08liter.com", f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건", alert_body, "luna")
     # Write new items to luna sheet
     if new_items:
         now_str = now.strftime("%Y-%m-%d %H:%M")
@@ -3140,7 +3171,7 @@ async def api_luna_review_na():
 <p style="color:#dc3545"><b>※ 회신 없이는 단 1통도 발송되지 않습니다.</b></p>
 </div></div>'''
     subject = f"[루나 북미 발송 승인 요청] 이번 주 비정형형 뉴스레터 확인해주세요"
-    result = _send_email_smtp("jacob@08liter.com", subject, "루나 북미 승인 요청", "루나", html_body=html)
+    result = _send_email_smtp("jacob@08liter.com", subject, "루나 북미 승인 요청", "luna", html_body=html)
     result["na_count"] = na_count
     result["na_email"] = na_email
     return result
@@ -3743,7 +3774,7 @@ async def _sophie_daily_content():
                 proposals = load_proposals()
                 proposals.append({
                     "id": int(time.time() * 1000) % 10000000,
-                    "agent": "소피", "status": "pending_approval",
+                    "agent": "sophie", "status": "pending_approval",
                     "proposal": f"오건의 SNS 콘텐츠 (B2B + B2C)",
                     "detail": content[:500],
                     "expected_impact": "B2B: 건¸건건 건¦¬건 1건+ / B2C: 인플건£¨언서 건¦¬건 2건+",
@@ -3983,7 +4014,7 @@ async def _agent_auto_cycle():
         # 3. 카일 â 건¬´건응 건 감지
         if t.get("unhandled", 0) > 0:
             alerts_posted.append({
-                "id": _id(), "agent": "카일", "severity": "warning",
+                "id": _id(), "agent": "kyle", "severity": "warning",
                 "summary": f"건¬´건응 {t['unhandled']}건 â 건´건¹자 건°°정 필요",
                 "detail": "건´건¹자 건¯¸건°°정 건건 컨텍현황 건¯¸입건 ¥",
                 "timestamp": now_ts, "resolved": False})
@@ -3998,7 +4029,7 @@ async def _agent_auto_cycle():
         for svc, ok in api_checks.items():
             if not ok:
                 alerts_posted.append({
-                    "id": _id(), "agent": "카일", "severity": "critical",
+                    "id": _id(), "agent": "kyle", "severity": "critical",
                     "summary": f"ð´ {svc} 연결 실패 â 자건 재연결 시건 중",
                     "detail": f"{svc} API 키 건¯¸설정 건건 건§건£. Railway Variables 확인 필요.",
                     "timestamp": now_ts, "resolved": False})
@@ -4008,7 +4039,7 @@ async def _agent_auto_cycle():
             sophie_result = await api_sophie_content()
             if sophie_result.get("status") == "ok":
                 content = sophie_result.get("content", "")
-                alerts_posted.append({"id": _id(), "agent": "소피", "severity": "info",
+                alerts_posted.append({"id": _id(), "agent": "sophie", "severity": "info",
                     "summary": "ð± 이건² 주 SNS 콘텐츠 전건µ 생성 완건£", "detail": content[:200],
                     "timestamp": now_ts, "resolved": False})
                 _send_email(AGENT_EMAILS["소피"], "[소피] 이건² 주 SNS 콘텐츠 전건µ", _build_pitch_html("SNS 콘텐츠", content), "소피")
@@ -4022,7 +4053,7 @@ async def _agent_auto_cycle():
             bc = stats.get("by_country", {})
             total = inf.get("total", 0)
             pitch_summary = f"인플건£¨언서 풀: {total:,}건ª\n국가건³: {', '.join(f'{k}:{v}' for k,v in sorted(bc.items(), key=lambda x:-x[1])[:5])}"
-            alerts_posted.append({"id": _id(), "agent": "피치", "severity": "info",
+            alerts_posted.append({"id": _id(), "agent": "pitch", "severity": "info",
                 "summary": f"ð 인플건£¨언서 풀 현황: {total:,}건ª", "detail": pitch_summary,
                 "timestamp": now_ts, "resolved": False})
             _send_email(AGENT_EMAILS["피치"], "[피치] 인플건£¨언서 풀 일일 건³´고서", _build_pitch_html("인플건£¨언서", pitch_summary), "피치")
@@ -4059,7 +4090,7 @@ async def _agent_auto_cycle():
             ib_sent = pitch_ib.get("sent", 0)
             crm_sent = pitch_crm.get("sent", 0)
             if ib_sent + crm_sent > 0:
-                alerts_posted.append({"id": _id(), "agent": "피치", "severity": "info",
+                alerts_posted.append({"id": _id(), "agent": "pitch", "severity": "info",
                     "summary": f"ð§ 피치 자율업건¬´: 인건°운건 응건 {ib_sent}건 + CRM 건´스건 터 {crm_sent}건",
                     "detail": f"건¯¸팅 예약 건§크 포함 건°송 완건£",
                     "timestamp": now_ts, "resolved": False})
@@ -4087,7 +4118,7 @@ async def _agent_auto_cycle():
         try:
             sophie = await _sophie_daily_content()
             if sophie.get("status") == "ok":
-                alerts_posted.append({"id": _id(), "agent": "소피", "severity": "info",
+                alerts_posted.append({"id": _id(), "agent": "sophie", "severity": "info",
                     "summary": "ð± 소피 자율업건¬´: 오건의 B2B/B2C 콘텐츠 기획 완건£",
                     "detail": "승인 큐에서 확인 후 승인해주세요",
                     "timestamp": now_ts, "resolved": False})
@@ -4194,7 +4225,7 @@ async def api_kakao_channel():
         "b2b": {"channel": b2b, "status": "connected" if b2b_key else "not_configured",
                 "agent": "하건", "desc": "B2B CS 건©시지 자건 수신/응건"},
         "b2c": {"channel": b2c, "status": "connected" if b2c_key else "not_configured",
-                "agent": "피치", "desc": "B2C 인플건£¨언서 건¬¸의 수신 â 인건°운건 시트 자건 기건¡"},
+                "agent": "pitch", "desc": "B2C 인플건£¨언서 건¬¸의 수신 â 인건°운건 시트 자건 기건¡"},
     }
 
 @app.get("/api/kakao-b2b/messages")
@@ -4843,7 +4874,7 @@ async def _generate_agent_proposals():
             listed = stats.get("by_status", {}).get("1. 건¨순건¦¬스트업", 0)
             if listed > 50:
                 new_proposals.append({
-                    "id": _pid(), "agent": "피치", "status": "pending_approval",
+                    "id": _pid(), "agent": "pitch", "status": "pending_approval",
                     "proposal": f"건¨순건¦¬스트업 {listed}건ª â 컨택 전환 캠페인 제안",
                     "detail": f"건¦¬스트업건§ 건 인플건£¨언서 {listed}건ª. 이 중 팔건¡워 10건§+ 건상으건¡ 개인화 컨택 이건©일 건°송 권장.",
                     "expected_impact": f"응건µ건¥  25% 기준 {int(listed*0.25)}건ª 추가 확건³´",
@@ -4857,7 +4888,7 @@ async def _generate_agent_proposals():
         # 4. 카일 â 건¬´건응 자건건°°정
         if t.get("unhandled", 0) > 0:
             new_proposals.append({
-                "id": _pid(), "agent": "카일", "status": "pending_approval",
+                "id": _pid(), "agent": "kyle", "status": "pending_approval",
                 "proposal": f"건¬´건응 {t['unhandled']}건 â 건´건¹자 자건건°°정 제안",
                 "detail": "건¯¸처건¦¬ 인건°운건가 건°©치 중. 건´건¹자건³ 업건¬´건 기준으건¡ 자건 건°°정 실행 가건¥.",
                 "expected_impact": "응건µ시간 50% 건¨축, 전환율 개선",
@@ -5010,7 +5041,7 @@ async def api_agent_auto_report():
     return {"reports": reports, "timestamp": now.isoformat()}
 
 
-@app.get("/api/kyle/auto-report")
+@app.api_route("/api/kyle/auto-report", methods=["GET", "POST"])
 async def api_kyle_auto_report():
     """Kyle integrated check report."""
     now = datetime.now(KST)
@@ -5122,7 +5153,7 @@ async def api_token_usage():
                 for mk, mv in metrics.items():
                     monthly_data[ag][mk] = monthly_data[ag].get(mk, 0) + mv
     agents = {}
-    for ag in ["피치", "루나", "소피", "건§¥스", "카일"]:
+    for ag in ["pitch", "루나", "sophie", "건§¥스", "카일"]:
         td = today_data.get(ag, {})
         md = monthly_data.get(ag, {})
         today_in = td.get("input_tokens", 0)
@@ -5165,7 +5196,7 @@ async def api_email_approve(request: Request):
         if e.get("id") == eid and e.get("status") == "pending":
             subject = body.get("subject", e["subject"])
             html = body.get("html", e["html"])
-            result = _send_email(e["to"], subject, html, e.get("agent", "피치"))
+            result = _send_email(e["to"], subject, html, e.get("agent", "pitch"))
             e["status"] = "sent" if result["status"] == "ok" else "failed"
             e["sent_at"] = datetime.now(KST).isoformat()
             e["result"] = result
@@ -5197,7 +5228,7 @@ async def api_email_approve_all(request: Request):
             continue
         if not _check_send_limit():
             break
-        result = _send_email(e["to"], e["subject"], e["html"], e.get("agent", "피치"))
+        result = _send_email(e["to"], e["subject"], e["html"], e.get("agent", "pitch"))
         e["status"] = "sent" if result["status"] == "ok" else "failed"
         e["sent_at"] = datetime.now(KST).isoformat()
         e["result"] = result
@@ -5234,7 +5265,7 @@ async def api_email_regenerate(request: Request):
     for e in queue:
         if e.get("id") == eid and e.get("status") == "pending":
             target = e.get("meta", {}).get("target", "고객")
-            agent = e.get("agent", "피치")
+            agent = e.get("agent", "pitch")
             if ANTHROPIC_API_KEY:
                 try:
                     prompt = f"{target}에게 건³´건¼ {'인플건£¨언서 건§케팅' if agent=='피치' else '협찬'} 제안 이건©일을 작성해주세요. 100건¨어, 건¯¸팅 건§크 포함."
@@ -5260,7 +5291,7 @@ async def api_email_regenerate(request: Request):
 async def api_generate_with_promo(request: Request):
     """프건¡건ª¨션/협찬 설정 기반 이건©일 생성."""
     body = await request.json()
-    agent = body.get("agent", "피치")
+    agent = body.get("agent", "pitch")
     promos = body.get("promos", [])
     highlights = body.get("highlights", [])
     targets = body.get("targets", [])
@@ -5330,7 +5361,7 @@ async def api_sns_content_generate(request: Request):
         if results[ct]:
             proposals.append({
                 "id": int(time.time() * 1000) % 10000000 + (1 if ct == "b2c" else 0),
-                "agent": "소피", "status": "pending_approval",
+                "agent": "sophie", "status": "pending_approval",
                 "proposal": f"{'B2B' if ct=='b2b' else 'B2C'} 콘텐츠 â {results[ct]['channel']}",
                 "detail": results[ct]["content"],
                 "expected_impact": f"예상 건¦¬건: {'5~15' if ct=='b2b' else '10~30'}건",
@@ -5344,7 +5375,7 @@ async def api_sns_content_generate(request: Request):
     return {"status": "ok", "results": results}
 
 @app.get("/api/sheet-pipeline")
-async def api_sheet_pipeline(agent: str = "피치"):
+async def api_sheet_pipeline(agent: str = "pitch"):
     """구글시트 실시간 파이프건¼인 â 에이전트건³ 집계. 실제 시트 컬건¼ 기반."""
     now = datetime.now(KST)
     result = {"agent": agent, "today": {}, "month": {}, "total": {}, "funnel": {},
@@ -5461,7 +5492,7 @@ async def api_sheet_pipeline(agent: str = "피치"):
 async def api_pipeline_start(request: Request):
     """CEO 승인 후 DB 수집 + 이건©일 생성 파이프건¼인 실행."""
     body = await request.json()
-    agent = body.get("agent", "피치")
+    agent = body.get("agent", "pitch")
     pid = body.get("proposal_id")
     now = datetime.now(KST)
     result = {"agent": agent, "steps": []}
@@ -5536,7 +5567,7 @@ async def api_pipeline_start(request: Request):
     return {"status": "ok", "result": result}
 
 @app.get("/api/outbound-dashboard")
-async def api_outbound_dashboard(agent: str = "피치"):
+async def api_outbound_dashboard(agent: str = "pitch"):
     """섹션 최상건¨ 통합 KPI â CEO 건시건³´건용."""
     perf = load_agent_perf()
     now = datetime.now(KST)
@@ -5752,7 +5783,7 @@ async def api_generate_emails(request: Request):
     """크건¡¤건§ 결과 기반 이건©일 자건 생성 â 검수 큐."""
     body = await request.json()
     targets = body.get("targets", [])
-    agent = body.get("agent", "피치")
+    agent = body.get("agent", "pitch")
     template_key = body.get("template", "pitch_outbound")
     tmpl = EMAIL_TEMPLATES.get(template_key, EMAIL_TEMPLATES["pitch_outbound"])
     queued = 0
@@ -5925,19 +5956,25 @@ try:
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
     _scheduler = BackgroundScheduler(timezone="Asia/Seoul")
-    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/pitch/daily", json={"trigger":"scheduled","action":"collect_only"}, timeout=60), CronTrigger(hour="*/2"), id="pitch_collect", replace_existing=True)
-    _scheduler.add_job(lambda: req_lib.post("http://localhost:8000/api/agents/luna/collect-northamerica", json={"target_count":100}, timeout=60), CronTrigger(hour="*/2"), id="luna_collect", replace_existing=True)
+    def _sched_call(job_id, method, url, **kw):
+        try:
+            _log_scheduler(job_id, "start")
+            r = method(url, timeout=60, **kw)
+            _log_scheduler(job_id, "done" if r.status_code == 200 else f"fail:{r.status_code}")
+        except Exception as e:
+            _log_scheduler(job_id, f"error:{e}")
+    _scheduler.add_job(lambda: _sched_call("pitch_collect", req_lib.post, "http://localhost:8000/api/agents/pitch/daily", json={"trigger":"scheduled","action":"collect_only"}), CronTrigger(hour="*/2"), id="pitch_collect", replace_existing=True)
+    _scheduler.add_job(lambda: _sched_call("luna_collect", req_lib.post, "http://localhost:8000/api/agents/luna/collect-northamerica", json={"target_count":100}), CronTrigger(hour="*/2"), id="luna_collect", replace_existing=True)
     _scheduler.add_job(_pitch_send_job, CronTrigger(day_of_week="mon-fri", hour=9, minute=0), id="pitch_send", replace_existing=True)
-    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/send-review-email", timeout=60), CronTrigger(day_of_week="mon", hour=8, minute=30), id="weekly_review", replace_existing=True)
+    _scheduler.add_job(lambda: _sched_call("weekly_review", req_lib.get, "http://localhost:8000/api/send-review-email"), CronTrigger(day_of_week="mon", hour=8, minute=30), id="weekly_review", replace_existing=True)
     # Luna KR send: Mon-Fri 10:00 KST (A/B rotation)
     _scheduler.add_job(_luna_kr_send_job, CronTrigger(day_of_week="mon-fri", hour=10, minute=0), id="luna_kr_send", replace_existing=True)
     # Luna US send: Mon-Fri 23:00 KST (A/B rotation)
     _scheduler.add_job(_luna_us_send_job, CronTrigger(day_of_week="mon-fri", hour=23, minute=0), id="luna_us_send", replace_existing=True)
     # Auto reports: 09,12,15,18 KST weekdays
-    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/agent-auto-report", timeout=30), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="agent_auto_report", replace_existing=True)
-    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/kyle/auto-report", timeout=30), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
-    # Daily health check: 06:00 KST weekdays
-    _scheduler.add_job(lambda: req_lib.get("http://localhost:8000/api/daily-health-check", timeout=30), CronTrigger(day_of_week="mon-fri", hour=6, minute=0), id="daily_health_check", replace_existing=True)
+    _scheduler.add_job(lambda: _sched_call("agent_auto_report", req_lib.get, "http://localhost:8000/api/agent-auto-report"), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="agent_auto_report", replace_existing=True)
+    _scheduler.add_job(lambda: _sched_call("kyle_auto_report", req_lib.get, "http://localhost:8000/api/kyle/auto-report"), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
+    _scheduler.add_job(lambda: _sched_call("daily_health_check", req_lib.get, "http://localhost:8000/api/daily-health-check"), CronTrigger(day_of_week="mon-fri", hour=6, minute=0), id="daily_health_check", replace_existing=True)
     _scheduler.start()
     print("[SCHEDULER] Started - pitch(A/B/C), luna(A/B), reports(9/12/15/18), health(06:00)")
 except ImportError:
