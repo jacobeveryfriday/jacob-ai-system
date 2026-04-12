@@ -2705,9 +2705,19 @@ async def api_pitch_send(request: Request):
     """CEO 승인건 시안으건¡ 피치 이건©일 건°송. DB 소스: 오직 피치_클건¡건 탭."""
     body = await request.json()
     template_key = body.get("template", body.get("variant", "A")).upper()
+    test_mode = body.get("test_mode", False)
+    test_recipient = body.get("recipient", "")
     if template_key == "AB":
-        template_key = "A"  # 건³µ수 선택 시 A 우선
+        template_key = "A"
     tmpl = PITCH_TEMPLATES.get(template_key, PITCH_TEMPLATES["A"])
+    # Test mode: send to specified recipient only
+    if test_mode and test_recipient:
+        brand = body.get("brand_name", "Test Brand")
+        subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", brand)
+        email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", brand)
+        result = _send_email_smtp(test_recipient, subj, "", "\ud53c\uce58", email_body)
+        _log_scheduler("pitch_send_test", "done", 1)
+        return {"status": "ok", "test_mode": True, "sent_to": test_recipient, "template": template_key, "result": result}
     # DB 소스: 오직 피치 시트 "피치_클건¡건" 탭 (건¤건¥¸ 시트 혼용 금지)
     rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
     leads = []
@@ -3017,7 +3027,24 @@ async def api_luna_send_na(request: Request):
     """CEO 승인된 시안으로 루나 북미 이메일 발송."""
     body = await request.json()
     template_key = body.get("template", "D").upper()
-    tmpl = LUNA_NA_TEMPLATES.get(template_key, LUNA_NA_TEMPLATES["D"])
+    test_mode = body.get("test_mode", False)
+    test_recipient = body.get("recipient", "")
+    # Import templates
+    from pitch_templates import LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
+    all_luna = {}
+    all_luna.update({"KR_" + k: v for k, v in LUNA_KR_TEMPLATES.items()})
+    all_luna.update({"US_" + k: v for k, v in LUNA_US_TEMPLATES.items()})
+    tmpl = all_luna.get(template_key, LUNA_NA_TEMPLATES.get(template_key, LUNA_NA_TEMPLATES.get("D", {})))
+    if not tmpl:
+        tmpl = list(LUNA_NA_TEMPLATES.values())[0] if LUNA_NA_TEMPLATES else {"subject": "Luna", "body": "Hello"}
+    # Test mode
+    if test_mode and test_recipient:
+        inf_name = body.get("influencer_name", "Test Influencer")
+        subj = tmpl.get("subject", "").replace("{name}", inf_name).replace("{InfluencerName}", inf_name)
+        email_body = tmpl.get("body", "").replace("{name}", inf_name).replace("{InfluencerName}", inf_name)
+        result = _send_email_smtp(test_recipient, subj, "", "\ub8e8\ub098", email_body)
+        _log_scheduler("luna_send_test", "done", 1)
+        return {"status": "ok", "test_mode": True, "sent_to": test_recipient, "template": template_key, "result": result}
     rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
     targets = []
     if rows and len(rows) > 1:
@@ -4832,7 +4859,7 @@ async def api_kyle_suggestions():
 
 
 # ===== Auto Report APIs =====
-@app.get("/api/agent-auto-report")
+@app.api_route("/api/agent-auto-report", methods=["GET", "POST"])
 async def api_agent_auto_report():
     """Generate periodic status reports for all active agents."""
     now = datetime.now(KST)
