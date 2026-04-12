@@ -9,6 +9,21 @@
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+
+    // Sheet append action (for DB collection writes)
+    if (data.action === 'appendSheet') {
+      var ss = SpreadsheetApp.openById(data.sheetId);
+      var sheet = ss.getSheetByName(data.range.split('!')[0]) || ss.getSheets()[0];
+      if (data.values && data.values.length > 0) {
+        sheet.getRange(sheet.getLastRow()+1, 1, data.values.length, data.values[0].length)
+          .setValues(data.values);
+      }
+      return ContentService.createTextOutput(
+        JSON.stringify({status:'success', rows: data.values.length})
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Email send action (existing)
     var to = data.to || '';
     var subject = data.subject || '';
     var body = data.body || '';

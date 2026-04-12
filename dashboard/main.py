@@ -184,6 +184,7 @@ EMAIL_QUEUE_FILE = DATA_DIR / "email_queue.json"
 AGENT_AUTO_SEND_FILE = DATA_DIR / "agent_auto_send.json"
 CRAWLED_DATA_FILE = DATA_DIR / "crawled_data.json"
 EMAIL_LOG_FILE = DATA_DIR / "email_log.json"
+SCHEDULER_LOG_FILE = DATA_DIR / "scheduler_log.json"
 
 # 건°송 속건 제한
 SEND_LIMITS = {"hourly": 50, "daily": 550, "interval_sec": 30}
@@ -409,6 +410,38 @@ def load_cycle_log() -> list:
 def save_cycle_log(data: list):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     CYCLE_LOG_FILE.write_text(json.dumps(data[-100:], ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ===== Scheduler Log =====
+def _log_scheduler(job_id: str, result: str, count: int = 0):
+    try:
+        log = json.loads(SCHEDULER_LOG_FILE.read_text(encoding="utf-8")) if SCHEDULER_LOG_FILE.exists() else {"runs": []}
+        log["runs"].append({"job": job_id, "time": datetime.now(KST).isoformat(), "result": result, "count": count})
+        log["runs"] = log["runs"][-100:]
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        SCHEDULER_LOG_FILE.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+# ===== Sheet Write via GAS Webhook =====
+def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list):
+    """Write rows to Google Sheets via GAS webhook (read-only API key can't write)."""
+    webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
+    if not webhook or not rows:
+        return False
+    try:
+        payload = {
+            "action": "appendSheet",
+            "sheetId": sheet_id,
+            "range": tab_range,
+            "values": rows,
+        }
+        r = req_lib.post(webhook, json=payload, timeout=30)
+        return r.status_code == 200
+    except Exception:
+        return False
+
 
 # ===== Google Sheets Config =====
 GSHEETS_API_KEY = os.getenv("GOOGLE_SHEETS_API_KEY", "")
@@ -2728,10 +2761,10 @@ async def api_pitch_send(request: Request):
 
 @app.post("/api/agents/pitch/daily")
 async def api_pitch_daily(request: Request):
-    """피치 건§¤일 자율 실행. trigger=immediate/scheduled, action=collect_only/full."""
     body = await request.json()
     action = body.get("action", "full")
     now = datetime.now(KST)
+    _log_scheduler("pitch_daily_" + action, "start")
     result = {"timestamp": now.isoformat(), "steps": []}
 
     # STEP 1: 피치_클건¡건 탭 신규 DB 건수 확인
@@ -2752,6 +2785,11 @@ async def api_pitch_daily(request: Request):
         leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
         collected = len(leads)
         _record_perf("피치", "crawl_brands", collected)
+        # Write collected leads to pitch sheet
+        if leads:
+            now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+            sheet_rows = [[now_str, l.get("name",""), l.get("email",""), l.get("category",""), "✔"] for l in leads[:50]]
+            _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:E", sheet_rows)
     result["steps"].append({"step": "DB 수집", "collected": collected, "needed": unsent < 10})
 
     if action == "collect_only":
@@ -2769,6 +2807,7 @@ async def api_pitch_daily(request: Request):
     # STEP 3: CEO 검수 이건©일 건°송
     review_result = await api_send_review_email()
     result["steps"].append({"step": "CEO 검수 건°송", "status": review_result.get("status"), "total": review_result.get("pitch_total", 0)})
+    _log_scheduler("pitch_daily", "done")
     return result
 
 @app.post("/api/pitch/revise")
@@ -2916,6 +2955,7 @@ async def api_luna_collect_na(request: Request):
                   f"누적 수집: {existing_na + total_collected}명 / 400명 목표\n\n"
                   f"월요일 오전 09:00 승인 요청 이메일 발송 예정.")
     _send_email_smtp("jacob@08liter.com", f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건", alert_body, "루나")
+    _log_scheduler("luna_collect_na", "done", total_collected)
     return {"status": "ok", "day": day_num, "collected": {"instagram": collected_ig, "tiktok": collected_tt},
             "total_na": existing_na + total_collected, "target": 400}
 
@@ -4579,9 +4619,14 @@ async def api_calendar_meetings():
         }
     return {"status": "configured", "today_meetings": 0, "month_meetings": 0, "source": "Google Calendar"}
 
+@app.get("/api/scheduler-log")
+async def api_scheduler_log():
+    if SCHEDULER_LOG_FILE.exists():
+        return json.loads(SCHEDULER_LOG_FILE.read_text(encoding="utf-8"))
+    return {"runs": []}
+
 @app.get("/api/cycle-log")
 async def api_get_cycle_log():
-    """에이전트 사이클 히스토건¦¬ 조회."""
     return {"log": load_cycle_log()[-30:]}
 
 
