@@ -2522,6 +2522,35 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: st
     except Exception as e:
         return {"status": "error", "message": str(e), "method": "gas_webhook"}
 
+def _send_template_via_gas(agent: str, to_email: str, template: str,
+                           brand: str = "", contact: str = "", name: str = "") -> dict:
+    """Send templated email via GAS webhook. GAS generates McKinsey HTML from template key."""
+    webhook_url = EMAIL_WEBHOOK_URL
+    if not webhook_url:
+        return {"status": "not_configured"}
+    payload = {"to": to_email, "agent": agent, "template": template}
+    if brand:
+        payload["brand"] = brand
+    if contact:
+        payload["contact"] = contact
+    if name:
+        payload["name"] = name
+    try:
+        resp = req_lib.post(webhook_url,
+                            data=_clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8"),
+                            timeout=30, allow_redirects=True,
+                            headers={"Content-Type": "application/json; charset=utf-8"})
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"message": resp.text[:200]}
+            return {"status": "ok", "to": to_email, "template": template, "method": "gas_template", "response": data}
+        return {"status": "error", "message": resp.text[:300], "code": resp.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 def _html_to_text(html: str) -> str:
     """HTML에서 태그 제거하여 플건 인 텍스트 추출."""
     text = html.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
@@ -2852,13 +2881,16 @@ async def api_pitch_send(request: Request):
         template_key = "A"
     tmpl = PITCH_TEMPLATES.get(template_key, PITCH_TEMPLATES["A"])
     # Test mode: send to specified recipient only
+    # CEO test or direct send with "to" parameter
+    direct_to = body.get("to", "")
     if test_mode and test_recipient:
-        brand = body.get("brand_name", "Test Brand")
-        subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", brand)
-        email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", brand)
-        result = _send_email_smtp(test_recipient, subj, "", "pitch", email_body)
+        direct_to = test_recipient
+    if direct_to:
+        brand_name = body.get("brand_name", body.get("brand", "Test Brand"))
+        contact_name = body.get("contact", brand_name)
+        result = _send_template_via_gas("pitch", direct_to, template_key, brand=brand_name, contact=contact_name)
         _log_scheduler("pitch_send_test", "done", 1)
-        return {"status": "ok", "test_mode": True, "sent_to": test_recipient, "template": template_key, "result": result}
+        return {"status": "ok", "test_mode": bool(test_mode), "sent_to": direct_to, "template": template_key, "result": result}
     # DB 소스: 오직 피치 시트 "피치_클건¡건" 탭 (건¤건¥¸ 시트 혼용 금지)
     rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
     leads = []
@@ -2897,17 +2929,16 @@ async def api_pitch_send(request: Request):
         if qc:
             skipped += 1
             errors_list.append({"brand": brand, "errors": qc})
-            _record_perf("피치", "quality_fail")
+            _record_perf("pitch", "quality_fail")
             continue
-        # GAS template mode: send action+template+vars only
-        gas_payload = {"action": "send_pitch", "template": template_key, "to": email, "brand_name": brand, "contact_name": contact}
-        result = _send_email_smtp(email, subj, email_body, "pitch")
+        # GAS template mode: send template key + vars, GAS generates HTML
+        result = _send_template_via_gas("pitch", email, template_key, brand=brand, contact=contact)
         if result["status"] == "ok":
             sent += 1
         else:
             skipped += 1
             errors_list.append({"brand": brand, "errors": [result.get("message", "건°송 실패")]})
-    _record_perf("피치", "email_sent_batch", sent)
+    _record_perf("pitch", "email_sent_batch", sent)
     return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped, "deferred": deferred, "errors": errors_list[:10]}
 
 @app.post("/api/agents/pitch/daily")
@@ -3211,14 +3242,15 @@ async def api_luna_send_na(request: Request):
     tmpl = all_luna.get(template_key, LUNA_NA_TEMPLATES.get(template_key, LUNA_NA_TEMPLATES.get("D", {})))
     if not tmpl:
         tmpl = list(LUNA_NA_TEMPLATES.values())[0] if LUNA_NA_TEMPLATES else {"subject": "Luna", "body": "Hello"}
-    # Test mode
+    # Test mode or direct send with "to" parameter
+    direct_to = body.get("to", "")
     if test_mode and test_recipient:
-        inf_name = body.get("influencer_name", "Test Influencer")
-        subj = tmpl.get("subject", "").replace("{name}", inf_name).replace("{InfluencerName}", inf_name)
-        email_body = tmpl.get("body", "").replace("{name}", inf_name).replace("{InfluencerName}", inf_name)
-        result = _send_email_smtp(test_recipient, subj, "", "luna", email_body)
+        direct_to = test_recipient
+    if direct_to:
+        inf_name = body.get("influencer_name", body.get("name", "Test Influencer"))
+        result = _send_template_via_gas("luna", direct_to, template_key, name=inf_name)
         _log_scheduler("luna_send_test", "done", 1)
-        return {"status": "ok", "test_mode": True, "sent_to": test_recipient, "template": template_key, "result": result}
+        return {"status": "ok", "test_mode": bool(test_mode), "sent_to": direct_to, "template": template_key, "result": result}
     rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
     targets = []
     if rows and len(rows) > 1:
@@ -3239,13 +3271,12 @@ async def api_luna_send_na(request: Request):
         if qc:
             skipped += 1
             continue
-        html = _build_pitch_html(t["name"], email_body)
-        result = _send_email(t["email"], subj, html, "루나")
+        result = _send_template_via_gas("luna", t["email"], template_key, name=t["name"])
         if result["status"] == "ok":
             sent += 1
         else:
             skipped += 1
-    _record_perf("루나", "na_email_sent", sent)
+    _record_perf("luna", "na_email_sent", sent)
     return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped}
 
 # ===== Quality Check + Batch Send + Pipeline APIs =====
