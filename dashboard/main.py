@@ -576,6 +576,9 @@ def _kyle_post_check(agent: str, result: dict):
 
 # ===== Google Sheets Config =====
 GSHEETS_API_KEY = os.getenv("GOOGLE_SHEETS_API_KEY", "")
+if not GSHEETS_API_KEY:
+    import logging as _logging
+    _logging.warning("GOOGLE_SHEETS_API_KEY not set. fetch_sheet() will return empty data. Pitch/Luna agents cannot collect DB.")
 SHEET_INBOUND = os.getenv("INBOUND_SHEET_ID", "1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8")
 SHEET_CONTRACT = os.getenv("GOOGLE_SHEETS_ID", "1j_3IYME764NlrARbNCZ_TJqzZCyfAMy-N3V-ByRik6Q")
 SHEET_INFLUENCER = "1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs"
