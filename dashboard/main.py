@@ -4733,41 +4733,45 @@ async def api_create_proposal(request: Request):
 
 @app.post("/api/proposals/approve")
 async def api_approve_proposal(request: Request):
-    """CEO가 제안 승인 â status건¥¼ approved건¡ 건³경."""
     body = await request.json()
     pid = body.get("id")
     proposals = load_proposals()
+    pipeline_result = None
     for p in proposals:
         if p.get("id") == pid:
             p["status"] = "approved"
             p["approved_at"] = datetime.now(KST).isoformat()
-            # DB 수집 파이프건¼인 자건 시작
             action_type = p.get("action_type", "")
-            pipeline_result = None
-            if action_type in ("pitch_db_collect", "luna_db_collect"):
-                try:
-                    agent_name = "피치" if "pitch" in action_type else "루나"
-                    if agent_name == "피치":
-                        pitch_result = await _pitch_outbound_crm()
-                        pipeline_result = {"step": "이건©일 생성+큐 건±건¡", "sent": pitch_result.get("sent", 0)}
-                    else:
-                        luna_result = await _luna_outbound_pitch()
-                        pipeline_result = {"step": "이건©일 생성+큐 건±건¡", "sent": luna_result.get("sent", 0)}
-                    p["result"] = f"파이프건¼인 실행: {pipeline_result.get('sent',0)}건 이건©일 â 검수 큐"
+            try:
+                if action_type == "pitch_db_collect":
+                    r = await _pitch_outbound_crm()
+                    pipeline_result = {"action": action_type, "sent": r.get("sent", 0)}
                     p["status"] = "executed"
                     p["executed_at"] = datetime.now(KST).isoformat()
-                except Exception as ex:
-                    pipeline_result = {"error": str(ex)}
-            # Slack 알건¦¼
+                    p["result"] = f"pipeline: {r.get('sent', 0)} emails queued"
+                elif action_type == "luna_db_collect":
+                    r = await _luna_outbound_pitch()
+                    pipeline_result = {"action": action_type, "sent": r.get("sent", 0)}
+                    p["status"] = "executed"
+                    p["executed_at"] = datetime.now(KST).isoformat()
+                    p["result"] = f"pipeline: {r.get('sent', 0)} emails queued"
+                else:
+                    p["result"] = "approved (no auto-execute for " + action_type + ")"
+                    pipeline_result = {"action": action_type, "note": "approved, manual execution needed"}
+            except Exception as ex:
+                p["status"] = "error"
+                p["result"] = f"execution error: {str(ex)[:200]}"
+                pipeline_result = {"action": action_type, "error": str(ex)[:200]}
+                print(f"[PROPOSAL] Approve error: {action_type} {ex}")
             slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
             if slack_url and _slack_enabled():
                 try:
-                    req_lib.post(slack_url, json={"text": f"â CEO 승인: [{p['agent']}] {p['proposal']}"}, timeout=5)
+                    req_lib.post(slack_url, json={"text": f"CEO approved: [{p.get('agent','')}] {p.get('proposal','')[:50]}"}, timeout=5)
                 except Exception:
                     pass
             break
     save_proposals(proposals)
-    _log_cycle("approve", pid, f"CEO가 제안 승인")
+    _log_cycle("approve", pid, "CEO approved")
     return {"status": "ok", "pipeline": pipeline_result}
 
 
