@@ -2492,6 +2492,27 @@ async def api_send_email(request: Request):
     return _send_email(to_email, subject, html)
 
 
+@app.get("/api/test-all-templates")
+async def api_test_all_templates():
+    """Send 9 template test emails to jacob@08liter.com."""
+    to = "jacob@08liter.com"
+    results = {}
+    templates = [
+        ("pitch", "A", {"brand": "테스트브랜드", "contact": "제이콥"}),
+        ("pitch", "B", {"brand": "테스트브랜드", "contact": "제이콥"}),
+        ("pitch", "C", {"brand": "테스트브랜드", "contact": "제이콥"}),
+        ("pitch", "A_EN", {"brand": "TestBrand", "contact": "Jacob"}),
+        ("pitch", "B_EN", {"brand": "TestBrand", "contact": "Jacob"}),
+        ("luna", "KR_A", {"name": "제이콥"}),
+        ("luna", "KR_B", {"name": "제이콥"}),
+        ("luna", "US_A", {"name": "Jacob"}),
+        ("luna", "US_B", {"name": "Jacob"}),
+    ]
+    for agent, tmpl, vars in templates:
+        r = _send_template_via_gas(agent, to, tmpl, brand=vars.get("brand", ""), contact=vars.get("contact", ""), name=vars.get("name", ""))
+        results[f"{agent}_{tmpl}"] = {"status": r.get("status"), "method": r.get("method", "")}
+    return {"sent_to": to, "count": len(templates), "results": results}
+
 @app.get("/api/test-email")
 async def api_test_email(agent: str = "피치"):
     """에이전트별 테스트 이메일 발송 (GAS 웹훅)."""
