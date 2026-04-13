@@ -1463,8 +1463,7 @@ async def api_ads_performance():
                 google_debug["status"] = ads_resp.status_code
                 if ads_resp.status_code == 200:
                     for row in ads_resp.json().get("results", []):
-                        m = row.get("metrics", {})
-                        google_spend += int(float(m.get("costMicros", 0))) // 1_000_000
+                        google_spend += int(float(row.get("metrics", {}).get("costMicros", 0))) // 1_000_000
                     google_debug["raw_spend"] = google_spend
                 else:
                     google_debug["error"] = ads_resp.text[:300]
