@@ -2240,57 +2240,63 @@ EMAIL_WEBHOOK_URL = os.getenv("EMAIL_WEBHOOK_URL", "")
 
 AGENT_ID_MAP = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle", "레이": "ray", "하나": "hana", "맥스": "max"}
 
-def _send_email_webhook(to_email: str, subject: str, body_text: str, agent_name: str = "루나") -> dict:
-    """Google Apps Script 웹훅으로 이메일 발송."""
-    webhook_url = EMAIL_WEBHOOK_URL
-    if not webhook_url:
-        return {"status": "not_configured", "message": "EMAIL_WEBHOOK_URL 미설정"}
-    agent_id = AGENT_ID_MAP.get(agent_name, "pitch")
+# ===== Email via Naver Works SMTP =====
+SMTP_ACCOUNTS = {
+    "pitch": {"email": "pitch@08liter.com", "password_env": "PITCH_EMAIL_PASSWORD", "display": "Pitch | 08liter(0.8L)"},
+    "luna": {"email": "luna@08liter.com", "password_env": "LUNA_EMAIL_PASSWORD", "display": "Luna | Mili Mili x 08liter(0.8L)"},
+    "kyle": {"email": os.getenv("KYLE_EMAIL", "kyle@08liter.com"), "password_env": "KYLE_EMAIL_PASSWORD", "display": "Kyle | 08liter"},
+    "sophie": {"email": os.getenv("SOPHIE_EMAIL", "sophie@08liter.com"), "password_env": "SOPHIE_EMAIL_PASSWORD", "display": "Sophie | 08liter"},
+}
+
+def _send_email_smtp(to_email: str, subject: str, body_text: str, agent: str = "pitch", html_body: str = "") -> dict:
+    """Send email via Naver Works SMTP (smtplib). No GAS dependency."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from email.header import Header
+
+    acct = SMTP_ACCOUNTS.get(agent, SMTP_ACCOUNTS["pitch"])
+    from_email = acct["email"]
+    password = os.getenv(acct["password_env"], "")
+    display_name = acct["display"]
+    smtp_host = os.getenv("SMTP_HOST", "smtp.worksmobile.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+
+    if not password:
+        # Fallback to GAS webhook if SMTP password not set
+        return _send_email_gas_fallback(to_email, subject, body_text, agent, html_body)
+
     try:
-        resp = req_lib.post(webhook_url, json={
-            "agent": agent_id,
-            "to": to_email,
-            "subject": subject,
-            "body": body_text,
-        }, timeout=30, allow_redirects=True)
-        if resp.status_code == 200:
-            data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {"message": resp.text[:200]}
-            return {"status": "ok", "to": to_email, "agent": agent_id, "method": "gas_webhook", "response": data}
-        return {"status": "error", "message": resp.text[:300], "code": resp.status_code, "method": "gas_webhook"}
+        msg = MIMEMultipart("alternative")
+        msg["From"] = f"{display_name} <{from_email}>"
+        msg["To"] = to_email
+        msg["Subject"] = Header(subject, "utf-8")
+
+        msg.attach(MIMEText(body_text or subject, "plain", "utf-8"))
+        if html_body:
+            msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+            server.starttls()
+            server.login(from_email, password)
+            server.send_message(msg)
+
+        print(f"[SMTP] OK: {agent} -> {to_email}")
+        return {"status": "ok", "to": to_email, "from": f"{display_name} <{from_email}>", "method": "smtp"}
     except Exception as e:
-        return {"status": "error", "message": str(e), "method": "gas_webhook"}
-
-def _html_to_text(html: str) -> str:
-    """HTML에서 태그 제거하여 플레인 텍스트 추출."""
-    text = html.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
-    text = re.sub(r'<[^>]+>', '', text)
-    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
-    return text.strip()
-
-def _send_email(to_email: str, subject: str, html: str, agent_name: str = "luna") -> dict:
-    """Email send via GAS webhook."""
-    body_text = _html_to_text(html) if html else subject
-    result = _send_email_webhook(to_email, subject, body_text, agent_name)
-    if result["status"] == "ok":
-        _record_perf(agent_name, "email_sent")
-        _log_email(agent_name, to_email, subject, "sent")
-    return result
+        print(f"[SMTP] ERROR: {agent} -> {to_email}: {e}")
+        return {"status": "error", "message": str(e), "method": "smtp"}
 
 
-def _send_template_via_gas(agent: str, to_email: str, template: str,
-                           brand: str = "", contact: str = "", name: str = "") -> dict:
-    """Send templated email via GAS webhook. GAS generates HTML from template key."""
+def _send_email_gas_fallback(to_email: str, subject: str, body_text: str, agent: str = "pitch", html_body: str = "") -> dict:
+    """Fallback: send via GAS webhook when SMTP password not configured."""
     webhook_url = EMAIL_WEBHOOK_URL
     if not webhook_url:
-        return {"status": "not_configured"}
-    payload = {"to": to_email, "agent": agent, "template": template}
-    if brand:
-        payload["brand"] = brand
-    if contact:
-        payload["contact"] = contact
-    if name:
-        payload["name"] = name
+        return {"status": "not_configured", "message": "Neither SMTP password nor EMAIL_WEBHOOK_URL set"}
     try:
+        payload = {"agent": agent, "to": to_email, "subject": subject, "body": body_text}
+        if html_body:
+            payload["htmlBody"] = html_body
         resp = req_lib.post(webhook_url, json=payload, timeout=30, allow_redirects=False)
         if resp.status_code in (301, 302, 303):
             redir = resp.headers.get("Location", "")
@@ -2301,10 +2307,70 @@ def _send_template_via_gas(agent: str, to_email: str, template: str,
                 data = resp.json()
             except Exception:
                 data = {"message": resp.text[:200]}
-            return {"status": "ok", "to": to_email, "template": template, "method": "gas_template", "response": data}
-        return {"status": "error", "message": resp.text[:300], "code": resp.status_code}
+            return {"status": "ok", "to": to_email, "method": "gas_fallback", "response": data}
+        return {"status": "error", "message": resp.text[:300], "method": "gas_fallback"}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": str(e), "method": "gas_fallback"}
+
+
+def _build_mckinsey_html(subject: str, body_text: str, agent: str = "pitch") -> str:
+    """Build McKinsey-style HTML email."""
+    colors = {"pitch": "#1B2A4A", "luna": "#2D4A7A", "sophie": "#1A7A4C", "kyle": "#333"}
+    color = colors.get(agent, "#1B2A4A")
+    display = SMTP_ACCOUNTS.get(agent, {}).get("display", agent)
+    body_html = body_text.replace("\n", "<br>").replace(chr(10), "<br>")
+    return (f'<div style="font-family:Helvetica Neue,Arial,sans-serif;max-width:600px;margin:0 auto">'
+            f'<div style="background:{color};padding:16px 24px;border-radius:8px 8px 0 0">'
+            f'<span style="color:#fff;font-size:14px;font-weight:700">{display}</span></div>'
+            f'<div style="background:#f8f7f5;padding:24px;border:1px solid #e8e6e1;border-top:none;border-radius:0 0 8px 8px">'
+            f'<p style="font-size:14px;color:#1a1a1a;line-height:1.8;margin:0">{body_html}</p>'
+            f'</div></div>')
+
+
+def _html_to_text(html: str) -> str:
+    """HTML to plain text."""
+    text = html.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    text = re.sub(r'<[^>]+>', '', text)
+    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
+    return text.strip()
+
+
+def _send_email(to_email: str, subject: str, html: str, agent_name: str = "luna") -> dict:
+    """Send email — uses SMTP with GAS fallback."""
+    agent = AGENT_ID_MAP.get(agent_name, agent_name) if agent_name not in SMTP_ACCOUNTS else agent_name
+    body_text = _html_to_text(html) if html else subject
+    result = _send_email_smtp(to_email, subject, body_text, agent, html_body=html)
+    if result["status"] == "ok":
+        _record_perf(agent, "email_sent")
+        _log_email(agent, to_email, subject, "sent")
+    return result
+
+
+def _send_template_email(agent: str, to_email: str, template: str,
+                         brand: str = "", contact: str = "", name: str = "") -> dict:
+    """Send templated email via SMTP. Renders template from pitch_templates.py."""
+    from pitch_templates import PITCH_TEMPLATES as PT, LUNA_KR_TEMPLATES as LKR, LUNA_US_TEMPLATES as LUS
+    all_templates = dict(PT)
+    all_templates.update({"KR_" + k: v for k, v in LKR.items()})
+    all_templates.update({"US_" + k: v for k, v in LUS.items()})
+    tmpl = all_templates.get(template)
+    if not tmpl:
+        return {"status": "error", "message": f"Unknown template: {template}"}
+    subject = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name)
+    body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name)
+    html = _build_mckinsey_html(subject, body, agent)
+    return _send_email_smtp(to_email, subject, body, agent, html_body=html)
+
+
+# Keep for backward compat — routes to new SMTP function
+def _send_template_via_gas(agent: str, to_email: str, template: str,
+                           brand: str = "", contact: str = "", name: str = "") -> dict:
+    """Backward compat wrapper — now uses SMTP instead of GAS."""
+    result = _send_template_email(agent, to_email, template, brand=brand, contact=contact, name=name)
+    if result["status"] == "ok":
+        _record_perf(agent, "email_sent")
+        _log_email(agent, to_email, f"[{template}]", "sent")
+    return result
 
 
 @app.post("/api/send-email")
