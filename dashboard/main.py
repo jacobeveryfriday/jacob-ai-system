@@ -2346,12 +2346,16 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent: str = "
         return _send_email_gas_fallback(to_email, subject, body_text, agent, html_body)
 
     try:
+        subject = _clean_surrogates(subject)
+        body_text = _clean_surrogates(body_text or subject)
+        html_body = _clean_surrogates(html_body) if html_body else ""
+
         msg = MIMEMultipart("alternative")
         msg["From"] = f"{display_name} <{from_email}>"
         msg["To"] = to_email
         msg["Subject"] = Header(subject, "utf-8")
 
-        msg.attach(MIMEText(body_text or subject, "plain", "utf-8"))
+        msg.attach(MIMEText(body_text, "plain", "utf-8"))
         if html_body:
             msg.attach(MIMEText(html_body, "html", "utf-8"))
 
@@ -2425,6 +2429,15 @@ def _send_email(to_email: str, subject: str, html: str, agent_name: str = "luna"
     return result
 
 
+def _clean_surrogates(text: str) -> str:
+    """Remove surrogate characters to prevent UTF-8 encoding errors."""
+    if not text:
+        return ""
+    try:
+        return text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
+    except Exception:
+        return text.encode("ascii", errors="replace").decode("ascii")
+
 def _send_template_email(agent: str, to_email: str, template: str,
                          brand: str = "", contact: str = "", name: str = "") -> dict:
     """Send templated email via SMTP. Renders template from pitch_templates.py."""
@@ -2435,8 +2448,8 @@ def _send_template_email(agent: str, to_email: str, template: str,
     tmpl = all_templates.get(template)
     if not tmpl:
         return {"status": "error", "message": f"Unknown template: {template}"}
-    subject = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name)
-    body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name)
+    subject = _clean_surrogates(tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name))
+    body = _clean_surrogates(tmpl["body"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name))
     html = _build_mckinsey_html(subject, body, agent)
     return _send_email_smtp(to_email, subject, body, agent, html_body=html)
 
