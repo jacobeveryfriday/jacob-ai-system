@@ -5659,10 +5659,10 @@ async def crm_influencers():
 
 @app.get("/api/crm/debug")
 async def crm_debug():
-    """MCP CRM connection probe - tries all auth/endpoint combos."""
+    """MCP CRM connection probe - deep scan."""
     try:
-        from mcp_crm import probe_server
-        return probe_server()
+        from mcp_crm import probe_server, deep_probe
+        return deep_probe()
     except Exception as e:
         return {"error": str(e)}
 
