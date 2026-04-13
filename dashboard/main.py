@@ -21,6 +21,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 load_dotenv(override=False)  # OS 환경변수(Railway)가 .env보다 우선
+try:
+    import mcp_crm as _mcp_crm_mod
+    _MCP_CRM_AVAILABLE = True
+except ImportError:
+    _MCP_CRM_AVAILABLE = False
 from fastapi.responses import JSONResponse as _OrigJSONResponse
 
 class KoreanJSONResponse(_OrigJSONResponse):
@@ -74,6 +79,7 @@ async def health_check():
             "kakao_b2b": "connected" if os.getenv("KAKAO_B2B_API_KEY") or os.getenv("KAKAO_REST_API_KEY") else "not_configured",
             "kakao_b2c": "connected" if os.getenv("KAKAO_B2C_API_KEY") or os.getenv("KAKAO_REST_API_KEY") else "not_configured",
             "naver_works_smtp": _chk("NAVER_WORKS_SMTP_PASSWORD"),
+            "mcp_crm": "connected" if (os.getenv("MCP_CRM_API_KEY") and _MCP_CRM_AVAILABLE) else "not_configured",
             "instagram": _chk("META_INSTAGRAM_TOKEN"),
         },
         "cache_entries": len(_cache),
@@ -5550,6 +5556,104 @@ async def api_pitch_outbound():
         "source": "pitch-agent",
         "note": "피치에이전트 발송로그 기반 — 실시간 연동 후 실데이터 전환"
     }
+
+
+
+# ===== MCP CRM Endpoints =====
+
+@app.get("/api/crm/brands")
+async def crm_brands(mode: str = "dormant", limit: int = 200):
+    """Pitch section: dormant brand list + contacts"""
+    try:
+        from mcp_crm import get_dormant_brands, get_all_brands
+        if mode == "all":
+            result = get_all_brands(limit=limit)
+        else:
+            result = get_dormant_brands(limit=limit)
+        if "error" in result:
+            return {"brands": [], "total": 0, "mode": mode, "error": result["error"]}
+        brands = result.get("brands", result.get("data", []))
+        return {"brands": brands, "total": len(brands), "mode": mode}
+    except Exception as e:
+        return {"brands": [], "total": 0, "mode": mode, "error": str(e)}
+
+
+@app.get("/api/crm/influencers")
+async def crm_influencers():
+    """Luna section: influencer partner schema + stats"""
+    try:
+        from mcp_crm import get_influencer_schema
+        return get_influencer_schema()
+    except Exception as e:
+        return {"schema": {"error": str(e)}, "admin_schema": {"error": str(e)}}
+
+
+@app.post("/api/crm/run-pitch")
+async def crm_run_pitch(request: Request):
+    """Pitch automation: segment -> draft -> review queue"""
+    import datetime as dt
+    try:
+        from mcp_crm import get_dormant_brands, create_segment, save_draft, queue_review, DORMANT_DAYS
+
+        body = await request.json()
+        template = body.get("template", "A")
+        limit = body.get("limit", 100)
+
+        # 피치 시안 환경변수
+        subject_tpl = os.environ.get(
+            f"PITCH_SUBJECT_{template}",
+            "\uacf5\ud338\ub9ac\ud130 \uce90\ud398\uc778 \uc81c\uc548\ub4dc\ub9bd\ub2c8\ub2e4"
+        )
+        body_tpl = os.environ.get(f"PITCH_BODY_{template}", "")
+
+        # 브랜드 조회
+        result = get_dormant_brands(limit=limit)
+        if "error" in result:
+            return {"status": "error", "message": result["error"]}
+        brands = result.get("brands", result.get("data", []))
+
+        if not brands:
+            # \ud734\uba74 \ube0c\ub79c\ub4dc \uc5c6\uc74c
+            return {"status": "no_targets", "message": "\ud734\uba74 \ube0c\ub79c\ub4dc \uc5c6\uc74c"}
+
+        # 세그먼트 생성
+        seg_name = f"pitch-{template}-{dt.date.today()}"
+        seg = create_segment(seg_name, brands)
+        segment_id = seg.get("segment_id", seg.get("id", ""))
+
+        # 수신자별 개인화
+        targets = []
+        for b in brands:
+            email = b.get("primary_contact_email", "")
+            if not email:
+                continue
+            targets.append({
+                "externalId": b.get("brand_id", ""),
+                "toEmail": email,
+                "toName": b.get("primary_contact_name", ""),
+                "subject": subject_tpl.replace("{brand}", b.get("partner_name", "")),
+                "body": body_tpl.replace("{brand}", b.get("partner_name", ""))
+                               .replace("{contact}", b.get("primary_contact_name", "")),
+            })
+
+        # 드래프트 저장
+        draft = save_draft(segment_id, seg_name, subject_tpl, body_tpl, targets)
+        draft_id = draft.get("draft_id", draft.get("id", ""))
+
+        # 리뷰 큐 등록 (Jacob 최종 승인 필요)
+        queue_review(draft_id, len(targets))
+
+        return {
+            "status": "queued_for_review",
+            "segment_id": segment_id,
+            "draft_id": draft_id,
+            "target_count": len(targets),
+            "review_url": f"https://mcp-crm.08liter.com/drafts/{draft_id}",
+            # Jacob \uc2b9\uc778 \ud6c4 \ubc1c\uc1a1\ub429\ub2c8\ub2e4
+            "note": "Jacob \uc2b9\uc778 \ud6c4 \ubc1c\uc1a1\ub429\ub2c8\ub2e4",
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 import asyncio

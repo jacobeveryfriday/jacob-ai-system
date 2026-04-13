@@ -896,5 +896,125 @@ fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},bod
 var r=document.createElement('div');r.style.cssText='padding:8px 12px;border-radius:8px;background:#F1EFEB;margin-bottom:6px;line-height:1.5;white-space:pre-line;max-width:95%';r.textContent=d.reply||'응답 오류';msgs.appendChild(r);msgs.scrollTop=msgs.scrollHeight
 }).catch(function(){var r=document.createElement('div');r.style.cssText='padding:8px 12px;border-radius:8px;background:#F1EFEB;margin-bottom:6px';r.textContent='연결 오류';msgs.appendChild(r)})}
 </script>
+
+<\!-- CRM Integration Scripts -->
+<script>
+// ===== CRM Brand Table (Pitch) =====
+function loadCrmBrands(){
+  var mode = document.getElementById('crm-brand-filter').value;
+  var tbody = document.getElementById('crm-brand-tbody');
+  tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted)">로딩 중...</td></tr>';
+  fetch('/api/crm/brands?mode='+mode+'&limit=200')
+    .then(function(r){return r.json()})
+    .then(function(d){
+      var badge = document.getElementById('crm-dormant-badge');
+      if(mode==='dormant'){
+        badge.textContent = '휴면 브랜드 '+d.total+'건';
+        badge.style.display = d.total > 0 ? 'inline-block' : 'none';
+      } else {
+        badge.textContent = '전체 '+d.total+'건';
+        badge.style.background = '#666';
+        badge.style.display = 'inline-block';
+      }
+      if(d.error){
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#ff4444">CRM 연결 오류: '+d.error+'</td></tr>';
+        return;
+      }
+      if(\!d.brands || d.brands.length===0){
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text-muted)">데이터 없음</td></tr>';
+        return;
+      }
+      var html = '';
+      d.brands.forEach(function(b){
+        html += '<tr style="border-bottom:1px solid var(--border)">';
+        html += '<td style="padding:6px 10px;white-space:nowrap">'+(b.partner_name||b.brand_name||'—')+'</td>';
+        html += '<td style="padding:6px 10px;white-space:nowrap">'+(b.primary_contact_name||'—')+'</td>';
+        html += '<td style="padding:6px 10px;white-space:nowrap">'+(b.primary_contact_email||'—')+'</td>';
+        html += '<td style="padding:6px 10px;white-space:nowrap">'+(b.primary_contact_phone||'—')+'</td>';
+        html += '<td style="padding:6px 10px;white-space:nowrap">'+(b.last_campaign_date||'—')+'</td>';
+        html += '<td style="padding:6px 10px;text-align:center">'+(b.total_campaigns||0)+'</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
+    })
+    .catch(function(e){
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#ff4444">API 연결 실패</td></tr>';
+    });
+}
+
+// ===== Pitch Auto-Send Modal =====
+function openPitchModal(){
+  document.getElementById('pitchModal').style.display = 'flex';
+}
+function closePitchModal(){
+  document.getElementById('pitchModal').style.display = 'none';
+}
+function runCrmPitch(){
+  var btn = document.getElementById('pitchRunBtn');
+  btn.textContent = '실행 중...';
+  btn.disabled = true;
+  var tpl = document.getElementById('pitchTemplate').value;
+  fetch('/api/crm/run-pitch',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({template:tpl, limit:100})
+  })
+  .then(function(r){return r.json()})
+  .then(function(d){
+    closePitchModal();
+    btn.textContent = '실행';
+    btn.disabled = false;
+    if(d.status==='queued_for_review'){
+      showToast('드래프트 생성 완료 ('+d.target_count+'건) — mcp-crm.08liter.com/drafts에서 승인하세요','success');
+    } else if(d.status==='no_targets'){
+      showToast('휴면 브랜드가 없습니다','warn');
+    } else {
+      showToast('오류: '+(d.message||'unknown'),'error');
+    }
+  })
+  .catch(function(){
+    btn.textContent = '실행';
+    btn.disabled = false;
+    showToast('API 연결 실패','error');
+  });
+}
+
+// ===== Toast Notification =====
+function showToast(msg, type){
+  var toast = document.createElement('div');
+  var bg = type==='success' ? '#22c55e' : type==='warn' ? '#f59e0b' : '#ef4444';
+  toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:'+bg+';color:#fff;padding:12px 20px;border-radius:8px;font-size:12px;z-index:99999;max-width:400px;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:opacity 0.3s';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(function(){toast.style.opacity='0';setTimeout(function(){toast.remove()},300)},4000);
+}
+
+// ===== Luna MCP Stats =====
+function loadCrmLuna(){
+  fetch('/api/crm/influencers')
+    .then(function(r){return r.json()})
+    .then(function(d){
+      var schema = d.schema || {};
+      var admin = d.admin_schema || {};
+      // Extract stats from schema response
+      var total = schema.row_count || schema.total || admin.row_count || admin.total || '—';
+      var verified = schema.verified_contacts || admin.verified_contacts || '—';
+      var cats = schema.category_count || admin.category_count || '—';
+      document.getElementById('crm-luna-total').textContent = total;
+      document.getElementById('crm-luna-verified').textContent = verified;
+      document.getElementById('crm-luna-categories').textContent = cats;
+    })
+    .catch(function(){
+      document.getElementById('crm-luna-total').textContent = '—';
+      document.getElementById('crm-luna-verified').textContent = '—';
+      document.getElementById('crm-luna-categories').textContent = '—';
+    });
+}
+
+// Load CRM data on page load
+(function(){
+  setTimeout(function(){ loadCrmBrands(); loadCrmLuna(); }, 500);
+})();
+</script>
 </body>
 </html>
