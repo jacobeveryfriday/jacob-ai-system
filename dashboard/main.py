@@ -383,8 +383,23 @@ def _is_auto_send(agent: str) -> bool:
 
 CEO_APPROVAL_REQUIRED = os.getenv("CEO_APPROVAL_REQUIRED", "true").lower() in ("true", "1", "yes")
 
-def _queue_or_send_email(agent: str, to_email: str, subject: str, html: str, meta: dict = None) -> dict:
-    """CEO approval required: always queue. Otherwise check auto-send toggle."""
+def _queue_or_send_email(agent: str, to_email: str, subject: str, html: str, meta: dict = None,
+                          template: str = None, brand: str = "", contact: str = "", name: str = "") -> dict:
+    """CEO approval required: always queue. Template mode sends via GAS template system."""
+    if template:
+        # Template mode: queue with template info, GAS will generate HTML
+        queue = load_email_queue()
+        entry = {
+            "id": int(time.time() * 1000) % 10000000,
+            "agent": agent, "to": to_email, "template": template,
+            "brand": brand, "contact": contact, "name": name,
+            "subject": f"[{agent}] template={template}", "html": "",
+            "meta": meta or {}, "status": "pending",
+            "created_at": datetime.now(KST).isoformat(),
+        }
+        queue.append(entry)
+        save_email_queue(queue)
+        return {"status": "queued", "id": entry["id"], "mode": "review_template"}
     if not CEO_APPROVAL_REQUIRED and _is_auto_send(agent):
         result = _send_email(to_email, subject, html, agent)
         result["mode"] = "auto"
@@ -392,18 +407,15 @@ def _queue_or_send_email(agent: str, to_email: str, subject: str, html: str, met
     queue = load_email_queue()
     entry = {
         "id": int(time.time() * 1000) % 10000000,
-        "agent": agent,
-        "to": to_email,
-        "subject": subject,
-        "html": html,
-        "html_body": html,
-        "meta": meta or {},
-        "status": "pending",
-        "created_at": datetime.now(KST).isoformat(),
+        "agent": agent, "to": to_email, "subject": subject,
+        "html": html, "html_body": html, "meta": meta or {},
+        "status": "pending", "created_at": datetime.now(KST).isoformat(),
     }
     queue.append(entry)
     save_email_queue(queue)
     return {"status": "queued", "id": entry["id"], "mode": "review"}
+
+
 
 
 def load_benchmarks() -> dict:
@@ -5476,9 +5488,13 @@ async def api_email_approve(request: Request):
     queue = load_email_queue()
     for e in queue:
         if e.get("id") == eid and e.get("status") == "pending":
-            subject = body.get("subject", e["subject"])
-            html = body.get("html", e["html"])
-            result = _send_email(e["to"], subject, html, e.get("agent", "pitch"))
+            if e.get("template"):
+                result = _send_template_via_gas(e.get("agent", "pitch"), e["to"], e["template"],
+                    brand=e.get("brand", ""), contact=e.get("contact", ""), name=e.get("name", ""))
+            else:
+                subject = body.get("subject", e["subject"])
+                html = body.get("html", e.get("html", ""))
+                result = _send_email(e["to"], subject, html, e.get("agent", "pitch"))
             e["status"] = "sent" if result["status"] == "ok" else "failed"
             e["sent_at"] = datetime.now(KST).isoformat()
             e["result"] = result
@@ -5510,7 +5526,11 @@ async def api_email_approve_all(request: Request):
             continue
         if not _check_send_limit():
             break
-        result = _send_email(e["to"], e["subject"], e["html"], e.get("agent", "pitch"))
+        if e.get("template"):
+            result = _send_template_via_gas(e.get("agent", "pitch"), e["to"], e["template"],
+                brand=e.get("brand", ""), contact=e.get("contact", ""), name=e.get("name", ""))
+        else:
+            result = _send_email(e["to"], e["subject"], e.get("html", ""), e.get("agent", "pitch"))
         e["status"] = "sent" if result["status"] == "ok" else "failed"
         e["sent_at"] = datetime.now(KST).isoformat()
         e["result"] = result
