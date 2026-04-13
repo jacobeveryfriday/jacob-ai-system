@@ -5105,6 +5105,8 @@ async def api_agent_auto_report():
 @app.api_route("/api/kyle/auto-report", methods=["GET", "POST"])
 async def api_kyle_auto_report():
     """Kyle integrated check report."""
+    if not _slack_enabled():
+        return {"report": "Slack reporting temporarily disabled", "skipped": True, "timestamp": datetime.now(KST).isoformat()}
     now = datetime.now(KST)
     ts = now.strftime("%H:%M KST")
     lines = [f"[\uce74\uc77c \ud1b5\ud569 \uc810\uac80] {ts}", ""]
@@ -6040,7 +6042,7 @@ try:
     _scheduler.add_job(_luna_us_send_job, CronTrigger(day_of_week="mon-fri", hour=23, minute=0), id="luna_us_send", replace_existing=True)
     # Auto reports: 09,12,15,18 KST weekdays
     _scheduler.add_job(lambda: _sched_call("agent_auto_report", req_lib.get, "http://localhost:8000/api/agent-auto-report"), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="agent_auto_report", replace_existing=True)
-    _scheduler.add_job(lambda: _sched_call("kyle_auto_report", req_lib.get, "http://localhost:8000/api/kyle/auto-report"), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
+    _scheduler.add_job(lambda: _sched_call("kyle_auto_report", req_lib.get, "http://localhost:8000/api/kyle/auto-report") if _slack_enabled() else None, CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
     _scheduler.add_job(lambda: _sched_call("daily_health_check", req_lib.get, "http://localhost:8000/api/daily-health-check"), CronTrigger(day_of_week="mon-fri", hour=6, minute=0), id="daily_health_check", replace_existing=True)
     _scheduler.start()
     print("[SCHEDULER] Started - pitch(A/B/C), luna(A/B), reports(9/12/15/18), health(06:00)")
