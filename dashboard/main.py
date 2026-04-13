@@ -3318,10 +3318,18 @@ async def api_luna_collect_na(request: Request):
         luna_rows = []
         for item in new_items:
             # A:S columns: date|recruiter|type|country|category|platform|name|url|followers|email|phone|status|currency|collab|desired|krw|manager|campaign|notes
+            uname = item.get("username", item.get("name", ""))
+            plat = item.get("platform", "Instagram")
+            if item.get("url"):
+                profile_url = item["url"]
+            elif "tiktok" in plat.lower():
+                profile_url = "https://www.tiktok.com/@" + uname.lstrip("@")
+            else:
+                profile_url = "https://www.instagram.com/" + uname.lstrip("@")
             luna_rows.append([
                 now_str, "luna", "AI", item.get("country", "US"),
-                item.get("category", "beauty"), item.get("platform", "Instagram"),
-                item.get("username", item.get("name", "")), item.get("url", ""),
+                item.get("category", "beauty"), plat,
+                uname, profile_url,
                 str(item.get("followers", "")), item.get("email", ""),
                 "", "", "", "", "", "", "", "", ""
             ])
