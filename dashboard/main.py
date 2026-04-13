@@ -1,4 +1,5 @@
-"""08L_AI Command Center — 통합 대시보드 + Google Sheets API + Anthropic AI Agents"""
+# -*- coding: utf-8 -*-
+"""08L_AI Command Center"""
 import hashlib
 import json
 import os
@@ -20,7 +21,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 load_dotenv(override=False)  # OS 환경변수(Railway)가 .env보다 우선
-app = FastAPI(title="Command Center")
+from fastapi.responses import JSONResponse as _OrigJSONResponse
+
+class KoreanJSONResponse(_OrigJSONResponse):
+    media_type = "application/json; charset=utf-8"
+    def render(self, content) -> bytes:
+        text = json.dumps(content, ensure_ascii=False, default=str)
+        return text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace").encode("utf-8")
+
+app = FastAPI(title="Command Center", default_response_class=KoreanJSONResponse)
 app.add_middleware(GZipMiddleware, minimum_size=500)
 KST = ZoneInfo("Asia/Seoul")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
@@ -2258,14 +2267,44 @@ def _html_to_text(html: str) -> str:
     text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
     return text.strip()
 
-def _send_email(to_email: str, subject: str, html: str, agent_name: str = "루나") -> dict:
-    """이메일 발송: Google Apps Script 웹훅."""
-    body_text = _html_to_text(html)
+def _send_email(to_email: str, subject: str, html: str, agent_name: str = "luna") -> dict:
+    """Email send via GAS webhook."""
+    body_text = _html_to_text(html) if html else subject
     result = _send_email_webhook(to_email, subject, body_text, agent_name)
     if result["status"] == "ok":
         _record_perf(agent_name, "email_sent")
         _log_email(agent_name, to_email, subject, "sent")
     return result
+
+
+def _send_template_via_gas(agent: str, to_email: str, template: str,
+                           brand: str = "", contact: str = "", name: str = "") -> dict:
+    """Send templated email via GAS webhook. GAS generates HTML from template key."""
+    webhook_url = EMAIL_WEBHOOK_URL
+    if not webhook_url:
+        return {"status": "not_configured"}
+    payload = {"to": to_email, "agent": agent, "template": template}
+    if brand:
+        payload["brand"] = brand
+    if contact:
+        payload["contact"] = contact
+    if name:
+        payload["name"] = name
+    try:
+        resp = req_lib.post(webhook_url, json=payload, timeout=30, allow_redirects=False)
+        if resp.status_code in (301, 302, 303):
+            redir = resp.headers.get("Location", "")
+            if redir:
+                resp = req_lib.get(redir, timeout=30)
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"message": resp.text[:200]}
+            return {"status": "ok", "to": to_email, "template": template, "method": "gas_template", "response": data}
+        return {"status": "error", "message": resp.text[:300], "code": resp.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.post("/api/send-email")
