@@ -592,6 +592,9 @@ TAB_PITCH = os.getenv("SHEET_TAB_PITCH", "피치_클로드")
 TAB_LUNA = os.getenv("SHEET_TAB_LUNA", "루나_클로드")
 TAB_SOPHIE = os.getenv("SHEET_TAB_SOPHIE", "소피_클로드")
 
+print(f"[SHEETS] Config: INBOUND={SHEET_INBOUND[:8]}../{TAB_INBOUND} | CONTRACT={SHEET_CONTRACT[:8]}../{TAB_CONTRACT}")
+print(f"[SHEETS] Config: PITCH={PITCH_SHEET_ID[:8]}../{TAB_PITCH} | LUNA={LUNA_SHEET_ID[:8]}../{TAB_INFLUENCER}")
+
 _cache: Dict[str, list] = {}
 _cache_time: Dict[str, float] = {}
 CACHE_TTLS = {
@@ -629,11 +632,15 @@ def fetch_sheet(sheet_id: str, range_name: str, tab_name: str = None, ttl_key: s
         resp = req_lib.get(url, timeout=10)
         if resp.status_code == 200:
             data = resp.json().get("values", [])
+            if not data:
+                print(f"[SHEETS] Empty result: sheet={sheet_id[:12]}... tab={tab_name} range={range_name}")
             _cache[cache_key] = data
             _cache_time[cache_key] = now
             return data
+        else:
+            print(f"[SHEETS] HTTP {resp.status_code}: sheet={sheet_id[:12]}... tab={tab_name} resp={resp.text[:150]}")
     except Exception as e:
-        print(f"Sheets API error: {e}")
+        print(f"[SHEETS] Error: sheet={sheet_id[:12]}... tab={tab_name} error={e}")
     return []
 
 
