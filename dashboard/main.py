@@ -3082,20 +3082,22 @@ async def api_pitch_daily(request: Request):
         leads_data = await api_recontact_leads()
         leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
         collected = len(leads)
-        _record_perf("피치", "crawl_brands", collected)
+        _record_perf("pitch", "crawl_brands", collected)
         # Write collected leads to pitch sheet
+        sheet_ok = False
         if leads:
             now_str = datetime.now(KST).strftime("%Y-%m-%d")
-            # A:S columns: date|recruiter|type|country|category|platform|name|url|followers|email|phone|status|currency|collab_price|desired_price|krw_price|manager|campaign|notes
             sheet_rows = [[
                 now_str, "pitch", "DB", l.get("country", "KR"), l.get("category", ""),
                 "", l.get("name", ""), "", "", l.get("email", ""),
                 "", "", "", "", "", "", "", "", ""
             ] for l in leads[:50]]
+            print(f"[PITCH] Writing {len(sheet_rows)} rows to {TAB_PITCH}")
             sheet_ok = _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:S", sheet_rows, backup_key="pitch_pending")
+            print(f"[PITCH] Sheet write result: {sheet_ok}")
             if not sheet_ok:
                 _record_mistake("pitch", "sheet_write_fail", f"{len(sheet_rows)} rows failed, backed up")
-    result["steps"].append({"step": "DB 수집", "collected": collected, "needed": unsent < 10})
+    result["steps"].append({"step": "DB collect", "collected": collected, "needed": unsent < 10, "sheet_write_ok": sheet_ok if collected > 0 else None})
 
     if action == "collect_only":
         # DB 수집건§ (건°송은 월요일 09:00)
@@ -3306,13 +3308,17 @@ async def api_luna_collect_na(request: Request):
                 str(item.get("followers", "")), item.get("email", ""),
                 "", "", "", "", "", "", "", "", ""
             ])
+        print(f"[LUNA] Writing {len(luna_rows)} rows to {TAB_INFLUENCER}")
         sheet_ok = _write_rows_to_sheet(LUNA_SHEET_ID, TAB_INFLUENCER + "!A:S", luna_rows, backup_key="luna_pending")
+        print(f"[LUNA] Sheet write result: {sheet_ok}")
         if not sheet_ok:
             _record_mistake("luna", "sheet_write_fail", f"{len(luna_rows)} rows failed, backed up")
         _kyle_post_check("luna", {"sent_count": total_collected, "sheet_updated": sheet_ok})
+    else:
+        sheet_ok = None
     _log_scheduler("luna_collect_na", "done", total_collected)
     return {"status": "ok", "day": day_num, "collected": {"instagram": collected_ig, "tiktok": collected_tt},
-            "total_na": existing_na + total_collected, "target": 400}
+            "total_na": existing_na + total_collected, "target": 400, "sheet_write_ok": sheet_ok}
 
 @app.get("/api/agents/luna/review-northamerica")
 async def api_luna_review_na():
