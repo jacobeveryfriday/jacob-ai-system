@@ -1388,7 +1388,66 @@ async def api_ads_performance():
         meta_debug["error"] = str(e)
 
     # ========== 4. 광고비 합산 ==========
-    naver_spend = 0  # TODO
+    # ========== 3-2. 네이버 검색광고 API (파워링크) ==========
+    naver_spend = 0
+    naver_impressions = 0
+    naver_clicks = 0
+    naver_ctr = 0.0
+    naver_avg_cpc = 0
+    naver_conversions = 0
+    naver_debug = {"status": None, "error": None}
+    try:
+        import hmac as _hmac, hashlib as _hashlib, base64 as _base64
+        naver_api_key = os.getenv("NAVER_API_KEY", "")
+        naver_secret = os.getenv("NAVER_SECRET_KEY", "")
+        naver_customer = os.getenv("NAVER_CUSTOMER_ID", "")
+        if naver_api_key and naver_secret and naver_customer:
+            since = month_start.strftime("%Y-%m-%d")
+            until = now.strftime("%Y-%m-%d")
+            # 1단계: 캠페인 목록 조회
+            ts = str(int(time.time() * 1000))
+            camp_path = "/ncc/campaigns"
+            msg = f"{ts}.GET.{camp_path}"
+            sig = _base64.b64encode(_hmac.new(naver_secret.encode("utf-8"), msg.encode("utf-8"), _hashlib.sha256).digest()).decode("utf-8")
+            camp_resp = req_lib.get(f"https://api.naver.com{camp_path}", headers={"X-Timestamp": ts, "X-API-KEY": naver_api_key, "X-Customer": naver_customer, "X-Signature": sig, "Content-Type": "application/json"}, timeout=15)
+            naver_debug["camp_status"] = camp_resp.status_code
+            if camp_resp.status_code == 200:
+                camp_ids = [c["nccCampaignId"] for c in camp_resp.json() if isinstance(c, dict) and c.get("nccCampaignId")]
+                naver_debug["camp_count"] = len(camp_ids)
+                if camp_ids:
+                    # 2단계: 캠페인 ID로 통계 조회
+                    ts2 = str(int(time.time() * 1000))
+                    stats_path = "/stats"
+                    msg2 = f"{ts2}.GET.{stats_path}"
+                    sig2 = _base64.b64encode(_hmac.new(naver_secret.encode("utf-8"), msg2.encode("utf-8"), _hashlib.sha256).digest()).decode("utf-8")
+                    stats_resp = req_lib.get(
+                        f"https://api.naver.com{stats_path}?ids={','.join(camp_ids)}&fields=impCnt,clkCnt,salesAmt,ctr,avgCpc,convAmt&timeRange.since={since}&timeRange.until={until}&timeUnit=TOTAL",
+                        headers={"X-Timestamp": ts2, "X-API-KEY": naver_api_key, "X-Customer": naver_customer, "X-Signature": sig2, "Content-Type": "application/json"},
+                        timeout=15
+                    )
+                    naver_debug["status"] = stats_resp.status_code
+                    if stats_resp.status_code == 200:
+                        rows = stats_resp.json()
+                        if isinstance(rows, dict): rows = rows.get("data", [])
+                        for row in rows:
+                            d2 = row.get("data", row) if isinstance(row, dict) else {}
+                            naver_spend += int(float(d2.get("salesAmt", 0)))
+                            naver_impressions += int(d2.get("impCnt", 0))
+                            naver_clicks += int(d2.get("clkCnt", 0))
+                            naver_conversions += int(d2.get("convAmt", 0))
+                        if naver_clicks > 0:
+                            naver_ctr = round(naver_clicks / max(naver_impressions, 1) * 100, 2)
+                            naver_avg_cpc = naver_spend // naver_clicks
+                        naver_debug["raw_spend"] = naver_spend
+                    else:
+                        naver_debug["error"] = stats_resp.text[:200]
+            else:
+                naver_debug["error"] = camp_resp.text[:200]
+        else:
+            naver_debug["error"] = "NAVER 환경변수 미설정"
+    except Exception as e:
+        naver_debug["error"] = str(e)
+
     google_spend = 0  # TODO
     total_spend = meta_spend + naver_spend + google_spend
     prev_total_spend = 0  # 전월 광고비는 API 없으면 0
