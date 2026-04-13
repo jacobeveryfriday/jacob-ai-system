@@ -200,14 +200,31 @@ async def api_retry_pending():
 
 
 
-@app.post("/api/sheets/test-write")
+@app.api_route("/api/sheets/test-write", methods=["GET", "POST"])
 async def api_test_sheet_write():
-    """Test if GAS appendSheet handler is deployed and working."""
+    """Test GAS appendSheet with full diagnostics."""
     now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     test_row = [[now_str, "WRITE_TEST", "auto_test", "", ""]]
+    webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
+    gas_raw = {}
+    if webhook:
+        try:
+            payload = {"action": "appendSheet", "sheet_id": PITCH_SHEET_ID, "tab_name": TAB_PITCH, "rows": test_row}
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            hdrs = {"Content-Type": "application/json; charset=utf-8"}
+            r = req_lib.post(webhook, data=body, timeout=30, headers=hdrs, allow_redirects=False)
+            gas_raw = {"http": r.status_code, "body": r.text[:300]}
+            if r.status_code in (301, 302, 303):
+                redir = r.headers.get("Location", "")
+                r2 = req_lib.post(redir, data=body, timeout=30, headers=hdrs)
+                gas_raw["redirect"] = redir[:80]
+                gas_raw["redirect_http"] = r2.status_code
+                gas_raw["redirect_body"] = r2.text[:300]
+        except Exception as e:
+            gas_raw = {"error": str(e)}
     ok = _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:E", test_row)
-    return {"status": "ok" if ok else "failed", "gas_appendsheet_working": ok,
-            "message": "GAS appendSheet handler deployed" if ok else "GAS appendSheet NOT working - deploy GAS_CODE_CURRENT.md"}
+    return {"gas_appendsheet_working": ok, "gas_raw": gas_raw,
+            "payload_sent": {"action": "appendSheet", "sheet_id": PITCH_SHEET_ID[:12], "tab_name": TAB_PITCH}}
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: str = ""):
@@ -555,7 +572,7 @@ def _log_scheduler(job_id: str, result: str, count: int = 0):
 # ===== Sheet Write via GAS Webhook =====
 def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: str = None) -> bool:
     """Write rows to Google Sheets via GAS webhook (appendSheet action).
-    GAS doPost must handle action='appendSheet' - see GAS_CODE_CURRENT.md."""
+    Handles GAS 302 redirect (POST->GET conversion) by manual redirect follow."""
     webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
     if not webhook:
         print("[SHEET_WRITE] EMAIL_WEBHOOK_URL not set")
@@ -564,27 +581,35 @@ def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: 
         return False
     if not rows:
         return True
+    # Extract tab name from tab_range (e.g. "tab!A:E" -> "tab")
+    tab_name = tab_range.split("!")[0] if "!" in tab_range else tab_range
     try:
-        payload = {"action": "appendSheet", "sheetId": sheet_id, "range": tab_range, "values": rows}
-        r = req_lib.post(webhook,
-                         data=_clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8"),
-                         timeout=30, headers={"Content-Type": "application/json; charset=utf-8"})
-        resp_text = r.text[:300]
+        payload = {"action": "appendSheet", "sheet_id": sheet_id, "tab_name": tab_name, "rows": rows}
+        body_bytes = _clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8")
+        hdrs = {"Content-Type": "application/json; charset=utf-8"}
+        # First request: don't follow redirects (GAS 302 converts POST to GET)
+        r = req_lib.post(webhook, data=body_bytes, timeout=30, headers=hdrs, allow_redirects=False)
+        # Handle 302 redirect manually — re-POST to the redirect URL
+        if r.status_code in (301, 302, 303, 307, 308):
+            redirect_url = r.headers.get("Location", "")
+            if redirect_url:
+                r = req_lib.post(redirect_url, data=body_bytes, timeout=30, headers=hdrs, allow_redirects=True)
+        resp_text = r.text[:500]
+        print(f"[SHEET_WRITE] HTTP {r.status_code} tab={tab_name} rows={len(rows)} resp={resp_text[:150]}")
         if r.status_code == 200:
             try:
                 resp = json.loads(resp_text)
             except Exception:
                 resp = {}
             if resp.get("status") == "success":
-                print(f"[SHEET_WRITE] OK: {tab_range} {len(rows)} rows")
+                print(f"[SHEET_WRITE] OK: {tab_name} {len(rows)} rows written")
                 return True
-            if "sent to" in resp_text or resp.get("message", "").startswith("sent"):
-                print("[SHEET_WRITE] GAS treated appendSheet as email - handler not deployed")
-                _record_mistake("system", "gas_no_appendsheet", "Deploy GAS_CODE_CURRENT.md appendSheet handler")
+            if "sent to" in resp_text:
+                print("[SHEET_WRITE] GAS treated as email send - appendSheet handler missing")
+                _record_mistake("system", "gas_no_appendsheet", "GAS missing appendSheet handler")
                 _backup_rows(backup_key, rows)
                 return False
-        print(f"[SHEET_WRITE] FAIL: HTTP {r.status_code} resp={resp_text[:150]}")
-        _record_mistake("system", "sheet_write_fail", f"{tab_range}: HTTP {r.status_code}")
+        _record_mistake("system", "sheet_write_fail", f"{tab_name}: HTTP {r.status_code}")
         _backup_rows(backup_key, rows)
         return False
     except Exception as e:
