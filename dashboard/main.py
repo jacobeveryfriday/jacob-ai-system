@@ -131,9 +131,12 @@ def _run_health_check() -> dict:
     pitch_sheet = _test_sheet_access(PITCH_SHEET_ID, TAB_PITCH)
     luna_sheet = _test_sheet_access(LUNA_SHEET_ID, TAB_INFLUENCER)
     api_key_ok = bool(os.getenv("ANTHROPIC_API_KEY"))
+    webhook_ok = bool(os.getenv("EMAIL_WEBHOOK_URL"))
     issues = []
     if not gas:
         issues.append("GAS webhook fail")
+    if not webhook_ok:
+        issues.append("EMAIL_WEBHOOK_URL not set - sheet writes disabled")
     if not pitch_sheet:
         issues.append("Pitch sheet fail")
     if not luna_sheet:
@@ -168,6 +171,32 @@ async def api_daily_health_check():
         msg = "[Kyle Morning Check] Issues:\n" + "\n".join(result["issues"])
         _record_mistake("\uce74\uc77c", "morning_check_fail", "; ".join(result["issues"]))
     return result
+
+
+@app.post("/api/sheets/retry-pending")
+async def api_retry_pending():
+    """Retry writing backed-up rows to Google Sheets."""
+    if not CRAWLED_DATA_FILE.exists():
+        return {"status": "no_backup"}
+    backup = json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8"))
+    if not isinstance(backup, dict):
+        return {"status": "no_backup"}
+    results = {}
+    for key in ["pitch_pending", "luna_pending"]:
+        rows = backup.get(key, [])
+        if not rows:
+            results[key] = {"status": "empty"}
+            continue
+        sheet_id = PITCH_SHEET_ID if "pitch" in key else LUNA_SHEET_ID
+        tab = (TAB_PITCH + "!A:E") if "pitch" in key else (TAB_INFLUENCER + "!A:R")
+        ok = _write_rows_to_sheet(sheet_id, tab, rows)
+        if ok:
+            del backup[key]
+            results[key] = {"status": "ok", "rows": len(rows)}
+        else:
+            results[key] = {"status": "failed", "rows": len(rows)}
+    CRAWLED_DATA_FILE.write_text(json.dumps(backup, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status": "ok", "results": results}
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -514,12 +543,13 @@ def _log_scheduler(job_id: str, result: str, count: int = 0):
 
 
 # ===== Sheet Write via GAS Webhook =====
-def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list) -> bool:
-    """Write rows to Google Sheets via GAS webhook."""
+def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: str = None) -> bool:
+    """Write rows to Google Sheets via GAS webhook. Backs up locally on failure."""
     webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
     if not webhook:
         print("[SHEET_WRITE] EMAIL_WEBHOOK_URL not set")
-        _record_mistake("\uc2dc\uc2a4\ud15c", "config_error", "EMAIL_WEBHOOK_URL not set")
+        _record_mistake("system", "config_error", "EMAIL_WEBHOOK_URL not set")
+        _backup_rows(backup_key, rows)
         return False
     if not rows:
         return True
@@ -532,12 +562,28 @@ def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list) -> bool:
                 print(f"[SHEET_WRITE] OK: {tab_range} {len(rows)} rows")
                 return True
         print(f"[SHEET_WRITE] FAIL: {r.status_code} {r.text[:200]}")
-        _record_mistake("\uc2dc\uc2a4\ud15c", "sheet_write_fail", f"{tab_range}: {r.status_code}")
+        _record_mistake("system", "sheet_write_fail", f"{tab_range}: {r.status_code}")
+        _backup_rows(backup_key, rows)
         return False
     except Exception as e:
         print(f"[SHEET_WRITE] ERROR: {e}")
-        _record_mistake("\uc2dc\uc2a4\ud15c", "sheet_write_error", str(e))
+        _record_mistake("system", "sheet_write_error", str(e))
+        _backup_rows(backup_key, rows)
         return False
+
+def _backup_rows(key: str, rows: list):
+    if not key or not rows:
+        return
+    try:
+        backup = json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8")) if CRAWLED_DATA_FILE.exists() else {}
+        if not isinstance(backup, dict):
+            backup = {}
+        backup[key] = backup.get(key, []) + rows
+        CRAWLED_DATA_FILE.write_text(json.dumps(backup, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"[SHEET_WRITE] Backed up {len(rows)} rows to crawled_data.json[{key}]")
+    except Exception as e:
+        print(f"[BACKUP] Error: {e}")
+
 
 
 def _kyle_pre_check(agent: str) -> dict:
@@ -2985,7 +3031,9 @@ async def api_pitch_daily(request: Request):
         if leads:
             now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
             sheet_rows = [[now_str, l.get("name",""), l.get("email",""), l.get("category",""), "✔"] for l in leads[:50]]
-            _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:E", sheet_rows)
+            sheet_ok = _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:E", sheet_rows, backup_key="pitch_pending")
+            if not sheet_ok:
+                _record_mistake("pitch", "sheet_write_fail", f"{len(sheet_rows)} rows failed, backed up")
     result["steps"].append({"step": "DB 수집", "collected": collected, "needed": unsent < 10})
 
     if action == "collect_only":
@@ -3182,8 +3230,10 @@ async def api_luna_collect_na(request: Request):
             luna_rows.append([now_str, "", item.get("country", "US"), "",
                               item.get("platform", "Instagram"), item.get("username", item.get("name", "")),
                               "", "", item.get("email", ""), "", "", "", "", "", "", "", "", ""])
-        sheet_ok = _write_rows_to_sheet(LUNA_SHEET_ID, TAB_INFLUENCER + "!A:R", luna_rows)
-        _kyle_post_check("\ub8e8\ub098", {"sent_count": total_collected, "sheet_updated": sheet_ok})
+        sheet_ok = _write_rows_to_sheet(LUNA_SHEET_ID, TAB_INFLUENCER + "!A:R", luna_rows, backup_key="luna_pending")
+        if not sheet_ok:
+            _record_mistake("luna", "sheet_write_fail", f"{len(luna_rows)} rows failed, backed up")
+        _kyle_post_check("luna", {"sent_count": total_collected, "sheet_updated": sheet_ok})
     _log_scheduler("luna_collect_na", "done", total_collected)
     return {"status": "ok", "day": day_num, "collected": {"instagram": collected_ig, "tiktok": collected_tt},
             "total_na": existing_na + total_collected, "target": 400}
