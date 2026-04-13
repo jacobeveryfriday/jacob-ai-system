@@ -334,6 +334,85 @@ def _record_perf(agent: str, metric: str, delta: int = 1):
     perf[today][agent][metric] = perf[today][agent].get(metric, 0) + delta
     save_agent_perf(perf)
 
+SCHEDULER_LOG_FILE = DATA_DIR / "scheduler_log.json"
+
+def _log_scheduler(job_id: str, result: str, count: int = 0):
+    try:
+        log = json.loads(SCHEDULER_LOG_FILE.read_text(encoding="utf-8")) if SCHEDULER_LOG_FILE.exists() else {"runs": []}
+        log["runs"].append({"job": job_id, "time": datetime.now(KST).isoformat(), "result": result, "count": count})
+        log["runs"] = log["runs"][-100:]
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        SCHEDULER_LOG_FILE.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+MISTAKE_LOG_FILE = DATA_DIR / "mistake_log.json"
+
+def _record_mistake(agent: str, error_type: str, detail: str):
+    try:
+        log = json.loads(MISTAKE_LOG_FILE.read_text(encoding="utf-8")) if MISTAKE_LOG_FILE.exists() else {"errors": [], "prevention_rules": []}
+        existing = [e for e in log["errors"] if e.get("agent") == agent and e.get("type") == error_type]
+        now_str = datetime.now(KST).isoformat()
+        if existing:
+            existing[0]["count"] = existing[0].get("count", 1) + 1
+            existing[0]["last_occurred"] = now_str
+            existing[0].setdefault("details", []).append(detail)
+            existing[0]["details"] = existing[0]["details"][-20:]
+        else:
+            log["errors"].append({"agent": agent, "type": error_type, "count": 1, "first_occurred": now_str, "last_occurred": now_str, "details": [detail], "prevention": ""})
+        MISTAKE_LOG_FILE.write_text(json.dumps(log, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+def _backup_rows(key: str, rows: list):
+    if not key or not rows:
+        return
+    try:
+        CRAWLED_DATA_FILE = DATA_DIR / "crawled_data.json"
+        backup = json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8")) if CRAWLED_DATA_FILE.exists() else {}
+        if not isinstance(backup, dict):
+            backup = {}
+        backup[key] = backup.get(key, []) + rows
+        CRAWLED_DATA_FILE.write_text(json.dumps(backup, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: str = None) -> bool:
+    """Write rows to Google Sheets via GAS webhook (appendSheet action)."""
+    webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
+    if not webhook:
+        _backup_rows(backup_key, rows)
+        return False
+    if not rows:
+        return True
+    tab_name = tab_range.split("!")[0] if "!" in tab_range else tab_range
+    try:
+        payload = {"action": "appendSheet", "sheet_id": sheet_id, "tab_name": tab_name, "rows": rows}
+        r = req_lib.post(webhook, json=payload, timeout=60, allow_redirects=False)
+        if r.status_code in (301, 302, 303):
+            redir = r.headers.get("Location", "")
+            if redir:
+                r = req_lib.get(redir, timeout=30)
+        if r.status_code == 200:
+            try:
+                resp = r.json()
+            except Exception:
+                resp = {}
+            if resp.get("status") == "success":
+                return True
+        _backup_rows(backup_key, rows)
+        return False
+    except Exception:
+        _backup_rows(backup_key, rows)
+        return False
+
+def _kyle_post_check(agent: str, result: dict):
+    sent = result.get("sent_count", 0)
+    if sent == 0:
+        _record_mistake(agent, "zero_sent", "0 items sent")
+    if not result.get("sheet_updated", False):
+        _record_mistake(agent, "sheet_not_updated", "sheet not updated after send")
+
 def load_alerts() -> list:
     if ALERTS_FILE.exists():
         return json.loads(ALERTS_FILE.read_text(encoding="utf-8"))
