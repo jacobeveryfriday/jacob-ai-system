@@ -216,7 +216,7 @@ async def api_test_sheet_write():
             gas_raw = {"http": r.status_code, "body": r.text[:300]}
             if r.status_code in (301, 302, 303):
                 redir = r.headers.get("Location", "")
-                r2 = req_lib.post(redir, data=body, timeout=30, headers=hdrs)
+                r2 = req_lib.get(redir, timeout=30)
                 gas_raw["redirect"] = redir[:80]
                 gas_raw["redirect_http"] = r2.status_code
                 gas_raw["redirect_body"] = r2.text[:300]
@@ -589,11 +589,11 @@ def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: 
         hdrs = {"Content-Type": "application/json; charset=utf-8"}
         # First request: don't follow redirects (GAS 302 converts POST to GET)
         r = req_lib.post(webhook, data=body_bytes, timeout=30, headers=hdrs, allow_redirects=False)
-        # Handle 302 redirect manually — re-POST to the redirect URL
-        if r.status_code in (301, 302, 303, 307, 308):
+        # GAS 302 redirect: POST executes doPost, then 302 to result page — fetch with GET
+        if r.status_code in (301, 302, 303):
             redirect_url = r.headers.get("Location", "")
             if redirect_url:
-                r = req_lib.post(redirect_url, data=body_bytes, timeout=30, headers=hdrs, allow_redirects=True)
+                r = req_lib.get(redirect_url, timeout=30)
         resp_text = r.text[:500]
         print(f"[SHEET_WRITE] HTTP {r.status_code} tab={tab_name} rows={len(rows)} resp={resp_text[:150]}")
         if r.status_code == 200:
@@ -2615,10 +2615,13 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent_name: st
     if html_body:
         payload["htmlBody"] = html_body
     try:
-        resp = req_lib.post(webhook_url,
-                            data=_clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8"),
-                            timeout=30, allow_redirects=True,
+        body_data = _clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8")
+        resp = req_lib.post(webhook_url, data=body_data, timeout=30, allow_redirects=False,
                             headers={"Content-Type": "application/json; charset=utf-8"})
+        if resp.status_code in (301, 302, 303):
+            redir = resp.headers.get("Location", "")
+            if redir:
+                resp = req_lib.get(redir, timeout=30)
         if resp.status_code == 200:
             try:
                 data = resp.json()
@@ -2643,10 +2646,13 @@ def _send_template_via_gas(agent: str, to_email: str, template: str,
     if name:
         payload["name"] = name
     try:
-        resp = req_lib.post(webhook_url,
-                            data=_clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8"),
-                            timeout=30, allow_redirects=True,
+        body_data = _clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8")
+        resp = req_lib.post(webhook_url, data=body_data, timeout=30, allow_redirects=False,
                             headers={"Content-Type": "application/json; charset=utf-8"})
+        if resp.status_code in (301, 302, 303):
+            redir = resp.headers.get("Location", "")
+            if redir:
+                resp = req_lib.get(redir, timeout=30)
         if resp.status_code == 200:
             try:
                 data = resp.json()
