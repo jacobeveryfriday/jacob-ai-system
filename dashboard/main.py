@@ -3056,7 +3056,10 @@ async def api_pitch_send(request: Request):
 
 @app.post("/api/agents/pitch/daily")
 async def api_pitch_daily(request: Request):
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
     action = body.get("action", "full")
     now = datetime.now(KST)
     _log_scheduler("pitch_daily_" + action, "start")
