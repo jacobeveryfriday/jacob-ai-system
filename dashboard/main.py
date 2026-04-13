@@ -2494,24 +2494,37 @@ async def api_send_email(request: Request):
 
 @app.get("/api/test-all-templates")
 async def api_test_all_templates():
-    """Send 9 template test emails to jacob@08liter.com."""
+    """Send 9 template test emails to jacob@08liter.com with 1s delay."""
+    import asyncio
     to = "jacob@08liter.com"
-    results = {}
     templates = [
-        ("pitch", "A", {"brand": "테스트브랜드", "contact": "제이콥"}),
-        ("pitch", "B", {"brand": "테스트브랜드", "contact": "제이콥"}),
-        ("pitch", "C", {"brand": "테스트브랜드", "contact": "제이콥"}),
-        ("pitch", "A_EN", {"brand": "TestBrand", "contact": "Jacob"}),
-        ("pitch", "B_EN", {"brand": "TestBrand", "contact": "Jacob"}),
-        ("luna", "KR_A", {"name": "제이콥"}),
-        ("luna", "KR_B", {"name": "제이콥"}),
-        ("luna", "US_A", {"name": "Jacob"}),
-        ("luna", "US_B", {"name": "Jacob"}),
+        ("pitch", "A", "테스트브랜드", "제이콥", ""),
+        ("pitch", "B", "테스트브랜드", "제이콥", ""),
+        ("pitch", "C", "테스트브랜드", "제이콥", ""),
+        ("pitch", "A_EN", "TestBrand", "Jacob", ""),
+        ("pitch", "B_EN", "TestBrand", "Jacob", ""),
+        ("luna", "KR_A", "테스트브랜드", "제이콥", "제이콥"),
+        ("luna", "KR_B", "테스트브랜드", "제이콥", "제이콥"),
+        ("luna", "US_A", "TestBrand", "Jacob", "Jacob"),
+        ("luna", "US_B", "TestBrand", "Jacob", "Jacob"),
     ]
-    for agent, tmpl, vars in templates:
-        r = _send_template_via_gas(agent, to, tmpl, brand=vars.get("brand", ""), contact=vars.get("contact", ""), name=vars.get("name", ""))
-        results[f"{agent}_{tmpl}"] = {"status": r.get("status"), "method": r.get("method", "")}
-    return {"sent_to": to, "count": len(templates), "results": results}
+    results = []
+    for agent, tmpl, brand, contact, name in templates:
+        r = _send_template_via_gas(agent, to, tmpl, brand=brand, contact=contact, name=name)
+        results.append({"template": f"{agent}_{tmpl}", "status": r.get("status"), "method": r.get("method", ""), "message": r.get("message", "")[:80]})
+        await asyncio.sleep(1)
+    return {"sent_to": to, "count": len(results), "results": results}
+
+@app.get("/api/smtp-check")
+async def api_smtp_check():
+    """Check SMTP configuration status (no secrets exposed)."""
+    return {
+        "smtp_host": os.getenv("SMTP_HOST", "not_set"),
+        "smtp_port": os.getenv("SMTP_PORT", "not_set"),
+        "pitch_password": "yes" if os.getenv("PITCH_EMAIL_PASSWORD") else "no",
+        "luna_password": "yes" if os.getenv("LUNA_EMAIL_PASSWORD") else "no",
+        "email_webhook_url": "yes" if os.getenv("EMAIL_WEBHOOK_URL") else "no",
+    }
 
 @app.get("/api/test-email")
 async def api_test_email(agent: str = "피치"):
