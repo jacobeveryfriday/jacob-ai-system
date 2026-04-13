@@ -208,6 +208,8 @@ body { background:var(--bg-primary); color:var(--text-primary); font-size:13px; 
 </div>
 <!-- 에이전트 요약 바 -->
 <div id="agentSummaryBar" style="display:flex;gap:20px;background:var(--bg-tertiary);border-radius:8px;padding:10px 16px;margin-bottom:16px;align-items:center;flex-wrap:wrap"></div>
+<!-- 에이전트 실시간 활동 위젯 -->
+<div id="agentActivityWidget" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px"></div>
 <!-- 에이전트 현황 카드 -->
 <div id="agentGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px"></div>
 <!-- CEO 승인 대기 -->
@@ -1338,6 +1340,25 @@ rejectBtn.addEventListener('click',function(){fetch('/api/proposals/reject',{met
 row.appendChild(btns);card.appendChild(row);card.appendChild(fullDetail);
 el.appendChild(card)})}).catch(function(){})}
 loadProposalQueue();setInterval(loadProposalQueue,300000);
+// Agent activity widget
+function loadAgentActivity(){
+fetch('/api/agent-activity-status').then(function(r){return r.json()}).then(function(d){
+var w=document.getElementById('agentActivityWidget');if(!w)return;while(w.firstChild)w.removeChild(w.firstChild);
+var labels={pitch:'피치',luna:'루나',kyle:'카일',sophie:'소피',max:'맥스',ray:'레이',hana:'하나'};
+var colors={collecting:'#1A7A4C',sending:'#B8860B',idle:'#9B9B9B',error:'#C4332B'};
+Object.entries(d.agents||{}).forEach(function(e){
+var name=e[0],ag=e[1];
+var card=document.createElement('div');card.style.cssText='background:#fff;border:0.5px solid #E8E6E1;border-radius:8px;padding:10px;text-align:center';
+var hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:6px';
+var dot=document.createElement('span');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:'+(colors[ag.status]||'#9B9B9B');hdr.appendChild(dot);
+var nm=document.createElement('span');nm.style.cssText='font-size:11px;font-weight:700;color:#1a1a1a;font-family:Helvetica Neue,sans-serif';nm.textContent=labels[name]||name;hdr.appendChild(nm);
+card.appendChild(hdr);
+var db=document.createElement('p');db.style.cssText='font-size:9px;color:#6B6B6B;margin-bottom:2px';db.textContent='DB +'+ag.db_collected_today+'건';card.appendChild(db);
+var eq=document.createElement('p');eq.style.cssText='font-size:9px;color:'+(ag.emails_queued>0?'#B8860B':'#6B6B6B');eq.textContent='대기 '+ag.emails_queued+'건';card.appendChild(eq);
+if(ag.last_db_collect){var ago=document.createElement('p');ago.style.cssText='font-size:8px;color:#9B9B9B';
+var mins=Math.round((Date.now()-new Date(ag.last_db_collect).getTime())/60000);ago.textContent=mins<60?mins+'분 전':Math.round(mins/60)+'시간 전';card.appendChild(ago)}
+w.appendChild(card)})}).catch(function(){})}
+loadAgentActivity();setInterval(loadAgentActivity,30000);
 
 // ===== Brand Pipeline Functions =====
 var _brandData=null,_brandTab='daily';

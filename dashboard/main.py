@@ -5231,6 +5231,63 @@ async def api_kyle_auto_report():
 async def api_kyle_pre_check(agent: str = "\ud53c\uce58"):
     return _kyle_pre_check(agent)
 
+@app.get("/api/agent-activity-status")
+async def api_agent_activity_status():
+    """Real-time agent activity status for dashboard widget."""
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    log = json.loads(SCHEDULER_LOG_FILE.read_text(encoding="utf-8")) if SCHEDULER_LOG_FILE.exists() else {"runs": []}
+    runs = log.get("runs", [])
+    queue = load_email_queue()
+    perf = load_agent_perf()
+    today_perf = perf.get(today, {})
+
+    def last_run_time(job_prefix):
+        found = [r for r in runs if r.get("job", "").startswith(job_prefix)]
+        return found[-1].get("time", "") if found else ""
+
+    def pending_count(ag):
+        return sum(1 for e in queue if e.get("status") == "pending" and e.get("agent", "").lower().startswith(ag))
+
+    def today_count(ag_key, metric):
+        d = today_perf.get(ag_key, {})
+        return sum(d.get(m, 0) for m in ([metric] if isinstance(metric, str) else metric))
+
+    agents = {}
+    for name, key, collect_job, metrics in [
+        ("pitch", "pitch", "pitch_collect", ["crawl_brands", "email_sent_batch"]),
+        ("luna", "luna", "luna_collect", ["na_collect_ig", "na_collect_tt", "ai_collect"]),
+        ("kyle", "kyle", "kyle_auto", []),
+        ("sophie", "sophie", "", []),
+        ("max", "max", "", []),
+        ("ray", "ray", "", []),
+        ("hana", "hana", "", []),
+    ]:
+        tp = today_perf.get(key, today_perf.get(name, {}))
+        db_today = sum(tp.get(m, 0) for m in metrics) if metrics else 0
+        last_collect = last_run_time(collect_job) if collect_job else ""
+        eq = pending_count(name)
+        status = "idle"
+        if last_collect:
+            from dateutil import parser as _dp
+            try:
+                last_dt = _dp.parse(last_collect)
+                if (now - last_dt.replace(tzinfo=None if not last_dt.tzinfo else last_dt.tzinfo)).total_seconds() < 300:
+                    status = "collecting"
+            except Exception:
+                pass
+        if eq > 0:
+            status = "sending"
+        agents[name] = {
+            "last_db_collect": last_collect,
+            "db_collected_today": db_today,
+            "emails_queued": eq,
+            "status": status,
+        }
+
+    return {"agents": agents, "timestamp": now.isoformat()}
+
+
 @app.get("/api/agent-scoreboard")
 async def api_agent_scoreboard():
     """주간 에이전트 건­킹 스코어건³´건."""
