@@ -2324,6 +2324,39 @@ async def api_test_email(agent: str = "피치"):
     result["webhook_url"] = EMAIL_WEBHOOK_URL[:50] + "..." if EMAIL_WEBHOOK_URL else "미설정"
     return result
 
+@app.get("/api/smtp-check")
+async def api_smtp_check():
+    return {
+        "smtp_host": os.getenv("SMTP_HOST", "미설정"),
+        "smtp_port": os.getenv("SMTP_PORT", "미설정"),
+        "pitch_password": "설정됨" if os.getenv("PITCH_EMAIL_PASSWORD") else "미설정",
+        "luna_password": "설정됨" if os.getenv("LUNA_EMAIL_PASSWORD") else "미설정",
+    }
+
+@app.get("/api/test-all-templates")
+async def api_test_all_templates():
+    import asyncio
+    results = []
+    templates = [
+        ("pitch", "A", "테스트브랜드", "제이콥"),
+        ("pitch", "B", "테스트브랜드", "제이콥"),
+        ("pitch", "C", "테스트브랜드", "제이콥"),
+        ("pitch", "A_EN", "TestBrand", "Jacob"),
+        ("pitch", "B_EN", "TestBrand", "Jacob"),
+        ("luna", "KR_A", "테스트브랜드", "제이콥"),
+        ("luna", "KR_B", "테스트브랜드", "제이콥"),
+        ("luna", "US_A", "TestBrand", "Jacob"),
+        ("luna", "US_B", "TestBrand", "Jacob"),
+    ]
+    for agent, tmpl, brand, contact in templates:
+        try:
+            r = _send_template_email(agent, "jacob@08liter.com", tmpl, brand=brand, contact=contact, name=contact)
+            results.append({"template": tmpl, "agent": agent, "result": r})
+        except Exception as e:
+            results.append({"template": tmpl, "agent": agent, "error": str(e)})
+        await asyncio.sleep(1)
+    return {"total": len(results), "results": results}
+
 @app.get("/api/send-review-email")
 async def api_send_review_email():
     """CEO 검수 이메일 — 피치+루나 4가지 시안 통합 발송."""
