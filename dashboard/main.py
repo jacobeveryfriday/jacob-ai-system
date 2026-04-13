@@ -2359,10 +2359,15 @@ def _send_email_smtp(to_email: str, subject: str, body_text: str, agent: str = "
         if html_body:
             msg.attach(MIMEText(html_body, "html", "utf-8"))
 
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
-            server.starttls()
-            server.login(from_email, password)
-            server.send_message(msg)
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as server:
+                server.login(from_email, password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+                server.starttls()
+                server.login(from_email, password)
+                server.send_message(msg)
 
         print(f"[SMTP] OK: {agent} -> {to_email}")
         return {"status": "ok", "to": to_email, "from": f"{display_name} <{from_email}>", "method": "smtp"}
