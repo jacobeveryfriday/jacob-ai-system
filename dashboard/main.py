@@ -616,11 +616,18 @@ def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: 
             if resp.get("status") == "success":
                 print(f"[SHEET_WRITE] OK: {tab_name} {len(rows)} rows written")
                 return True
-            if "sent to" in resp_text:
-                print("[SHEET_WRITE] GAS treated as email send - appendSheet handler missing")
+            # GAS returned error
+            gas_err = resp.get("message", resp_text[:150])
+            if "rechten" in gas_err or "permission" in gas_err.lower() or "openById" in gas_err:
+                print(f"[SHEET_WRITE] GAS permission error: {gas_err[:100]}")
+                _record_mistake("system", "gas_permission", f"GAS needs 'Execute as: Me' + share sheet with GAS account. Error: {gas_err[:80]}")
+            elif "sent to" in resp_text:
+                print("[SHEET_WRITE] GAS treated as email - appendSheet handler missing")
                 _record_mistake("system", "gas_no_appendsheet", "GAS missing appendSheet handler")
-                _backup_rows(backup_key, rows)
-                return False
+            else:
+                _record_mistake("system", "sheet_write_fail", f"{tab_name}: {gas_err[:80]}")
+            _backup_rows(backup_key, rows)
+            return False
         _record_mistake("system", "sheet_write_fail", f"{tab_name}: HTTP {r.status_code}")
         _backup_rows(backup_key, rows)
         return False
