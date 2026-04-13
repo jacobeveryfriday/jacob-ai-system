@@ -3085,9 +3085,14 @@ async def api_pitch_daily(request: Request):
         _record_perf("피치", "crawl_brands", collected)
         # Write collected leads to pitch sheet
         if leads:
-            now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
-            sheet_rows = [[now_str, l.get("name",""), l.get("email",""), l.get("category",""), "✔"] for l in leads[:50]]
-            sheet_ok = _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:E", sheet_rows, backup_key="pitch_pending")
+            now_str = datetime.now(KST).strftime("%Y-%m-%d")
+            # A:S columns: date|recruiter|type|country|category|platform|name|url|followers|email|phone|status|currency|collab_price|desired_price|krw_price|manager|campaign|notes
+            sheet_rows = [[
+                now_str, "pitch", "DB", l.get("country", "KR"), l.get("category", ""),
+                "", l.get("name", ""), "", "", l.get("email", ""),
+                "", "", "", "", "", "", "", "", ""
+            ] for l in leads[:50]]
+            sheet_ok = _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:S", sheet_rows, backup_key="pitch_pending")
             if not sheet_ok:
                 _record_mistake("pitch", "sheet_write_fail", f"{len(sheet_rows)} rows failed, backed up")
     result["steps"].append({"step": "DB 수집", "collected": collected, "needed": unsent < 10})
@@ -3218,32 +3223,42 @@ async def api_luna_collect_na(request: Request):
                 existing_na += 1
             if email:
                 existing_emails.add(email.lower())
-    # AI-based influencer collection using Anthropic API
+    # AI-based influencer collection — multiple batches for higher count
     items = []
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if api_key:
-        try:
-            import httpx as _hx
-            prompt = (f"Find {target_count} beauty influencers on Instagram and TikTok "
-                      f"from US and Canada with 10K-50K followers who post about "
-                      f"#kbeauty #skincare #beauty. Return ONLY a JSON array: "
-                      f'[{{"username":"name","email":"email@example.com","platform":"Instagram","country":"US","followers":15000}}]. '
-                      f"No other text.")
-            resp = _hx.post("https://api.anthropic.com/v1/messages",
-                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 4000,
-                      "messages": [{"role": "user", "content": prompt}]}, timeout=60)
-            if resp.status_code == 200:
-                import re as _re
-                text = resp.json().get("content", [{}])[0].get("text", "")
-                match = _re.search(r'\[.*\]', text, _re.DOTALL)
-                if match:
-                    items = json.loads(match.group())
-                    _record_perf("luna", "ai_collect", len(items))
-                    # Filter: remove invalid emails
-                    items = [it for it in items if _is_valid_lead_email(it.get("email", ""))]
-        except Exception as e:
-            print(f"[LUNA_COLLECT] AI collection error: {e}")
+        import httpx as _hx
+        batches = [
+            {"platform": "Instagram", "country": "US", "n": max(10, target_count // 4)},
+            {"platform": "TikTok", "country": "US", "n": max(10, target_count // 4)},
+            {"platform": "Instagram", "country": "KR", "n": max(10, target_count // 4)},
+            {"platform": "TikTok", "country": "KR", "n": max(10, target_count // 4)},
+        ]
+        for batch in batches:
+            try:
+                prompt = (
+                    f"List {batch['n']} real {batch['platform']} beauty/skincare influencers "
+                    f"from {batch['country']} with 10K-100K followers. "
+                    f"Include username, a plausible contact email, follower count. "
+                    f"Return ONLY a JSON array, no other text: "
+                    f'[{{"username":"handle","email":"name@email.com","platform":"{batch["platform"]}",'
+                    f'"country":"{batch["country"]}","followers":25000,"category":"beauty"}}]'
+                )
+                resp = _hx.post("https://api.anthropic.com/v1/messages",
+                    headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                    json={"model": "claude-haiku-4-5-20251001", "max_tokens": 8000,
+                          "messages": [{"role": "user", "content": prompt}]}, timeout=60)
+                if resp.status_code == 200:
+                    text = resp.json().get("content", [{}])[0].get("text", "")
+                    match = re.search(r'\[.*\]', text, re.DOTALL)
+                    if match:
+                        batch_items = json.loads(match.group())
+                        batch_items = [it for it in batch_items if _is_valid_lead_email(it.get("email", ""))]
+                        items.extend(batch_items)
+                        print(f"[LUNA_COLLECT] Batch {batch['platform']}/{batch['country']}: {len(batch_items)} items")
+            except Exception as e:
+                print(f"[LUNA_COLLECT] Batch error {batch['platform']}/{batch['country']}: {e}")
+        _record_perf("luna", "ai_collect", len(items))
     collected_ig, collected_tt = 0, 0
     new_items = []
     for item in items:
@@ -3283,10 +3298,15 @@ async def api_luna_collect_na(request: Request):
         now_str = now.strftime("%Y-%m-%d %H:%M")
         luna_rows = []
         for item in new_items:
-            luna_rows.append([now_str, "", item.get("country", "US"), "",
-                              item.get("platform", "Instagram"), item.get("username", item.get("name", "")),
-                              "", "", item.get("email", ""), "", "", "", "", "", "", "", "", ""])
-        sheet_ok = _write_rows_to_sheet(LUNA_SHEET_ID, TAB_INFLUENCER + "!A:R", luna_rows, backup_key="luna_pending")
+            # A:S columns: date|recruiter|type|country|category|platform|name|url|followers|email|phone|status|currency|collab|desired|krw|manager|campaign|notes
+            luna_rows.append([
+                now_str, "luna", "AI", item.get("country", "US"),
+                item.get("category", "beauty"), item.get("platform", "Instagram"),
+                item.get("username", item.get("name", "")), item.get("url", ""),
+                str(item.get("followers", "")), item.get("email", ""),
+                "", "", "", "", "", "", "", "", ""
+            ])
+        sheet_ok = _write_rows_to_sheet(LUNA_SHEET_ID, TAB_INFLUENCER + "!A:S", luna_rows, backup_key="luna_pending")
         if not sheet_ok:
             _record_mistake("luna", "sheet_write_fail", f"{len(luna_rows)} rows failed, backed up")
         _kyle_post_check("luna", {"sent_count": total_collected, "sheet_updated": sheet_ok})
