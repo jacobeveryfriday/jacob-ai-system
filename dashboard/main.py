@@ -5634,6 +5634,17 @@ async def crm_influencers():
         return {"schema": {"error": str(e)}, "admin_schema": {"error": str(e)}}
 
 
+
+
+@app.get("/api/crm/debug")
+async def crm_debug():
+    """MCP CRM connection probe - tries all auth/endpoint combos."""
+    try:
+        from mcp_crm import probe_server
+        return probe_server()
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.post("/api/crm/run-pitch")
 async def crm_run_pitch(request: Request):
     """Pitch automation: segment -> draft -> review queue"""
