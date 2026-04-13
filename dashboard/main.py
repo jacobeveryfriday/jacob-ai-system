@@ -199,6 +199,16 @@ async def api_retry_pending():
     return {"status": "ok", "results": results}
 
 
+
+@app.post("/api/sheets/test-write")
+async def api_test_sheet_write():
+    """Test if GAS appendSheet handler is deployed and working."""
+    now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+    test_row = [[now_str, "WRITE_TEST", "auto_test", "", ""]]
+    ok = _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:E", test_row)
+    return {"status": "ok" if ok else "failed", "gas_appendsheet_working": ok,
+            "message": "GAS appendSheet handler deployed" if ok else "GAS appendSheet NOT working - deploy GAS_CODE_CURRENT.md"}
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request, error: str = ""):
     """건¡그인 폼 페이지"""
@@ -544,7 +554,8 @@ def _log_scheduler(job_id: str, result: str, count: int = 0):
 
 # ===== Sheet Write via GAS Webhook =====
 def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: str = None) -> bool:
-    """Write rows to Google Sheets via GAS webhook. Backs up locally on failure."""
+    """Write rows to Google Sheets via GAS webhook (appendSheet action).
+    GAS doPost must handle action='appendSheet' - see GAS_CODE_CURRENT.md."""
     webhook = os.getenv("EMAIL_WEBHOOK_URL", "")
     if not webhook:
         print("[SHEET_WRITE] EMAIL_WEBHOOK_URL not set")
@@ -555,14 +566,25 @@ def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: 
         return True
     try:
         payload = {"action": "appendSheet", "sheetId": sheet_id, "range": tab_range, "values": rows}
-        r = req_lib.post(webhook, json=payload, timeout=30)
+        r = req_lib.post(webhook,
+                         data=_clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8"),
+                         timeout=30, headers={"Content-Type": "application/json; charset=utf-8"})
+        resp_text = r.text[:300]
         if r.status_code == 200:
-            resp = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+            try:
+                resp = json.loads(resp_text)
+            except Exception:
+                resp = {}
             if resp.get("status") == "success":
                 print(f"[SHEET_WRITE] OK: {tab_range} {len(rows)} rows")
                 return True
-        print(f"[SHEET_WRITE] FAIL: {r.status_code} {r.text[:200]}")
-        _record_mistake("system", "sheet_write_fail", f"{tab_range}: {r.status_code}")
+            if "sent to" in resp_text or resp.get("message", "").startswith("sent"):
+                print("[SHEET_WRITE] GAS treated appendSheet as email - handler not deployed")
+                _record_mistake("system", "gas_no_appendsheet", "Deploy GAS_CODE_CURRENT.md appendSheet handler")
+                _backup_rows(backup_key, rows)
+                return False
+        print(f"[SHEET_WRITE] FAIL: HTTP {r.status_code} resp={resp_text[:150]}")
+        _record_mistake("system", "sheet_write_fail", f"{tab_range}: HTTP {r.status_code}")
         _backup_rows(backup_key, rows)
         return False
     except Exception as e:
