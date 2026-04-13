@@ -588,7 +588,7 @@ def _write_rows_to_sheet(sheet_id: str, tab_range: str, rows: list, backup_key: 
         body_bytes = _clean_surrogates(json.dumps(payload, ensure_ascii=False)).encode("utf-8")
         hdrs = {"Content-Type": "application/json; charset=utf-8"}
         # First request: don't follow redirects (GAS 302 converts POST to GET)
-        r = req_lib.post(webhook, data=body_bytes, timeout=30, headers=hdrs, allow_redirects=False)
+        r = req_lib.post(webhook, data=body_bytes, timeout=60, headers=hdrs, allow_redirects=False)
         # GAS 302 redirect: POST executes doPost, then 302 to result page — fetch with GET
         if r.status_code in (301, 302, 303):
             redirect_url = r.headers.get("Location", "")
@@ -3092,8 +3092,13 @@ async def api_pitch_daily(request: Request):
                 "", l.get("name", ""), "", "", l.get("email", ""),
                 "", "", "", "", "", "", "", "", ""
             ] for l in leads[:50]]
-            print(f"[PITCH] Writing {len(sheet_rows)} rows to {TAB_PITCH}")
-            sheet_ok = _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:S", sheet_rows, backup_key="pitch_pending")
+            # Write in batches of 20 to avoid GAS timeout
+            sheet_ok = True
+            for i in range(0, len(sheet_rows), 20):
+                batch = sheet_rows[i:i+20]
+                print(f"[PITCH] Writing batch {i//20+1}: {len(batch)} rows to {TAB_PITCH}")
+                if not _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:S", batch, backup_key="pitch_pending"):
+                    sheet_ok = False
             print(f"[PITCH] Sheet write result: {sheet_ok}")
             if not sheet_ok:
                 _record_mistake("pitch", "sheet_write_fail", f"{len(sheet_rows)} rows failed, backed up")
