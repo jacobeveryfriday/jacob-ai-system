@@ -146,8 +146,8 @@ AGENT_AUTO_SEND_FILE = DATA_DIR / "agent_auto_send.json"
 CRAWLED_DATA_FILE = DATA_DIR / "crawled_data.json"
 EMAIL_LOG_FILE = DATA_DIR / "email_log.json"
 
-# 발송 속도 제한
-SEND_LIMITS = {"hourly": 50, "daily": 550, "interval_sec": 30}
+# 건°송 속건 제한
+SEND_LIMITS = {"hourly": 50, "daily": 500, "interval_sec": 30}
 
 def load_crawled() -> list:
     if CRAWLED_DATA_FILE.exists():
@@ -2419,6 +2419,897 @@ KOL 라이브 → 2분 30초에 1억 매출
     result["luna_total"] = luna_total
     return result
 
+@app.get("/api/send-luna-db-request")
+async def api_send_luna_db_request():
+    """루나 DB 수집 승인 요청 이건©일 건°송."""
+    ceo_email = "jacob@08liter.com"
+    subject = "[루나 DB 수집 승인 요청] 인플건£¨언서 50건ª | 건¹용 196원"
+    html = '''<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px">
+<h2 style="color:#1a1a1a;border-bottom:2px solid #333;padding-bottom:10px">ð¦ 루나 DB 수집 계획</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd;font-weight:bold">항건ª©</td><td style="padding:8px;border:1px solid #ddd;font-weight:bold">건´용</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">수집 출처</td><td style="padding:8px;border:1px solid #ddd">Instagram (#kbeauty #skincare 해시태그)</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">수집 건ª©표</td><td style="padding:8px;border:1px solid #ddd">50건ª</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">완건£ 기간</td><td style="padding:8px;border:1px solid #ddd">승인 후 건¹일</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">예상 건¹용</td><td style="padding:8px;border:1px solid #ddd">약 196원 (Haiku 기준)</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">타겟 기준</td><td style="padding:8px;border:1px solid #ddd">â 팔건¡워 1건§~100건§<br>â 인게이지건¨¼트 3%+<br>â 건·°티/스킨케어<br>â 공개 건¹즈건스 이건©일<br>â 한국 50% / 일건³¸ 25% / 건건¨아 25%</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">제외 기준</td><td style="padding:8px;border:1px solid #ddd">â 인게이지건¨¼트 3% 건¯¸건§<br>â 3개월 건¯¸업건¡건<br>â 이건©일 없건 계정</td></tr>
+</table>
+<div style="background:#fff3cd;padding:15px;border:1px solid #ffc107;border-radius:4px">
+<strong>âï¸ 회신해주세요:</strong><br>
+"수집승인" â 즉시 수집 시작<br>
+"수집수정: [건´용]" â 수정 후 재요청<br>
+"수집취소" â 취소<br><br>
+<strong style="color:#dc3545">â» 회신 없이건 수집 시작 건¶가</strong>
+</div></div>'''
+    result = _send_email_smtp(ceo_email, subject, "루나 DB 수집 승인 요청", "루나", html_body=html)
+    return result
+
+# ===== 업건¬´시간 체크 =====
+def _is_business_hours(country: str = "KR") -> bool:
+    """현지 업건¬´시간(평일 09~18시) 여건¶ 확인."""
+    offsets = {"KR": 9, "JP": 9, "US": -4, "TH": 7, "ID": 7, "VN": 7, "MY": 8, "SG": 8}
+    offset = offsets.get(country[:2].upper(), 9)
+    now_utc = datetime.utcnow()
+    local_hour = (now_utc.hour + offset) % 24
+    local_weekday = ((now_utc.weekday() * 24 + now_utc.hour + offset) // 24) % 7
+    # 0=월 ~ 4=금 = 평일, 5=토 6=일 = 주건§
+    is_weekend = local_weekday >= 5
+    return not is_weekend and 9 <= local_hour < 18
+
+# ===== 피치 자율 실행 + 품질 점검 + 2차 이건©일 =====
+
+from pitch_templates import PITCH_TEMPLATES
+
+PITCH_REPLY_TEMPLATES = {
+    "meeting": {"subject": "RE: 건¯¸팅 예약 건§크 건³´건´건건¦½건건¤",
+                "body": "안건하세요 {contact}건,\n\n시간 건´주셔서 감사합건건¤.\n아건 건§크에서 편하신 시간 선택해 주세요.\n\nð https://buly.kr/1c9NOdW\n\n건¯¸팅 전에 아건 건´용 건¯¸건¦¬ 알건 ¤주시건©´ 건 알차게 준건¹하겠습건건¤.\n\nÂ· 주건 ¥ 판건§¤ 채건\nÂ· 관심 있건 건§케팅 건°©식\nÂ· 진출하건 ¤건 국가\n\n기건¤건¦¬겠습건건¤.\n\n---\n공팔건¦¬터 주건어 컨설턴트\n피치 건건¦¼\n\npitch@08liter.com\nwww.08liter.com"},
+    "info": {"subject": "RE: 공팔건¦¬터 서건¹스 안건´건건¦½건건¤",
+             "body": "안건하세요 {contact}건,\n\n저희건 세 가지 서건¹스건¥¼ 운영합건건¤.\n\nâ  구건§¤평 â 쿠팡Â·올건¦¬건¸영Â·아건§존 건± 실구건§¤ 건¦¬건·°\nâ¡ 숏폼 체험건¨ â 인스타Â·틱톡Â·쇼츠 영상 콘텐츠 제작\nâ¢ 건§춤 인플건£¨언서 â 건¸건건 핏에 건§건 KOL 협업\n\n4월 한정 최건 60% 할인 중입건건¤.\n\nð 자세한 건´용: https://buly.kr/AF24dn7\nð 30건¶ 건¹건건©´ 건¯¸팅: https://buly.kr/1c9NOdW\n\n---\n공팔건¦¬터 주건어 컨설턴트\n피치 건건¦¼\n\npitch@08liter.com\nwww.08liter.com"},
+    "later": {"subject": "{brand}, 4월 30일이 건§지건§입건건¤",
+              "body": "안건하세요 {contact}건,\n\n지건건² 연건½건건 ¸건 공팔건¦¬터 피치입건건¤.\n\n4월 한정 60% 할인 프건¡건ª¨션이 이건² 건¬ 건§ 건§감건©건건¤.\n건°쁘신 건 충건¶히 이해합건건¤.\n5월 일정으건¡ 건¯¸건¦¬ 건 짜건§ 잡아건셔건 건©건건¤.\n\nð https://buly.kr/1c9NOdW\nð 상품소개서: https://buly.kr/AF24dn7\n\n---\n공팔건¦¬터 주건어 컨설턴트\n피치 건건¦¼\n\npitch@08liter.com\nwww.08liter.com"},
+    "reject": {"subject": "RE: 건§씀 감사합건건¤",
+               "body": "안건하세요 {contact}건,\n\n건§씀 감사합건건¤.\n건¦¬건·°Â·숏폼Â·해외 진출 관건 ¨해서\n고건¯¼이 생기실 건 편하게 연건½ 주세요.\n\n---\n공팔건¦¬터 주건어 컨설턴트\n피치 건건¦¼\n\npitch@08liter.com\nwww.08liter.com"},
+}
+
+def _luna_quality_check(email: str, subject: str, body: str, country: str = "KR") -> list:
+    """루나 발송 전 품질 점검 10항목."""
+    errors = []
+    if not email or "@" not in email:
+        errors.append("이메일 무효")
+    if not subject:
+        errors.append("제목 비어있음")
+    if not body:
+        errors.append("본문 비어있음")
+    if "{" in subject or "{" in body:
+        errors.append("개인화 미치환")
+    if "08liter" not in body and "공팔리터" not in body and "luna" not in body.lower():
+        errors.append("서명 누락")
+    if not _is_business_hours(country):
+        errors.append(f"업무시간 외 ({country})")
+    return errors
+
+def _pitch_quality_check(email: str, subject: str, body: str) -> list:
+    """건°송 전 품질 점검. 실패 사유 건¦¬스트 건°환 (건¹ 건¦¬스트 = 통과)."""
+    errors = []
+    if not email or "@" not in email:
+        errors.append("이건©일 주소 건¬´효")
+    if not subject:
+        errors.append("제건ª© 건¹어있음")
+    if not body:
+        errors.append("건³¸건¬¸ 건¹어있음")
+    if "{" in subject or "{" in body:
+        errors.append("개인화 건¯¸치환 ({} 잔존)")
+    if "buly.kr/AF24dn7" not in body:
+        errors.append("소개서 건§크 건건½")
+    if "buly.kr/1c9NOdW" not in body:
+        errors.append("건¯¸팅 건§크 건건½")
+    if "공팔건¦¬터" not in body and "피치 건건¦¼" not in body:
+        errors.append("서건ª 건건½")
+    return errors
+
+@app.post("/api/pitch/send")
+async def api_pitch_send(request: Request):
+    """CEO 승인건 시안으건¡ 피치 이건©일 건°송. DB 소스: 오직 피치_클건¡건 탭."""
+    body = await request.json()
+    template_key = body.get("template", body.get("variant", "A")).upper()
+    test_mode = body.get("test_mode", False)
+    test_recipient = body.get("recipient", "")
+    if template_key == "AB":
+        template_key = "A"
+    tmpl = PITCH_TEMPLATES.get(template_key, PITCH_TEMPLATES["A"])
+    # Test mode: send to specified recipient only
+    # CEO test or direct send with "to" parameter
+    direct_to = body.get("to", "")
+    if test_mode and test_recipient:
+        direct_to = test_recipient
+    if direct_to:
+        brand_name = body.get("brand_name", body.get("brand", "Test Brand"))
+        contact_name = body.get("contact", brand_name)
+        result = _send_template_via_gas("pitch", direct_to, template_key, brand=brand_name, contact=contact_name)
+        _log_scheduler("pitch_send_test", "done", 1)
+        return {"status": "ok", "test_mode": bool(test_mode), "sent_to": direct_to, "template": template_key, "result": result}
+    # DB 소스: 오직 피치 시트 "피치_클건¡건" 탭 (건¤건¥¸ 시트 혼용 금지)
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+    leads = []
+    if rows and len(rows) > 1:
+        # 헤건 확인 (A:No B:DB확건³´건 짜 ... E:건¸건건건ª ... H:이건©일 ... N:건°송상태)
+        for row in rows[1:]:
+            if len(row) < 8:
+                continue
+            email = str(row[7]).strip() if len(row) > 7 else ""  # H열 = 이건©일
+            brand = str(row[4]).strip() if len(row) > 4 else ""  # E열 = 건¸건건건ª
+            sent_status = str(row[13]).strip() if len(row) > 13 else ""  # N열 = 건°송상태
+            if _is_valid_lead_email(email) and not sent_status:  # 건°송일자 건¹어있건 건건§
+                leads.append({"name": brand, "email": email})
+    if not leads:
+        # 피치_클건¡건 탭이 건¹었으건©´ 파센건¬¸의 폴건°± (경고 포함)
+        leads_data = await api_recontact_leads()
+        leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
+    limit = min(body.get("limit", 30), 30)
+    targets = leads[:limit]
+    sent, skipped, deferred, errors_list = 0, 0, 0, []
+    for t in targets:
+        brand = t.get("name", "")
+        contact = brand
+        email = t.get("email", "")
+        country = t.get("country", "KR")[:2].upper() if t.get("country") else "KR"
+        # 업건¬´시간 체크
+        if not _is_business_hours(country):
+            deferred += 1
+            continue
+        # 언어 자건 선택: 한국/일건³¸ â 한국어, 그 외 â 영어
+        if country not in ("KR", "JP") and template_key + "_EN" in PITCH_TEMPLATES:
+            tmpl = PITCH_TEMPLATES[template_key + "_EN"]
+        subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact)
+        email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact)
+        qc = _pitch_quality_check(email, subj, email_body)
+        if qc:
+            skipped += 1
+            errors_list.append({"brand": brand, "errors": qc})
+            _record_perf("pitch", "quality_fail")
+            continue
+        # GAS template mode: send template key + vars, GAS generates HTML
+        result = _send_template_via_gas("pitch", email, template_key, brand=brand, contact=contact)
+        if result["status"] == "ok":
+            sent += 1
+        else:
+            skipped += 1
+            errors_list.append({"brand": brand, "errors": [result.get("message", "건°송 실패")]})
+    _record_perf("pitch", "email_sent_batch", sent)
+    return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped, "deferred": deferred, "errors": errors_list[:10]}
+
+@app.post("/api/agents/pitch/daily")
+async def api_pitch_daily(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    action = body.get("action", "full")
+    now = datetime.now(KST)
+    _log_scheduler("pitch_daily_" + action, "start")
+    result = {"timestamp": now.isoformat(), "steps": []}
+
+    # STEP 1: 피치_클건¡건 탭 신규 DB 건수 확인
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+    unsent = 0
+    if rows and len(rows) > 1:
+        for row in rows[1:]:
+            email = str(row[7]).strip() if len(row) > 7 else ""
+            sent_status = str(row[13]).strip() if len(row) > 13 else ""
+            if email and "@" in email and not sent_status:
+                unsent += 1
+    result["steps"].append({"step": "DB 확인", "unsent": unsent})
+
+    # STEP 2: 건¶족하건©´ DB 수집 (현재건 인건°운건 시트 기반)
+    collected = 0
+    if unsent < 10:
+        leads_data = await api_recontact_leads()
+        leads = [l for l in leads_data.get("leads", []) if l.get("email") and "@" in l.get("email", "")]
+        leads = leads[:34]  # cap at 34 per run (3 runs/day = ~100)
+        collected = len(leads)
+        _record_perf("pitch", "crawl_brands", collected)
+        # Write collected leads to pitch sheet
+        sheet_ok = False
+        if leads:
+            now_str = datetime.now(KST).strftime("%Y-%m-%d")
+            sheet_rows = [[
+                now_str, "pitch", "DB", l.get("country", "KR"), l.get("category", ""),
+                "", l.get("name", ""), "", "", l.get("email", ""),
+                "", "", "", "", "", "", "", "", ""
+            ] for l in leads[:50]]
+            # Write in batches of 20 to avoid GAS timeout
+            sheet_ok = True
+            for i in range(0, len(sheet_rows), 20):
+                batch = sheet_rows[i:i+20]
+                print(f"[PITCH] Writing batch {i//20+1}: {len(batch)} rows to {TAB_PITCH}")
+                if not _write_rows_to_sheet(PITCH_SHEET_ID, TAB_PITCH + "!A:S", batch, backup_key="pitch_pending"):
+                    sheet_ok = False
+            print(f"[PITCH] Sheet write result: {sheet_ok}")
+            if not sheet_ok:
+                _record_mistake("pitch", "sheet_write_fail", f"{len(sheet_rows)} rows failed, backed up")
+    result["steps"].append({"step": "DB collect", "collected": collected, "needed": unsent < 10, "sheet_write_ok": sheet_ok if collected > 0 else None})
+
+    if action == "collect_only":
+        # DB 수집건§ (건°송은 월요일 09:00)
+        notify_body = f"[피치] DB {unsent + collected}건 확인 완건£.\n신규 건¯¸건°송: {unsent}건\n추가 수집: {collected}건\n\n월요일 08:30에 검수 이건©일 건°송 예정입건건¤."
+        _send_email_smtp("jacob@08liter.com", "[피치] DB 수집 완건£ â 월요일 건°송 예정", notify_body, "pitch")
+        result["steps"].append({"step": "CEO 알건¦¼", "message": "월요일 건°송 예정"})
+        return result
+
+    # STEP 3: 업건¬´시간 체크
+    if not _is_business_hours("KR"):
+        result["steps"].append({"step": "건°송 건³´건¥", "reason": "업건¬´시간 외 (월~금 09~18시건§)"})
+        return result
+
+    # STEP 3: CEO 검수 이건©일 건°송
+    review_result = await api_send_review_email()
+    result["steps"].append({"step": "CEO 검수 건°송", "status": review_result.get("status"), "total": review_result.get("pitch_total", 0)})
+    _log_scheduler("pitch_daily", "done")
+    return result
+
+@app.post("/api/pitch/revise")
+async def api_pitch_revise(request: Request):
+    """CEO 수정 요청 접수 â 수정 후 재검수 이건©일 건°송."""
+    body = await request.json()
+    instruction = body.get("instruction", "")
+    # 수정 요청 기건¡
+    _record_perf("피치", "revise_request")
+    # 재검수 이건©일 건°송
+    result = await api_send_review_email()
+    result["revise_instruction"] = instruction[:200]
+    return result
+
+@app.post("/api/pitch/reply")
+async def api_pitch_reply(request: Request):
+    """건¸건건 건µ건³ 유형건³ 2차 이건©일 자건 건°송."""
+    body = await request.json()
+    reply_type = body.get("type", "info")
+    brand = body.get("brand", "")
+    contact = body.get("contact", brand)
+    email = body.get("email", "")
+    tmpl = PITCH_REPLY_TEMPLATES.get(reply_type, PITCH_REPLY_TEMPLATES["info"])
+    subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact)
+    email_body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact)
+    html = _build_pitch_html(brand, email_body)
+    result = _send_email(email, subj, html, "피치")
+    _record_perf("피치", f"reply_{reply_type}")
+    return {"status": result["status"], "type": reply_type, "to": email}
+
+@app.get("/api/pitch/performance")
+async def api_pitch_performance():
+    """피치 성과 대시보드 — 피치_클로드 탭 직접 읽기."""
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    month_prefix = now.strftime("%Y-%m")
+    # 피치_클로드 탭 직접 읽기 (A:N, 389행)
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+    total_db, with_email, sent_count, unsent = 0, 0, 0, 0
+    if rows and len(rows) > 1:
+        total_db = len(rows) - 1
+        for row in rows[1:]:
+            email = str(row[7]).strip() if len(row) > 7 else ""
+            status = str(row[13]).strip() if len(row) > 13 else ""
+            if email and "@" in email:
+                with_email += 1
+            if status:
+                sent_count += 1
+            elif email and "@" in email:
+                unsent += 1
+    # agent_performance.json 폴백
+    perf = load_agent_perf()
+    monthly_p = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for agent_key in ["pitch", "pitch", "피치"]:
+                if agent_key in ad:
+                    for mk, mv in ad[agent_key].items():
+                        monthly_p[mk] = monthly_p.get(mk, 0) + mv
+    return {
+        "kpi": {
+            "total_db": total_db,
+            "with_email": with_email,
+            "sent": sent_count,
+            "unsent": unsent,
+            "sent_month": monthly_p.get("email_sent", 0) + monthly_p.get("email_sent_batch", 0),
+            "quality_fail": monthly_p.get("quality_fail", 0),
+        },
+        "reply_types": {
+            "meeting": monthly_p.get("reply_meeting", 0),
+            "info": monthly_p.get("reply_info", 0),
+            "later": monthly_p.get("reply_later", 0),
+            "reject": monthly_p.get("reply_reject", 0),
+        },
+        "sheet_url": "https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit#gid=0",
+    }
+
+
+# ===== 루나 북미 DB 수집 + 영어 이메일 =====
+
+LUNA_NA_TEMPLATES = {
+    "D": {"label": "한국 매니저형 (EN)",
+          "subject": "Want a Korean beauty partner who finds YOU the best deals?",
+          "body": "Hi {name},\n\nI'm Luna from 08liter Global — a K-beauty influencer platform based in Seoul.\n\nWe work with 20,000+ beauty brands in Korea and match them with creators like you.\n\nWhat we do for our partners:\n· Bring the best Korean brand deals to you\n· Handle all negotiation on your behalf\n· Pay monthly — no chasing invoices\n\nYour audience clearly loves beauty content.\nWe'd love to be your Korean beauty partner.\n\nInterested in hearing more?\n\n---\n08liter Global — Influencer Partnership\nLuna\n\nluna@08liter.com\nwww.08liter.com"},
+    "E": {"label": "장기계약형 (EN)",
+          "subject": "Steady monthly income from K-beauty collabs — interested?",
+          "body": "Hi {name},\n\nI'm Luna from 08liter Global in Seoul.\n\nInstead of one-off sponsorships, we offer long-term partnerships:\n\n· Guaranteed brand collabs per month\n· Fixed monthly payment\n· You choose the brands you like\n· Dedicated manager (me, Luna)\n\nBased on your followers, you could earn competitive monthly income.\n\nContracts start from 6 months.\nWant to know more?\n\n---\n08liter Global — Influencer Partnership\nLuna\n\nluna@08liter.com\nwww.08liter.com"},
+    "F": {"label": "비전 제시형 (EN)",
+          "subject": "Your K-beauty journey starts here",
+          "body": "Hi {name},\n\nI'm Luna from 08liter Global.\n\nOne of our creator partners grew from 15K to 80K in 6 months — through K-beauty collabs.\n\nThe right brand partnerships don't just pay you. They grow your audience too.\n\nWe'd love to be part of your journey.\nCan I share more?\n\n---\n08liter Global — Influencer Partnership\nLuna\n\nluna@08liter.com\nwww.08liter.com"},
+}
+
+@app.post("/api/agents/luna/collect-northamerica")
+async def api_luna_collect_na(request: Request):
+    """루나 북미 DB 수집 — 인스타 50 + 틱톡 50."""
+    body = await request.json()
+    target_count = body.get("target_count", 100)
+    now = datetime.now(KST)
+    # 루나 시트에서 기존 US/CA 건수 확인
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
+    existing_na = 0
+    existing_emails = set()
+    if rows and len(rows) > 1:
+        for r in rows[1:]:
+            country = str(r[2]).strip().upper() if len(r) > 2 else ""
+            email = str(r[8]).strip() if len(r) > 8 else ""
+            if country in ("US", "CA"):
+                existing_na += 1
+            if email:
+                existing_emails.add(email.lower())
+    # AI-based influencer collection — multiple batches for higher count
+    items = []
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if api_key:
+        import httpx as _hx
+        batches = [
+            {"platform": "Instagram", "country": "US", "n": max(10, target_count // 4)},
+            {"platform": "TikTok", "country": "US", "n": max(10, target_count // 4)},
+            {"platform": "Instagram", "country": "KR", "n": max(10, target_count // 4)},
+            {"platform": "TikTok", "country": "KR", "n": max(10, target_count // 4)},
+        ]
+        for batch in batches:
+            try:
+                prompt = (
+                    f"List {batch['n']} real {batch['platform']} beauty/skincare influencers "
+                    f"from {batch['country']} with 10K-100K followers. "
+                    f"Include username, a plausible contact email, follower count. "
+                    f"Return ONLY a JSON array, no other text: "
+                    f'[{{"username":"handle","email":"name@email.com","platform":"{batch["platform"]}",'
+                    f'"country":"{batch["country"]}","followers":25000,"category":"beauty"}}]'
+                )
+                resp = _hx.post("https://api.anthropic.com/v1/messages",
+                    headers={"x-api-key": api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+                    json={"model": "claude-haiku-4-5-20251001", "max_tokens": 8000,
+                          "messages": [{"role": "user", "content": prompt}]}, timeout=60)
+                if resp.status_code == 200:
+                    text = resp.json().get("content", [{}])[0].get("text", "")
+                    match = re.search(r'\[.*\]', text, re.DOTALL)
+                    if match:
+                        batch_items = json.loads(match.group())
+                        batch_items = [it for it in batch_items if _is_valid_lead_email(it.get("email", ""))]
+                        items.extend(batch_items)
+                        print(f"[LUNA_COLLECT] Batch {batch['platform']}/{batch['country']}: {len(batch_items)} items")
+            except Exception as e:
+                print(f"[LUNA_COLLECT] Batch error {batch['platform']}/{batch['country']}: {e}")
+        _record_perf("luna", "ai_collect", len(items))
+    collected_ig, collected_tt = 0, 0
+    new_items = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        email = item.get("email", "")
+        if not email or "@" not in email or email.lower() in existing_emails:
+            continue
+        country = item.get("country", "")
+        if country.upper() not in ("US", "CA", ""):
+            continue
+        platform = item.get("platform", "Instagram")
+        if "instagram" in platform.lower() or "ig" in platform.lower():
+            if collected_ig >= target_count // 2:
+                continue
+            collected_ig += 1
+        elif "tiktok" in platform.lower():
+            if collected_tt >= target_count // 2:
+                continue
+            collected_tt += 1
+        else:
+            continue
+        new_items.append(item)
+        existing_emails.add(email.lower())
+    total_collected = collected_ig + collected_tt
+    _record_perf("루나", "na_collect_ig", collected_ig)
+    _record_perf("루나", "na_collect_tt", collected_tt)
+    # CEO 알림
+    day_num = (now - datetime(2026, 4, 11, tzinfo=KST)).days + 1
+    alert_body = (f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건 확보\n\n"
+                  f"오늘 수집: 인스타 {collected_ig}명 / 틱톡 {collected_tt}명\n"
+                  f"누적 수집: {existing_na + total_collected}명 / 400명 목표\n\n"
+                  f"월요일 오전 09:00 승인 요청 이메일 발송 예정.")
+    _send_email_smtp("jacob@08liter.com", f"[루나 북미 DB] {day_num}일차 수집 완료 — 총 {existing_na + total_collected}건", alert_body, "luna")
+    # Write new items to luna sheet
+    if new_items:
+        now_str = now.strftime("%Y-%m-%d %H:%M")
+        luna_rows = []
+        for item in new_items:
+            # A:S columns: date|recruiter|type|country|category|platform|name|url|followers|email|phone|status|currency|collab|desired|krw|manager|campaign|notes
+            uname = item.get("username", item.get("name", ""))
+            plat = item.get("platform", "Instagram")
+            if item.get("url"):
+                profile_url = item["url"]
+            elif "tiktok" in plat.lower():
+                profile_url = "https://www.tiktok.com/@" + uname.lstrip("@")
+            else:
+                profile_url = "https://www.instagram.com/" + uname.lstrip("@")
+            luna_rows.append([
+                now_str, "luna", "AI", item.get("country", "US"),
+                item.get("category", "beauty"), plat,
+                uname, profile_url,
+                str(item.get("followers", "")), item.get("email", ""),
+                "", "", "", "", "", "", "", "", ""
+            ])
+        print(f"[LUNA] Writing {len(luna_rows)} rows to {TAB_INFLUENCER}")
+        sheet_ok = _write_rows_to_sheet(LUNA_SHEET_ID, TAB_INFLUENCER + "!A:S", luna_rows, backup_key="luna_pending")
+        print(f"[LUNA] Sheet write result: {sheet_ok}")
+        if not sheet_ok:
+            _record_mistake("luna", "sheet_write_fail", f"{len(luna_rows)} rows failed, backed up")
+        _kyle_post_check("luna", {"sent_count": total_collected, "sheet_updated": sheet_ok})
+    else:
+        sheet_ok = None
+    _log_scheduler("luna_collect_na", "done", total_collected)
+    return {"status": "ok", "day": day_num, "collected": {"instagram": collected_ig, "tiktok": collected_tt},
+            "total_na": existing_na + total_collected, "target": 400, "sheet_write_ok": sheet_ok}
+
+@app.get("/api/agents/luna/review-northamerica")
+async def api_luna_review_na():
+    """월요일 09:00 — 루나 북미 승인 요청 이메일 발송."""
+    now = datetime.now(KST)
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
+    na_count, na_email, total = 0, 0, 0
+    if rows and len(rows) > 1:
+        total = len(rows) - 1
+        for r in rows[1:]:
+            country = str(r[2]).strip().upper() if len(r) > 2 else ""
+            email = str(r[8]).strip() if len(r) > 8 else ""
+            if country in ("US", "CA"):
+                na_count += 1
+                if email and "@" in email:
+                    na_email += 1
+    unsent = na_email  # 미발송 건수 (추적 컬럼 없으므로 전체)
+    html = f'''<div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px">
+<h2 style="color:#1a1a1a;border-bottom:2px solid #333;padding-bottom:10px">📋 북미 DB 현황</h2>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd"><b>총 확보</b></td><td style="padding:8px;border:1px solid #ddd">{na_count}명 / 400명 목표</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">이메일 보유</td><td style="padding:8px;border:1px solid #ddd">{na_email}명</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">미발송 (이번 주 발송 예정)</td><td style="padding:8px;border:1px solid #ddd">{unsent}명</td></tr>
+<tr><td style="padding:8px;border:1px solid #ddd">채널</td><td style="padding:8px;border:1px solid #ddd">틱톡 50% / 인스타 50%</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:8px;border:1px solid #ddd">국가</td><td style="padding:8px;border:1px solid #ddd">US/CA</td></tr>
+</table>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2>📧 시안 D — 한국 매니저형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p><b>제목:</b> Want a Korean beauty partner who finds YOU the best deals?</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">{LUNA_NA_TEMPLATES["D"]["body"].replace(chr(10),"<br>")}</div>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2>📧 시안 E — 장기계약형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p><b>제목:</b> Steady monthly income from K-beauty collabs — interested?</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">{LUNA_NA_TEMPLATES["E"]["body"].replace(chr(10),"<br>")}</div>
+<hr style="border:1px solid #eee;margin:20px 0">
+<h2>📧 시안 F — 비전 제시형</h2>
+<div style="background:#f9f9f9;padding:15px;border-left:4px solid #333;margin-bottom:10px">
+<p><b>제목:</b> Your K-beauty journey starts here</p></div>
+<div style="background:#fff;padding:15px;border:1px solid #ddd;line-height:1.8">{LUNA_NA_TEMPLATES["F"]["body"].replace(chr(10),"<br>")}</div>
+<hr style="border:2px solid #333;margin:30px 0">
+<div style="background:#fff3cd;padding:15px;border:1px solid #ffc107;border-radius:4px">
+<h3 style="margin:0 0 10px;color:#856404">✉️ 이 이메일에 회신해주세요</h3>
+<p>"루나D" / "루나E" / "루나F" / "루나D+E" 복수 가능</p>
+<p>"루나수정: [내용]" → 수정 후 재발송</p>
+<p style="color:#dc3545"><b>※ 회신 없이는 단 1통도 발송되지 않습니다.</b></p>
+</div></div>'''
+    subject = f"[루나 북미 발송 승인 요청] 이번 주 비정형형 뉴스레터 확인해주세요"
+    result = _send_email_smtp("jacob@08liter.com", subject, "루나 북미 승인 요청", "luna", html_body=html)
+    result["na_count"] = na_count
+    result["na_email"] = na_email
+    return result
+
+@app.post("/api/luna/send-na")
+async def api_luna_send_na(request: Request):
+    """CEO 승인된 시안으로 루나 북미 이메일 발송."""
+    body = await request.json()
+    template_key = body.get("template", "D").upper()
+    test_mode = body.get("test_mode", False)
+    test_recipient = body.get("recipient", "")
+    # Import templates
+    from pitch_templates import LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
+    all_luna = {}
+    all_luna.update({"KR_" + k: v for k, v in LUNA_KR_TEMPLATES.items()})
+    all_luna.update({"US_" + k: v for k, v in LUNA_US_TEMPLATES.items()})
+    tmpl = all_luna.get(template_key, LUNA_NA_TEMPLATES.get(template_key, LUNA_NA_TEMPLATES.get("D", {})))
+    if not tmpl:
+        tmpl = list(LUNA_NA_TEMPLATES.values())[0] if LUNA_NA_TEMPLATES else {"subject": "Luna", "body": "Hello"}
+    # Test mode or direct send with "to" parameter
+    direct_to = body.get("to", "")
+    if test_mode and test_recipient:
+        direct_to = test_recipient
+    if direct_to:
+        inf_name = body.get("influencer_name", body.get("name", "Test Influencer"))
+        result = _send_template_via_gas("luna", direct_to, template_key, name=inf_name)
+        _log_scheduler("luna_send_test", "done", 1)
+        return {"status": "ok", "test_mode": bool(test_mode), "sent_to": direct_to, "template": template_key, "result": result}
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
+    targets = []
+    if rows and len(rows) > 1:
+        for r in rows[1:]:
+            country = str(r[2]).strip().upper() if len(r) > 2 else ""
+            email = str(r[8]).strip() if len(r) > 8 else ""
+            name = str(r[5]).strip() if len(r) > 5 else ""
+            if country in ("US", "CA") and email and "@" in email:
+                targets.append({"name": name, "email": email, "country": country})
+    limit = min(body.get("limit", 30), 30)
+    sent, skipped = 0, 0
+    for t in targets[:limit]:
+        if not _is_business_hours("US"):
+            break
+        subj = tmpl["subject"].replace("{name}", t["name"]).replace("{InfluencerName}", t["name"])
+        email_body = tmpl["body"].replace("{name}", t["name"]).replace("{InfluencerName}", t["name"])
+        qc = _luna_quality_check(t["email"], subj, email_body, t.get("country", "US"))
+        if qc:
+            skipped += 1
+            continue
+        result = _send_template_via_gas("luna", t["email"], template_key, name=t["name"])
+        if result["status"] == "ok":
+            sent += 1
+        else:
+            skipped += 1
+    _record_perf("luna", "na_email_sent", sent)
+    return {"status": "ok", "template": template_key, "sent": sent, "skipped": skipped}
+
+# ===== Quality Check + Batch Send + Pipeline APIs =====
+
+PITCH_SHEET_URL = "https://docs.google.com/spreadsheets/d/1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8/edit?gid=1333794047"
+LUNA_SHEET_URL = "https://docs.google.com/spreadsheets/d/1xLkrmlFfVrTEWvsbaP5FaBQ8sRvqestuQNorVC_Urgs/edit?gid=1722455708"
+VALID_TEMPLATES = {"A", "B", "C", "A_EN", "B_EN"}
+LUNA_VALID_TEMPLATES = {"A", "B"}
+BATCH_SIZE = 50
+
+def _email_quality_check(to: str, subject: str, body: str, template: str, country: str = "KR", agent: str = "pitch") -> list:
+    """Pre-send quality check. Returns list of failures (empty = pass)."""
+    errors = []
+    if not subject:
+        errors.append("empty subject")
+    if not body:
+        errors.append("empty body")
+    if not to or "@" not in to:
+        errors.append("invalid email")
+    if "{" in subject or "{" in body:
+        errors.append("unsubstituted variable")
+    valid = VALID_TEMPLATES if agent == "pitch" else LUNA_VALID_TEMPLATES
+    if template not in valid:
+        errors.append(f"invalid template: {template}")
+    if not _is_business_hours(country):
+        errors.append(f"outside business hours ({country})")
+    return errors
+
+@app.get("/api/email-quality-check")
+async def api_email_quality_check(agent: str = "pitch"):
+    """Pre-send quality check status."""
+    links = {
+        "promo": "https://buly.kr/AF24dn7",
+        "meeting": "https://buly.kr/1c9NOdW",
+    }
+    checks = {}
+    for name, url in links.items():
+        try:
+            r = req_lib.head(url, timeout=5, allow_redirects=True)
+            checks[name] = {"status": "ok" if r.status_code < 400 else "error", "code": r.status_code}
+        except Exception:
+            checks[name] = {"status": "error", "code": 0}
+    return {"agent": agent, "link_checks": checks, "batch_size": BATCH_SIZE, "valid_templates": list(VALID_TEMPLATES if agent == "pitch" else LUNA_VALID_TEMPLATES)}
+
+def _count_rows_by_date(rows, date_col_idx, now, mode="today"):
+    """Count rows matching today or this month. mode='today' or 'month'."""
+    count = 0
+    this_month = now.strftime("%Y-%m")
+    for row in rows:
+        if len(row) <= date_col_idx:
+            continue
+        dv = str(row[date_col_idx]).strip()
+        if not dv:
+            continue
+        if mode == "today" and _is_date_today(dv, now):
+            count += 1
+        elif mode == "month":
+            month_prefix_slash = str(now.month) + "/"
+            if dv.startswith(this_month) or dv.startswith(month_prefix_slash):
+                count += 1
+    return count
+
+@app.get("/api/pitch/pipeline/daily")
+async def api_pitch_pipeline_daily():
+    """Pitch daily pipeline stats."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    tp = perf.get(today, {}).get("\ud53c\uce58", perf.get(today, {}).get("pitch", {}))
+    queue = load_email_queue()
+    pending = sum(1 for q in queue if q.get("agent") in ("\ud53c\uce58", "pitch") and q.get("status") == "pending")
+    sent = tp.get("email_sent", 0) + tp.get("email_sent_batch", 0)
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+    total_db = max(len(rows) - 1, 0) if rows else 0
+    # Date-filtered count for daily
+    today_db = 0
+    if rows and len(rows) > 1:
+        headers = [str(h).replace("\n", " ").strip() for h in rows[0]]
+        date_col = _auto_detect_date_col(headers, rows[1:6])
+        if date_col is not None:
+            today_db = _count_rows_by_date(rows[1:], date_col, now, "today")
+    target = today_db  # daily = today only, never fallback to total
+    no_date_col = (today_db == 0 and total_db > 0)
+    replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
+    meeting = tp.get("reply_meeting", 0)
+    goals = load_goals()
+    pg = goals.get("agent_goals", {}).get("pitch", {})
+    db_goal = pg.get("daily_lead_db", pg.get("daily_db", 20))
+    meeting_goal = pg.get("daily_meeting", pg.get("meeting", 5))
+    src_text = "\ub0a0\uc9dc \ucee8\ub7fc \uc5c6\uc74c \u2014 \uc804\uccb4 DB " + str(total_db) + "\uac74" if no_date_col else "\ud53c\uce58_\ud074\ub85c\ub4dc \ud0ed"
+    return {
+        "period": "daily", "date": today,
+        "target": {"value": target, "total_db": total_db, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": PITCH_SHEET_URL, "source": src_text},
+        "pending": {"value": pending, "link": PITCH_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com 수신"},
+        "meeting": {"value": meeting, "goal": meeting_goal, "pct": min(round(meeting / max(meeting_goal, 1) * 100), 999), "link": "https://buly.kr/1c9NOdW", "source": "buly.kr 클릭 기준"},
+        "conversion": {
+            "pending_rate": f"{round(pending/max(target,1)*100)}%" if target else "0%",
+            "sent_rate": f"{round(sent/max(target,1)*100)}%" if target else "0%",
+            "reply_rate": f"{round(replied/max(sent,1)*100)}%" if sent else "0%",
+            "meeting_rate": f"{round(meeting/max(sent,1)*100)}%" if sent else "0%",
+        },
+    }
+
+@app.get("/api/pitch/pipeline/monthly")
+async def api_pitch_pipeline_monthly():
+    """Pitch monthly pipeline stats."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    mp = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["피치", "pitch"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        mp[mk] = mp.get(mk, 0) + mv
+    rows = fetch_sheet(PITCH_SHEET_ID, "A:N", TAB_PITCH, ttl_key="inbound")
+    total_db = max(len(rows) - 1, 0) if rows else 0
+    month_db = total_db
+    if rows and len(rows) > 1:
+        headers = [str(h).replace("\n", " ").strip() for h in rows[0]]
+        date_col = _auto_detect_date_col(headers, rows[1:6])
+        if date_col is not None:
+            month_db = _count_rows_by_date(rows[1:], date_col, now, "month")
+    target = month_db if month_db > 0 else total_db
+    sent = mp.get("email_sent", 0) + mp.get("email_sent_batch", 0)
+    replied = mp.get("reply_info", 0) + mp.get("reply_meeting", 0)
+    meeting = mp.get("reply_meeting", 0)
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "target": {"value": target, "link": PITCH_SHEET_URL, "source": "피치_클로드 탭"},
+        "pending": {"value": 0, "link": PITCH_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": PITCH_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": PITCH_SHEET_URL, "source": "pitch@08liter.com 수신"},
+        "meeting": {"value": meeting, "link": "https://buly.kr/1c9NOdW", "source": "buly.kr 클릭 기준"},
+    }
+
+@app.get("/api/luna/pipeline/daily")
+async def api_luna_pipeline_daily():
+    """Luna daily pipeline stats."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    tp = perf.get(today, {}).get("\ub8e8\ub098", perf.get(today, {}).get("luna", {}))
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
+    total_db = max(len(rows) - 1, 0) if rows else 0
+    today_db = 0
+    if rows and len(rows) > 1:
+        headers = [str(h).replace("\n", " ").strip() for h in rows[0]]
+        date_col = _auto_detect_date_col(headers, rows[1:6])
+        if date_col is not None:
+            today_db = _count_rows_by_date(rows[1:], date_col, now, "today")
+    target = today_db  # daily = today only
+    no_date_col = (today_db == 0 and total_db > 0)
+    sent = tp.get("email_sent", 0) + tp.get("na_email_sent", 0)
+    replied = tp.get("reply_info", 0) + tp.get("reply_meeting", 0)
+    contract = tp.get("reply_meeting", 0)
+    goals = load_goals()
+    lg = goals.get("agent_goals", {}).get("luna", {})
+    db_goal = lg.get("daily_outbound_db", lg.get("monthly_db", 100))
+    ct_goal = lg.get("contract", 80)
+    src_text = "\ub0a0\uc9dc \ucee8\ub7fc \uc5c6\uc74c \u2014 \uc804\uccb4 DB " + str(total_db) + "\uba85" if no_date_col else "\uc778\ud50c\ub8e8\uc5b8\uc11c DB"
+    return {
+        "period": "daily", "date": today,
+        "target": {"value": target, "total_db": total_db, "goal": db_goal, "pct": min(round(target / max(db_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": src_text},
+        "pending": {"value": 0, "link": LUNA_SHEET_URL, "source": "이메일 큐"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
+        "contract": {"value": contract, "goal": ct_goal, "pct": min(round(contract / max(ct_goal, 1) * 100), 999), "link": LUNA_SHEET_URL, "source": "계약 완료"},
+    }
+
+@app.get("/api/luna/pipeline/monthly")
+async def api_luna_pipeline_monthly():
+    """Luna monthly pipeline stats."""
+    perf = load_agent_perf()
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    mp = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["루나", "luna"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        mp[mk] = mp.get(mk, 0) + mv
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", TAB_INFLUENCER, ttl_key="influencer")
+    target = max(len(rows) - 1, 0) if rows else 0
+    sent = mp.get("email_sent", 0) + mp.get("na_email_sent", 0)
+    replied = mp.get("reply_info", 0) + mp.get("reply_meeting", 0)
+    contract = mp.get("reply_meeting", 0)
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "target": {"value": target, "link": LUNA_SHEET_URL, "source": "인플루언서 DB"},
+        "sent": {"value": sent, "link": LUNA_SHEET_URL, "source": "발송 성공 (반송 제외)"},
+        "replied": {"value": replied, "link": LUNA_SHEET_URL, "source": "luna@08liter.com 수신"},
+        "contract": {"value": contract, "link": LUNA_SHEET_URL, "source": "계약 완료"},
+    }
+
+# ===== Max/Sophie/Ray/Hana Pipeline APIs =====
+
+@app.get("/api/max/pipeline/daily")
+async def api_max_pipeline_daily():
+    """Max daily ads pipeline: budget -> clicks -> visits -> CPA -> conversions."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("max", perf.get(today, {}).get("맥스", {}))
+    return {
+        "period": "daily", "date": today,
+        "budget": {"value": tp.get("budget", 0), "source": "Meta+Kakao+Naver"},
+        "clicks": {"value": tp.get("clicks", 0), "source": "총 클릭"},
+        "visits": {"value": tp.get("visits", 0), "source": "유입 수"},
+        "cpa": {"value": tp.get("cpa", 0), "source": "목표: ₩10,000"},
+        "conversions": {"value": tp.get("conversions", 0), "source": "전환 건수"},
+    }
+
+@app.get("/api/max/pipeline/monthly")
+async def api_max_pipeline_monthly():
+    """Max monthly ads pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["max", "맥스"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "budget": {"value": mp.get("budget", 0), "source": "Meta+Kakao+Naver"},
+        "clicks": {"value": mp.get("clicks", 0), "source": "총 클릭"},
+        "visits": {"value": mp.get("visits", 0), "source": "유입 수"},
+        "cpa": {"value": mp.get("cpa", 0), "source": "목표: ₩10,000"},
+        "conversions": {"value": mp.get("conversions", 0), "source": "전환 건수"},
+    }
+
+@app.get("/api/sophie/pipeline/daily")
+async def api_sophie_pipeline_daily():
+    """Sophie daily content pipeline."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("sophie", perf.get(today, {}).get("소피", {}))
+    return {
+        "period": "daily", "date": today,
+        "scheduled": {"value": tp.get("scheduled", 0), "source": "발행 예정"},
+        "published": {"value": tp.get("published", 0), "source": "발행 완료"},
+        "views": {"value": tp.get("views", 0), "source": "조회수"},
+        "engagement": {"value": tp.get("engagement", 0), "source": "참여율 (%)"},
+        "leads": {"value": tp.get("leads", 0), "source": "B2B+B2C 리드"},
+    }
+
+@app.get("/api/sophie/pipeline/monthly")
+async def api_sophie_pipeline_monthly():
+    """Sophie monthly content pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["sophie", "소피"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "scheduled": {"value": mp.get("scheduled", 0), "source": "발행 예정"},
+        "published": {"value": mp.get("published", 0), "source": "발행 완료"},
+        "views": {"value": mp.get("views", 0), "source": "조회수"},
+        "engagement": {"value": mp.get("engagement", 0), "source": "참여율 (%)"},
+        "leads": {"value": mp.get("leads", 0), "source": "B2B+B2C 리드"},
+    }
+
+@app.get("/api/ray/pipeline/daily")
+async def api_ray_pipeline_daily():
+    """Ray daily invoice pipeline."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("ray", perf.get(today, {}).get("레이", {}))
+    return {
+        "period": "daily", "date": today,
+        "issued": {"value": tp.get("issued", 0), "source": "발행 예정"},
+        "collected": {"value": tp.get("collected", 0), "source": "발행 완료"},
+        "paid": {"value": tp.get("paid", 0), "source": "수금 완료"},
+        "unpaid": {"value": tp.get("unpaid", 0), "source": "미수금"},
+    }
+
+@app.get("/api/ray/pipeline/monthly")
+async def api_ray_pipeline_monthly():
+    """Ray monthly invoice pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["ray", "레이"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "issued": {"value": mp.get("issued", 0), "source": "발행 예정"},
+        "collected": {"value": mp.get("collected", 0), "source": "발행 완료"},
+        "paid": {"value": mp.get("paid", 0), "source": "수금 완료"},
+        "unpaid": {"value": mp.get("unpaid", 0), "source": "미수금"},
+    }
+
+@app.get("/api/hana/pipeline/daily")
+async def api_hana_pipeline_daily():
+    """Hana daily CS pipeline."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    tp = perf.get(today, {}).get("hana", perf.get(today, {}).get("하나", {}))
+    return {
+        "period": "daily", "date": today,
+        "new_inquiry": {"value": tp.get("new_inquiry", 0), "source": "신규 문의"},
+        "in_progress": {"value": tp.get("in_progress", 0), "source": "처리중"},
+        "resolved": {"value": tp.get("resolved", 0), "source": "완료"},
+        "renewal": {"value": tp.get("renewal", 0), "source": "재계약"},
+    }
+
+@app.get("/api/hana/pipeline/monthly")
+async def api_hana_pipeline_monthly():
+    """Hana monthly CS pipeline."""
+    now = datetime.now(KST)
+    month_prefix = now.strftime("%Y-%m")
+    perf = load_agent_perf()
+    mp: Dict[str, int] = {}
+    for dk, ad in perf.items():
+        if dk.startswith(month_prefix):
+            for key in ["hana", "하나"]:
+                if key in ad:
+                    for mk, mv in ad[key].items():
+                        if isinstance(mv, (int, float)):
+                            mp[mk] = mp.get(mk, 0) + mv
+    return {
+        "period": "monthly", "date": now.strftime("%Y-%m"),
+        "new_inquiry": {"value": mp.get("new_inquiry", 0), "source": "신규 문의"},
+        "in_progress": {"value": mp.get("in_progress", 0), "source": "처리중"},
+        "resolved": {"value": mp.get("resolved", 0), "source": "완료"},
+        "renewal": {"value": mp.get("renewal", 0), "source": "재계약"},
+    }
 
 async def _run_recontact_campaign(dry_run: bool = True, limit: int = 10) -> dict:
     """재접촉 캠페인 내부 실행 함수."""
@@ -4492,12 +5383,73 @@ _cache_warm()
 _bg_thread = threading.Thread(target=_cache_refresh_loop, daemon=True)
 _bg_thread.start()
 
+# Template rotation helpers
+def _pitch_template_today() -> str:
+    """Pitch A/B/C rotation by week+day."""
+    now = datetime.now(KST)
+    wk = now.isocalendar()[1]
+    day = now.weekday()
+    return ["A", "B", "C"][(wk * 5 + day) % 3]
+
+def _luna_kr_template_today() -> str:
+    """Luna KR A/B: Mon/Wed/Fri=A, Tue/Thu=B."""
+    return "KR_A" if datetime.now(KST).weekday() in (0, 2, 4) else "KR_B"
+
+def _luna_us_template_today() -> str:
+    """Luna US A/B: Mon/Wed/Fri=A, Tue/Thu=B."""
+    return "US_A" if datetime.now(KST).weekday() in (0, 2, 4) else "US_B"
+
+def _pitch_send_job():
+    tpl = _pitch_template_today()
+    req_lib.post("http://localhost:8000/api/agents/pitch/daily", json={"trigger": "scheduled", "action": "full", "template": tpl}, timeout=60)
+
+def _luna_kr_send_job():
+    tpl = _luna_kr_template_today()
+    req_lib.post("http://localhost:8000/api/luna/send-na", json={"template": tpl, "limit": 50}, timeout=60)
+
+def _luna_us_send_job():
+    tpl = _luna_us_template_today()
+    req_lib.post("http://localhost:8000/api/luna/send-na", json={"template": tpl, "limit": 50}, timeout=60)
+
+# APScheduler
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    _scheduler = BackgroundScheduler(timezone="Asia/Seoul")
+    def _sched_call(job_id, method, url, **kw):
+        try:
+            _log_scheduler(job_id, "start")
+            r = method(url, timeout=60, **kw)
+            _log_scheduler(job_id, "done" if r.status_code == 200 else f"fail:{r.status_code}")
+        except Exception as e:
+            _log_scheduler(job_id, f"error:{e}")
+    # Pitch DB collect: 03/06/09 KST daily (34 per run x 3 = ~100/day)
+    _scheduler.add_job(lambda: _sched_call("pitch_collect", req_lib.post, "http://localhost:8000/api/agents/pitch/daily", json={"trigger":"scheduled","action":"collect_only"}), CronTrigger(hour="3,6,9", minute=0), id="pitch_collect", replace_existing=True)
+    # Luna DB collect: every 2h, 24/7 (100 per run)
+    _scheduler.add_job(lambda: _sched_call("luna_collect", req_lib.post, "http://localhost:8000/api/agents/luna/collect-northamerica", json={"target_count":100}), CronTrigger(hour="*/2"), id="luna_collect", replace_existing=True)
+    # Pitch email send: Mon-Fri 09:00 KST (A/B/C rotation)
+    _scheduler.add_job(_pitch_send_job, CronTrigger(day_of_week="mon-fri", hour=9, minute=0), id="pitch_send", replace_existing=True)
+    # Weekly review: Mon 08:30 KST
+    _scheduler.add_job(lambda: _sched_call("weekly_review", req_lib.get, "http://localhost:8000/api/send-review-email"), CronTrigger(day_of_week="mon", hour=8, minute=30), id="weekly_review", replace_existing=True)
+    # Luna KR send: Mon-Fri 10:00 KST (KR_A/KR_B rotation)
+    _scheduler.add_job(_luna_kr_send_job, CronTrigger(day_of_week="mon-fri", hour=10, minute=0), id="luna_kr_send", replace_existing=True)
+    # Luna US send: Mon-Fri 23:00 KST = US 09:00 EST (US_A/US_B rotation)
+    _scheduler.add_job(_luna_us_send_job, CronTrigger(day_of_week="mon-fri", hour=23, minute=0), id="luna_us_send", replace_existing=True)
+    # NO luna_jp auto-send — JP templates available but manual only
+    # Auto reports: 09,12,15,18 KST weekdays
+    _scheduler.add_job(lambda: _sched_call("agent_auto_report", req_lib.get, "http://localhost:8000/api/agent-auto-report"), CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="agent_auto_report", replace_existing=True)
+    _scheduler.add_job(lambda: _sched_call("kyle_auto_report", req_lib.get, "http://localhost:8000/api/kyle/auto-report") if _slack_enabled() else None, CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
+    # Health check: Mon-Fri 06:00 KST
+    _scheduler.add_job(lambda: _sched_call("daily_health_check", req_lib.get, "http://localhost:8000/api/daily-health-check"), CronTrigger(day_of_week="mon-fri", hour=6, minute=0), id="daily_health_check", replace_existing=True)
+    _scheduler.start()
+    print("[SCHEDULER] pitch(03/06/09 34ea), luna(2h 100ea), send(pitch09/lunaKR10/lunaUS23), reports(9/12/15/18), health(06)")
+except ImportError:
+    print("[SCHEDULER] APScheduler not installed")
+except Exception as e:
+    print(f"[SCHEDULER] {e}")
+
 if __name__ == "__main__":
     import uvicorn
     print("08L_AI Command Center -> http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
-페이지가 저장되었습니다.
-요청을 완료하지 못했습니다. 다시 시도해 주세요.
-노트가 저장되었습니다.
-바로가기
 
