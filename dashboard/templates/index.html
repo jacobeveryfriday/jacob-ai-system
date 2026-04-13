@@ -1345,18 +1345,26 @@ function loadAgentActivity(){
 fetch('/api/agent-activity-status').then(function(r){return r.json()}).then(function(d){
 var w=document.getElementById('agentActivityWidget');if(!w)return;while(w.firstChild)w.removeChild(w.firstChild);
 var labels={pitch:'피치',luna:'루나',kyle:'카일',sophie:'소피',max:'맥스',ray:'레이',hana:'하나'};
-var colors={collecting:'#1A7A4C',sending:'#B8860B',idle:'#9B9B9B',error:'#C4332B'};
+var statusColors={active:'#1A7A4C',idle:'#9B9B9B',error:'#C4332B'};
 Object.entries(d.agents||{}).forEach(function(e){
 var name=e[0],ag=e[1];
 var card=document.createElement('div');card.style.cssText='background:#fff;border:0.5px solid #E8E6E1;border-radius:8px;padding:10px;text-align:center';
+// Header: dot + name
 var hdr=document.createElement('div');hdr.style.cssText='display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:6px';
-var dot=document.createElement('span');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:'+(colors[ag.status]||'#9B9B9B');hdr.appendChild(dot);
-var nm=document.createElement('span');nm.style.cssText='font-size:11px;font-weight:700;color:#1a1a1a;font-family:Helvetica Neue,sans-serif';nm.textContent=labels[name]||name;hdr.appendChild(nm);
+var dot=document.createElement('span');dot.style.cssText='width:8px;height:8px;border-radius:50%;background:'+(statusColors[ag.status]||'#9B9B9B');hdr.appendChild(dot);
+var nm=document.createElement('span');nm.style.cssText='font-size:11px;font-weight:700;color:#1a1a1a';nm.textContent=labels[name]||name;hdr.appendChild(nm);
 card.appendChild(hdr);
+// DB collected today
 var db=document.createElement('p');db.style.cssText='font-size:9px;color:#6B6B6B;margin-bottom:2px';db.textContent='DB +'+ag.db_collected_today+'건';card.appendChild(db);
-var eq=document.createElement('p');eq.style.cssText='font-size:9px;color:'+(ag.emails_queued>0?'#B8860B':'#6B6B6B');eq.textContent='대기 '+ag.emails_queued+'건';card.appendChild(eq);
-if(ag.last_db_collect){var ago=document.createElement('p');ago.style.cssText='font-size:8px;color:#9B9B9B';
-var mins=Math.round((Date.now()-new Date(ag.last_db_collect).getTime())/60000);ago.textContent=mins<60?mins+'분 전':Math.round(mins/60)+'시간 전';card.appendChild(ago)}
+// Emails sent today
+var sent=document.createElement('p');sent.style.cssText='font-size:9px;color:#2D4A7A;margin-bottom:2px';sent.textContent='발송 '+ag.emails_sent_today+'건';card.appendChild(sent);
+// Queue count
+if(ag.emails_queued>0){var eq=document.createElement('p');eq.style.cssText='font-size:9px;color:#B8860B';eq.textContent='대기 '+ag.emails_queued+'건';card.appendChild(eq)}
+// Last activity
+if(ag.last_collect){var ago=document.createElement('p');ago.style.cssText='font-size:8px;color:#9B9B9B';
+var mins=Math.round((Date.now()-new Date(ag.last_collect).getTime())/60000);ago.textContent=mins<60?mins+'분 전':Math.round(mins/60)+'시간 전';card.appendChild(ago)}
+// Sheet link
+if(ag.sheet_url){var link=document.createElement('a');link.href=ag.sheet_url;link.target='_blank';link.rel='noopener';link.style.cssText='font-size:8px;color:#2D4A7A;text-decoration:none';link.textContent='시트 →';card.appendChild(link)}
 w.appendChild(card)})}).catch(function(){})}
 loadAgentActivity();setInterval(loadAgentActivity,30000);
 

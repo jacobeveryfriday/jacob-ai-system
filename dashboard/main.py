@@ -4609,9 +4609,55 @@ async def api_execute_proposal(request: Request):
     return {"status": "ok", "result": result_text}
 
 
+@app.get("/api/scheduler-log")
+async def api_scheduler_log():
+    if SCHEDULER_LOG_FILE.exists():
+        return json.loads(SCHEDULER_LOG_FILE.read_text(encoding="utf-8"))
+    return {"runs": []}
+
+@app.get("/api/agent-activity-status")
+async def api_agent_activity_status():
+    """Real-time agent activity: DB count, email sent, sheet links."""
+    now = datetime.now(KST)
+    today = now.strftime("%Y-%m-%d")
+    perf = load_agent_perf()
+    today_perf = perf.get(today, {})
+    queue = load_email_queue()
+    log = json.loads(SCHEDULER_LOG_FILE.read_text(encoding="utf-8")) if SCHEDULER_LOG_FILE.exists() else {"runs": []}
+    runs = log.get("runs", [])
+
+    def last_run_time(prefix):
+        found = [r for r in runs if r.get("job", "").startswith(prefix)]
+        return found[-1].get("time", "") if found else ""
+
+    def pending_count(ag):
+        return sum(1 for e in queue if e.get("status") == "pending" and ag in (e.get("agent", "").lower()))
+
+    agents = {}
+    for name, key, collect_job, sheet_url in [
+        ("pitch", "pitch", "pitch_collect", PITCH_SHEET_URL),
+        ("luna", "luna", "luna_collect", LUNA_SHEET_URL),
+        ("kyle", "kyle", "", ""),
+        ("sophie", "sophie", "", SHEET_URLS.get("sophie", SHEET_URLS.get("소피", ""))),
+        ("max", "max", "", ""),
+        ("ray", "ray", "", SHEET_URLS.get("ray", SHEET_URLS.get("레이", ""))),
+        ("hana", "hana", "", ""),
+    ]:
+        tp = today_perf.get(key, today_perf.get(name, {}))
+        db_today = tp.get("crawl_brands", 0) + tp.get("ai_collect", 0) + tp.get("na_collect_ig", 0) + tp.get("na_collect_tt", 0)
+        emails_sent = tp.get("email_sent", 0) + tp.get("email_sent_batch", 0)
+        agents[name] = {
+            "db_collected_today": db_today,
+            "emails_sent_today": emails_sent,
+            "emails_queued": pending_count(name),
+            "last_collect": last_run_time(collect_job) if collect_job else "",
+            "sheet_url": sheet_url,
+            "status": "active" if db_today > 0 or emails_sent > 0 else "idle",
+        }
+    return {"agents": agents, "timestamp": now.isoformat()}
+
 @app.get("/api/cycle-log")
 async def api_get_cycle_log():
-    """에이전트 사이클 히스토리 조회."""
     return {"log": load_cycle_log()[-30:]}
 
 
@@ -5747,8 +5793,10 @@ try:
     _scheduler.add_job(lambda: _sched_call("kyle_auto_report", req_lib.get, "http://localhost:8000/api/kyle/auto-report") if _slack_enabled() else None, CronTrigger(day_of_week="mon-fri", hour="9,12,15,18", minute=0), id="kyle_auto_report", replace_existing=True)
     # Health check: Mon-Fri 06:00 KST
     _scheduler.add_job(lambda: _sched_call("daily_health_check", req_lib.get, "http://localhost:8000/api/daily-health-check"), CronTrigger(day_of_week="mon-fri", hour=6, minute=0), id="daily_health_check", replace_existing=True)
+    # Agent activity refresh: every 3 hours — updates cached DB/email counts
+    _scheduler.add_job(lambda: _sched_call("activity_refresh", req_lib.get, "http://localhost:8000/api/agent-activity-status"), CronTrigger(hour="*/3", minute=0), id="activity_refresh", replace_existing=True)
     _scheduler.start()
-    print("[SCHEDULER] pitch(03/06/09 34ea), luna(2h 100ea), send(pitch09/lunaKR10/lunaUS23), reports(9/12/15/18), health(06)")
+    print("[SCHEDULER] pitch(03/06/09), luna(2h), send(09/10/23), reports(9/12/15/18), health(06), activity(3h)")
 except ImportError:
     print("[SCHEDULER] APScheduler not installed")
 except Exception as e:
