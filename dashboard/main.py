@@ -325,9 +325,11 @@ def _is_auto_send(agent: str) -> bool:
             pass
     return False
 
+CEO_APPROVAL_REQUIRED = os.getenv("CEO_APPROVAL_REQUIRED", "true").lower() in ("true", "1", "yes")
+
 def _queue_or_send_email(agent: str, to_email: str, subject: str, html: str, meta: dict = None) -> dict:
-    """자건 건°송 건ª¨건건©´ 즉시 건°송, 아건건©´ 검수 큐에 추가."""
-    if _is_auto_send(agent):
+    """CEO approval required: always queue. Otherwise check auto-send toggle."""
+    if not CEO_APPROVAL_REQUIRED and _is_auto_send(agent):
         result = _send_email(to_email, subject, html, agent)
         result["mode"] = "auto"
         return result
@@ -338,6 +340,7 @@ def _queue_or_send_email(agent: str, to_email: str, subject: str, html: str, met
         "to": to_email,
         "subject": subject,
         "html": html,
+        "html_body": html,
         "meta": meta or {},
         "status": "pending",
         "created_at": datetime.now(KST).isoformat(),
@@ -345,6 +348,7 @@ def _queue_or_send_email(agent: str, to_email: str, subject: str, html: str, met
     queue.append(entry)
     save_email_queue(queue)
     return {"status": "queued", "id": entry["id"], "mode": "review"}
+
 
 def load_benchmarks() -> dict:
     if BENCHMARKS_FILE.exists():
@@ -5254,6 +5258,17 @@ async def api_email_queue(agent: Optional[str] = None):
     if agent:
         pending = [e for e in pending if e.get("agent") == agent]
     return {"emails": pending, "count": len(pending)}
+
+@app.get("/api/email-queue/{eid}/preview")
+async def api_email_preview(eid: int):
+    """Return HTML body for CEO preview in iframe."""
+    from fastapi.responses import HTMLResponse
+    queue = load_email_queue()
+    for e in queue:
+        if e.get("id") == eid:
+            html = e.get("html_body", e.get("html", "<p>No preview</p>"))
+            return HTMLResponse(content=html, media_type="text/html; charset=utf-8")
+    return HTMLResponse(content="<p>Not found</p>", status_code=404)
 
 @app.post("/api/email-queue/approve")
 async def api_email_approve(request: Request):

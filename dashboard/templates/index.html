@@ -1815,6 +1815,9 @@ var newSubj=si.value;var newBody=ba.value;
 fetch('/api/email-queue/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,subject:newSubj,body_text:newBody})}).then(function(){
 return fetch('/api/email-queue/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})}).then(function(){loadEmailQueue(agent,containerId)})
 }})(e.id,subjInput,bodyArea));btns.appendChild(b1);
+// 미리보기
+var bp=document.createElement('button');bp.style.cssText='padding:4px 10px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#1B2A4A;font-size:10px;cursor:pointer;font-weight:600';bp.textContent='미리보기';
+bp.addEventListener('click',(function(id,subj,ag){return function(){showEmailPreview(id,subj,ag)}})(e.id,e.subject,agent));btns.appendChild(bp);
 // 재생성
 var b3=document.createElement('button');b3.style.cssText='padding:4px 10px;background:#FFF;border:0.5px solid #E8E6E1;border-radius:4px;color:#2D4A7A;font-size:10px;cursor:pointer';b3.textContent='재생성';
 b3.addEventListener('click',(function(id){return function(){fetch('/api/email-queue/regenerate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}).then(function(){loadEmailQueue(agent,containerId)})}})(e.id));btns.appendChild(b3);
@@ -1835,6 +1838,29 @@ var l=document.getElementById('luna-auto-send');if(l)l.checked=d['루나']||fals
 }).catch(function(){});
 loadEmailQueue('피치','pitch-email-queue');
 loadEmailQueue('루나','luna-email-queue');
+// Email preview modal
+function showEmailPreview(eid,subj,agent){
+var overlay=document.createElement('div');overlay.id='emailPreviewOverlay';
+overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+var modal=document.createElement('div');modal.style.cssText='background:#fff;border-radius:12px;width:680px;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3)';
+var hdr=document.createElement('div');hdr.style.cssText='background:#1a1a1a;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center';
+var title=document.createElement('div');title.innerHTML='<div style="font-size:14px;font-weight:700;font-family:Helvetica Neue,sans-serif">'+agent+' | '+subj.substring(0,50)+'</div><div style="font-size:10px;color:#999;margin-top:2px">ID: '+eid+'</div>';
+hdr.appendChild(title);
+var closeBtn=document.createElement('button');closeBtn.style.cssText='background:none;border:none;color:#fff;font-size:20px;cursor:pointer';closeBtn.textContent='\u2715';
+closeBtn.onclick=function(){document.body.removeChild(overlay)};hdr.appendChild(closeBtn);modal.appendChild(hdr);
+var iframe=document.createElement('iframe');iframe.src='/api/email-queue/'+eid+'/preview';iframe.style.cssText='width:100%;height:400px;border:none';modal.appendChild(iframe);
+var foot=document.createElement('div');foot.style.cssText='padding:12px 20px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:8px';
+var approveBtn=document.createElement('button');approveBtn.style.cssText='padding:8px 20px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer';approveBtn.textContent='승인 발송';
+approveBtn.onclick=function(){fetch('/api/email-queue/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:eid})}).then(function(){document.body.removeChild(overlay);loadEmailQueue('피치','pitch-email-queue');loadEmailQueue('루나','luna-email-queue')})};foot.appendChild(approveBtn);
+var rejectBtn=document.createElement('button');rejectBtn.style.cssText='padding:8px 20px;background:#fff;color:#C4332B;border:1px solid #C4332B;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer';rejectBtn.textContent='거절';
+rejectBtn.onclick=function(){fetch('/api/email-queue/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:eid})}).then(function(){document.body.removeChild(overlay);loadEmailQueue('피치','pitch-email-queue');loadEmailQueue('루나','luna-email-queue')})};foot.appendChild(rejectBtn);
+modal.appendChild(foot);overlay.appendChild(modal);
+overlay.onclick=function(ev){if(ev.target===overlay)document.body.removeChild(overlay)};
+document.body.appendChild(overlay)}
+// Pending email banner
+fetch('/api/email-queue').then(function(r){return r.json()}).then(function(d){
+if(d.count>0){var banner=document.getElementById('alertBanner');if(banner){banner.style.display='flex';banner.style.background='rgba(184,134,11,0.08)';banner.style.borderColor='rgba(184,134,11,0.3)';banner.style.color='#B8860B';
+var txt=document.getElementById('alertText');if(txt)txt.textContent='승인 대기 이메일: '+d.count+'건'}}}).catch(function(){});
 // 파이프라인 통계 로드
 function loadPipelineStats(){
 Promise.all([
