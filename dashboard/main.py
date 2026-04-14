@@ -2477,8 +2477,9 @@ async def api_test_all_templates():
 
     to_email = "jacob@08liter.com"
     results = []
+    smtp_works = None  # None=untested, "587"/"465"=working method, False=blocked
 
-    for agent_key, tmpl_key, tmpl_dict, brand, contact in test_list:
+    for idx, (agent_key, tmpl_key, tmpl_dict, brand, contact) in enumerate(test_list):
         agent = "luna" if "luna" in agent_key else "pitch"
         label = f"{agent_key}_{tmpl_key}"
 
@@ -2522,29 +2523,35 @@ async def api_test_all_templates():
             sent = False
             err = ""
 
-            # 방법1: 587 STARTTLS
-            try:
-                with smtplib.SMTP(smtp_host, 587, timeout=15) as s:
-                    s.starttls()
-                    s.login(acct["email"], acct["pw"])
-                    s.sendmail(acct["email"], [to_email], msg.as_string())
-                results.append({"template": label, "status": "ok", "method": "smtp_587"})
-                sent = True
-            except Exception as e1:
-                err = f"587:{str(e1)[:80]}"
-
-            # 방법2: 465 SSL
-            if not sent:
+            # SMTP: 첫 템플릿에서만 테스트, 이후는 결과 재사용
+            if smtp_works is None or smtp_works == "587":
                 try:
-                    with smtplib.SMTP_SSL(smtp_host, 465, timeout=15) as s:
+                    with smtplib.SMTP(smtp_host, 587, timeout=60) as s:
+                        s.starttls()
+                        s.login(acct["email"], acct["pw"])
+                        s.sendmail(acct["email"], [to_email], msg.as_string())
+                    results.append({"template": label, "status": "ok", "method": "smtp_587"})
+                    smtp_works = "587"
+                    sent = True
+                except Exception as e1:
+                    err = f"587:{str(e1)[:80]}"
+
+            if not sent and (smtp_works is None or smtp_works == "465"):
+                try:
+                    with smtplib.SMTP_SSL(smtp_host, 465, timeout=60) as s:
                         s.login(acct["email"], acct["pw"])
                         s.sendmail(acct["email"], [to_email], msg.as_string())
                     results.append({"template": label, "status": "ok", "method": "smtp_465"})
+                    smtp_works = "465"
                     sent = True
                 except Exception as e2:
                     err += f"|465:{str(e2)[:80]}"
 
-            # 방법3: GAS webhook
+            # 첫 템플릿에서 SMTP 둘 다 실패 → 이후 SMTP 스킵
+            if not sent and smtp_works is None:
+                smtp_works = False
+
+            # GAS webhook fallback
             if not sent:
                 try:
                     gresult = _send_email_webhook(to_email, subject, body, agent_name=acct["display"])
@@ -2562,7 +2569,7 @@ async def api_test_all_templates():
         await asyncio.sleep(1)
 
     ok = sum(1 for r in results if r.get("status") == "ok")
-    return {"total": len(results), "success": ok, "fail": len(results)-ok, "results": results}
+    return {"total": len(results), "success": ok, "fail": len(results)-ok, "smtp_method": smtp_works or "none", "results": results}
 
 @app.get("/api/send-review-email")
 async def api_send_review_email():
