@@ -2446,6 +2446,12 @@ async def api_test_all_templates():
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
 
+    def clean(text):
+        """surrogate 문자 제거"""
+        if not isinstance(text, str):
+            return str(text)
+        return text.encode('utf-8', errors='replace').decode('utf-8')
+
     try:
         from pitch_templates import PITCH_TEMPLATES, LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
     except Exception as ie:
@@ -2485,11 +2491,14 @@ async def api_test_all_templates():
             subj_raw = tmpl.get("subject", "")
             body_raw = tmpl.get("body", "")
             try:
-                subject = subj_raw.format(brand=brand, contact=contact, name=contact)
-                body = body_raw.format(brand=brand, contact=contact, name=contact)
+                subject = clean(subj_raw.format(brand=brand, contact=contact, name=contact))
+                body = clean(body_raw.format(brand=brand, contact=contact, name=contact))
+            except UnicodeEncodeError:
+                subject = clean(subj_raw).format(brand=brand, contact=contact, name=contact)
+                body = clean(body_raw).format(brand=brand, contact=contact, name=contact)
             except (KeyError, IndexError):
-                subject = subj_raw
-                body = body_raw
+                subject = clean(subj_raw)
+                body = clean(body_raw)
 
             acct = accounts[agent]
             if not acct["pw"]:
@@ -2506,9 +2515,9 @@ async def api_test_all_templates():
             msg = MIMEMultipart("alternative")
             msg["From"] = f'{acct["display"]} <{acct["email"]}>'
             msg["To"] = to_email
-            msg["Subject"] = subject
-            msg.attach(MIMEText(body, "plain", "utf-8"))
-            msg.attach(MIMEText(html, "html", "utf-8"))
+            msg["Subject"] = clean(subject)
+            msg.attach(MIMEText(clean(body), "plain", "utf-8"))
+            msg.attach(MIMEText(clean(html), "html", "utf-8"))
 
             sent = False
             err = ""
