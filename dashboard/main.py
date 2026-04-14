@@ -2414,29 +2414,16 @@ async def api_smtp_check():
 
 @app.get("/api/test-all-templates")
 async def api_test_all_templates():
-    import os as _os
-    import smtplib
     import asyncio
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    from email.header import Header
-
-    # --- SMTP config (all inline, no external calls) ---
-    smtp_host = _os.getenv("SMTP_HOST", "smtp.worksmobile.com")
-    smtp_port = int(_os.getenv("SMTP_PORT", "465"))
-    pitch_pw = _os.getenv("PITCH_EMAIL_PASSWORD", "")
-    luna_pw = _os.getenv("LUNA_EMAIL_PASSWORD", "")
-
-    accounts = {
-        "pitch": {"email": "pitch@08liter.com", "pw": pitch_pw, "name": "Pitch | 08liter(0.8L)"},
-        "luna": {"email": "luna@08liter.com", "pw": luna_pw, "name": "Luna | Mili Mili x 08liter(0.8L)"},
-    }
 
     # --- Links ---
     PROMO = "https://buly.kr/AF24dn7"
     MEETING = "https://buly.kr/1c9NOdW"
     KR_DECK = "https://docs.google.com/presentation/d/1D_vUqTx3yppl3iBE2ItT4d6fcBD4lEZG/preview"
     US_DECK = "https://docs.google.com/presentation/d/1N69MLPASAOq5xVd1bSimK8fDWMg8QMmF/preview"
+
+    # --- agent_name to pass to _send_email_webhook (Korean keys for AGENT_ID_MAP) ---
+    AGENT_KR = {"pitch": "\ud53c\uce58", "luna": "\ub8e8\ub098"}
 
     # --- 9 templates: subject + body inline ---
     templates = {
@@ -2497,26 +2484,17 @@ async def api_test_all_templates():
         if not tmpl:
             results.append({"template": tmpl_key, "error": "template not found"})
             continue
-        acct = accounts[agent_key]
-        if not acct["pw"]:
-            results.append({"template": tmpl_key, "error": "no password configured"})
-            continue
         try:
             subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact).replace("{name}", contact)
             body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact).replace("{name}", contact)
             subj = subj.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
             body = body.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
-            html_body = "<html><body><pre>" + body + "</pre></body></html>"
-            msg = MIMEMultipart("alternative")
-            msg["From"] = f'{acct["name"]} <{acct["email"]}>'
-            msg["To"] = "jacob@08liter.com"
-            msg["Subject"] = Header(subj, "utf-8")
-            msg.attach(MIMEText(body, "plain", "utf-8"))
-            msg.attach(MIMEText(html_body, "html", "utf-8"))
-            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as server:
-                server.login(acct["email"], acct["pw"])
-                server.send_message(msg)
-            results.append({"template": tmpl_key, "agent": agent_key, "status": "ok", "from": acct["email"]})
+            agent_kr = AGENT_KR.get(agent_key, "\ud53c\uce58")
+            result = _send_email_webhook("jacob@08liter.com", subj, body, agent_kr)
+            if result.get("status") == "ok":
+                results.append({"template": tmpl_key, "agent": agent_key, "status": "ok", "method": "gas_webhook"})
+            else:
+                results.append({"template": tmpl_key, "agent": agent_key, "error": result.get("message", "unknown"), "method": "gas_webhook"})
         except Exception as e:
             results.append({"template": tmpl_key, "agent": agent_key, "error": str(e)})
         await asyncio.sleep(1)
