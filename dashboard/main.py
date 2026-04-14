@@ -2255,7 +2255,86 @@ EMAIL_WEBHOOK_URL = os.getenv("EMAIL_WEBHOOK_URL", "")
 
 AGENT_ID_MAP = {"피치": "pitch", "루나": "luna", "소피": "sophie", "카일": "kyle", "레이": "ray", "하나": "hana", "맥스": "max"}
 
-def _send_email_webhook(to_email: str, subject: str, body_text: str, agent_name: str = "루나") -> dict:
+SMTP_ACCOUNTS = {
+    "pitch": {"email": "pitch@08liter.com", "password_env": "PITCH_EMAIL_PASSWORD", "display": "Pitch | 08liter(0.8L)"},
+    "luna": {"email": "luna@08liter.com", "password_env": "LUNA_EMAIL_PASSWORD", "display": "Luna | Mili Mili x 08liter(0.8L)"},
+}
+
+def _clean_surrogates(text: str) -> str:
+    if not text:
+        return ""
+    try:
+        return text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
+    except Exception:
+        return text.encode("ascii", errors="replace").decode("ascii")
+
+def _send_email_smtp(to_email: str, subject: str, body_text: str, agent: str = "pitch", html_body: str = "") -> dict:
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from email.header import Header
+    acct = SMTP_ACCOUNTS.get(agent, SMTP_ACCOUNTS["pitch"])
+    from_email = acct["email"]
+    password = os.getenv(acct["password_env"], "")
+    display_name = acct["display"]
+    smtp_host = os.getenv("SMTP_HOST", "smtp.worksmobile.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "465"))
+    if not password:
+        return _send_email_webhook(to_email, subject, body_text, agent)
+    try:
+        subject = _clean_surrogates(subject)
+        body_text = _clean_surrogates(body_text or subject)
+        html_body = _clean_surrogates(html_body) if html_body else ""
+        msg = MIMEMultipart("alternative")
+        msg["From"] = f"{display_name} <{from_email}>"
+        msg["To"] = to_email
+        msg["Subject"] = Header(subject, "utf-8")
+        msg.attach(MIMEText(body_text, "plain", "utf-8"))
+        if html_body:
+            msg.attach(MIMEText(html_body, "html", "utf-8"))
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as server:
+                server.login(from_email, password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=30) as server:
+                server.starttls()
+                server.login(from_email, password)
+                server.send_message(msg)
+        return {"status": "ok", "to": to_email, "from": f"{display_name} <{from_email}>", "method": "smtp"}
+    except Exception as e:
+        return {"status": "error", "message": str(e), "method": "smtp"}
+
+def _build_mckinsey_html(subject: str, body_text: str, agent: str = "pitch") -> str:
+    colors = {"pitch": "#1B2A4A", "luna": "#2D4A7A", "sophie": "#1A7A4C", "kyle": "#333"}
+    color = colors.get(agent, "#1B2A4A")
+    display = SMTP_ACCOUNTS.get(agent, {}).get("display", agent)
+    body_html = body_text.replace("\n", "<br>")
+    return (f'<div style="font-family:Helvetica Neue,Arial,sans-serif;max-width:600px;margin:0 auto">'
+            f'<div style="background:{color};padding:16px 24px;border-radius:8px 8px 0 0">'
+            f'<span style="color:#fff;font-size:14px;font-weight:700">{display}</span></div>'
+            f'<div style="background:#f8f7f5;padding:24px;border:1px solid #e8e6e1;border-top:none;border-radius:0 0 8px 8px">'
+            f'<p style="font-size:14px;color:#1a1a1a;line-height:1.8;margin:0">{body_html}</p>'
+            f'</div></div>')
+
+def _send_template_email(agent: str, to_email: str, template: str,
+                         brand: str = "", contact: str = "", name: str = "") -> dict:
+    from pitch_templates import PITCH_TEMPLATES as PT, LUNA_KR_TEMPLATES as LKR, LUNA_US_TEMPLATES as LUS
+    all_templates = dict(PT)
+    all_templates.update({"KR_" + k: v for k, v in LKR.items()})
+    all_templates.update({"US_" + k: v for k, v in LUS.items()})
+    tmpl = all_templates.get(template)
+    if not tmpl:
+        return {"status": "error", "message": f"Unknown template: {template}"}
+    subject = _clean_surrogates(tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name))
+    body = _clean_surrogates(tmpl["body"].replace("{brand}", brand).replace("{contact}", contact or brand).replace("{name}", name))
+    html = _build_mckinsey_html(subject, body, agent)
+    result = _send_email_smtp(to_email, subject, body, agent, html_body=html)
+    if result.get("status") == "ok":
+        _record_perf(agent, "email_sent")
+    return result
+
+def _send_email_webhook(to_email: str, subject: str, body_text: str, agent_name: str = "luna") -> dict:
     """Google Apps Script 웹훅으로 이메일 발송."""
     webhook_url = EMAIL_WEBHOOK_URL
     if not webhook_url:
