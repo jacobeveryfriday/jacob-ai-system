@@ -2442,112 +2442,118 @@ async def api_debug_templates():
 
 @app.get("/api/test-all-templates")
 async def api_test_all_templates():
-    """9개 템플릿 테스트 - Naver Works SMTP 587 STARTTLS + 465 SSL + GAS fallback"""
-    import os as _os
-    import smtplib
-    import asyncio
+    import os, smtplib, asyncio, traceback
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
-    from pitch_templates import PITCH_TEMPLATES, LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
 
-    smtp_host = _os.getenv("SMTP_HOST", "smtp.worksmobile.com")
+    try:
+        from pitch_templates import PITCH_TEMPLATES, LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
+    except Exception as ie:
+        return {"error": f"import failed: {str(ie)}"}
+
+    smtp_host = os.getenv("SMTP_HOST", "smtp.worksmobile.com")
     accounts = {
-        "pitch": {"email": "pitch@08liter.com", "pw": _os.getenv("PITCH_EMAIL_PASSWORD", ""), "display": "Pitch | 08liter(0.8L)"},
-        "luna": {"email": "luna@08liter.com", "pw": _os.getenv("LUNA_EMAIL_PASSWORD", ""), "display": "Luna | Mili Mili x 08liter(0.8L)"},
+        "pitch": {"email": "pitch@08liter.com", "pw": os.getenv("PITCH_EMAIL_PASSWORD",""), "display": "Pitch | 08liter(0.8L)"},
+        "luna": {"email": "luna@08liter.com", "pw": os.getenv("LUNA_EMAIL_PASSWORD",""), "display": "Luna | Mili Mili x 08liter(0.8L)"},
     }
 
     test_list = [
-        ("pitch", "A", PITCH_TEMPLATES, "\ud14c\uc2a4\ud2b8\ube0c\ub79c\ub4dc", "\uc81c\uc774\ucf65"),
-        ("pitch", "B", PITCH_TEMPLATES, "\ud14c\uc2a4\ud2b8\ube0c\ub79c\ub4dc", "\uc81c\uc774\ucf65"),
-        ("pitch", "C", PITCH_TEMPLATES, "\ud14c\uc2a4\ud2b8\ube0c\ub79c\ub4dc", "\uc81c\uc774\ucf65"),
+        ("pitch", "A", PITCH_TEMPLATES, "테스트브랜드", "제이콥"),
+        ("pitch", "B", PITCH_TEMPLATES, "테스트브랜드", "제이콥"),
+        ("pitch", "C", PITCH_TEMPLATES, "테스트브랜드", "제이콥"),
         ("pitch", "A_EN", PITCH_TEMPLATES, "TestBrand", "Jacob"),
         ("pitch", "B_EN", PITCH_TEMPLATES, "TestBrand", "Jacob"),
-        ("luna", "A", LUNA_KR_TEMPLATES, "\ud14c\uc2a4\ud2b8\ube0c\ub79c\ub4dc", "\uc81c\uc774\ucf65"),
-        ("luna", "B", LUNA_KR_TEMPLATES, "\ud14c\uc2a4\ud2b8\ube0c\ub79c\ub4dc", "\uc81c\uc774\ucf65"),
-        ("luna", "A", LUNA_US_TEMPLATES, "TestBrand", "Jacob"),
-        ("luna", "B", LUNA_US_TEMPLATES, "TestBrand", "Jacob"),
+        ("luna_kr", "A", LUNA_KR_TEMPLATES, "테스트브랜드", "제이콥"),
+        ("luna_kr", "B", LUNA_KR_TEMPLATES, "테스트브랜드", "제이콥"),
+        ("luna_us", "A", LUNA_US_TEMPLATES, "TestBrand", "Jacob"),
+        ("luna_us", "B", LUNA_US_TEMPLATES, "TestBrand", "Jacob"),
     ]
 
     to_email = "jacob@08liter.com"
     results = []
 
-    for agent, tmpl_key, tmpl_dict, brand, contact in test_list:
-        tmpl = tmpl_dict.get(tmpl_key, {})
-        if not tmpl:
-            results.append({"template": f"{agent}_{tmpl_key}", "error": f"template {tmpl_key} not found"})
-            continue
+    for agent_key, tmpl_key, tmpl_dict, brand, contact in test_list:
+        agent = "luna" if "luna" in agent_key else "pitch"
+        label = f"{agent_key}_{tmpl_key}"
 
-        subject = tmpl.get("subject", "").replace("{brand}", brand).replace("{contact}", contact).replace("{name}", contact)
-        body = tmpl.get("body", "").replace("{brand}", brand).replace("{contact}", contact).replace("{name}", contact)
-
-        acct = accounts[agent]
-        if not acct["pw"]:
-            results.append({"template": f"{agent}_{tmpl_key}", "error": "password not set"})
-            continue
-
-        accent = "#1B3A5C" if agent == "pitch" else "#2D5016"
-        html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 0;">
-<tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:4px;">
-<tr><td style="background:{accent};padding:24px 32px;color:#fff;font-size:18px;font-weight:bold;">{acct['display']}</td></tr>
-<tr><td style="padding:32px;font-size:15px;line-height:1.8;color:#333;">{body.replace(chr(10),'<br>')}</td></tr>
-<tr><td style="padding:16px 32px;background:#f8f8f8;font-size:12px;color:#999;text-align:center;">Sent by {acct['display']}</td></tr>
-</table></td></tr></table></body></html>"""
-
-        msg = MIMEMultipart("alternative")
-        msg["From"] = f'{acct["display"]} <{acct["email"]}>'
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain", "utf-8"))
-        msg.attach(MIMEText(html, "html", "utf-8"))
-
-        sent = False
-        error_msg = ""
-
-        # Method 1: port 587 STARTTLS
         try:
-            with smtplib.SMTP(smtp_host, 587, timeout=30) as server:
-                server.starttls()
-                server.login(acct["email"], acct["pw"])
-                server.sendmail(acct["email"], [to_email], msg.as_string())
-            results.append({"template": f"{agent}_{tmpl_key}", "status": "ok", "method": "smtp_587"})
-            sent = True
-        except Exception as e1:
-            error_msg = f"587:{str(e1)}"
+            tmpl = tmpl_dict.get(tmpl_key, {})
+            if not tmpl:
+                results.append({"template": label, "error": f"key {tmpl_key} not found"})
+                continue
 
-        # Method 2: port 465 SSL
-        if not sent:
+            subj_raw = tmpl.get("subject", "")
+            body_raw = tmpl.get("body", "")
             try:
-                smtp_port = int(_os.getenv("SMTP_PORT", "465"))
-                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as server:
-                    server.login(acct["email"], acct["pw"])
-                    server.sendmail(acct["email"], [to_email], msg.as_string())
-                results.append({"template": f"{agent}_{tmpl_key}", "status": "ok", "method": "smtp_465"})
+                subject = subj_raw.format(brand=brand, contact=contact, name=contact)
+                body = body_raw.format(brand=brand, contact=contact, name=contact)
+            except (KeyError, IndexError):
+                subject = subj_raw
+                body = body_raw
+
+            acct = accounts[agent]
+            if not acct["pw"]:
+                results.append({"template": label, "error": "password not set"})
+                continue
+
+            accent = "#1B3A5C" if agent == "pitch" else "#2D5016"
+            html = f'<html><body style="font-family:Arial;"><div style="max-width:600px;margin:auto;background:#fff;padding:0;">'
+            html += f'<div style="background:{accent};padding:24px 32px;color:#fff;font-size:18px;font-weight:bold;">{acct["display"]}</div>'
+            html += f'<div style="padding:32px;font-size:15px;line-height:1.8;color:#333;">{body.replace(chr(10),"<br>")}</div>'
+            html += f'<div style="padding:16px 32px;background:#f8f8f8;font-size:12px;color:#999;text-align:center;">TEST: {label}</div>'
+            html += '</div></body></html>'
+
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f'{acct["display"]} <{acct["email"]}>'
+            msg["To"] = to_email
+            msg["Subject"] = subject
+            msg.attach(MIMEText(body, "plain", "utf-8"))
+            msg.attach(MIMEText(html, "html", "utf-8"))
+
+            sent = False
+            err = ""
+
+            # 방법1: 587 STARTTLS
+            try:
+                with smtplib.SMTP(smtp_host, 587, timeout=15) as s:
+                    s.starttls()
+                    s.login(acct["email"], acct["pw"])
+                    s.sendmail(acct["email"], [to_email], msg.as_string())
+                results.append({"template": label, "status": "ok", "method": "smtp_587"})
                 sent = True
-            except Exception as e2:
-                error_msg += f" | 465:{str(e2)}"
+            except Exception as e1:
+                err = f"587:{str(e1)[:80]}"
 
-        # Method 3: GAS webhook fallback (sends from Gmail, not NaverWorks)
-        if not sent:
-            try:
-                r = _send_email_webhook(to_email, subject, body, agent_name=acct["display"])
-                if r.get("status") == "ok":
-                    results.append({"template": f"{agent}_{tmpl_key}", "status": "ok", "method": "gas_fallback", "note": "sent from Gmail not NaverWorks"})
+            # 방법2: 465 SSL
+            if not sent:
+                try:
+                    with smtplib.SMTP_SSL(smtp_host, 465, timeout=15) as s:
+                        s.login(acct["email"], acct["pw"])
+                        s.sendmail(acct["email"], [to_email], msg.as_string())
+                    results.append({"template": label, "status": "ok", "method": "smtp_465"})
                     sent = True
-                else:
-                    error_msg += f" | gas:{r.get('message', 'unknown')}"
-            except Exception as e3:
-                error_msg += f" | gas:{str(e3)}"
+                except Exception as e2:
+                    err += f"|465:{str(e2)[:80]}"
 
-        if not sent:
-            results.append({"template": f"{agent}_{tmpl_key}", "error": error_msg})
+            # 방법3: GAS webhook
+            if not sent:
+                try:
+                    gresult = _send_email_webhook(to_email, subject, body, agent_name=acct["display"])
+                    results.append({"template": label, "status": "ok", "method": "gas", "note": "gmail sender"})
+                    sent = True
+                except Exception as e3:
+                    err += f"|gas:{str(e3)[:80]}"
+
+            if not sent:
+                results.append({"template": label, "error": err})
+
+        except Exception as ex:
+            results.append({"template": label, "error": traceback.format_exc()[-200:]})
 
         await asyncio.sleep(1)
 
-    ok_count = sum(1 for r in results if r.get("status") == "ok")
-    methods = [r.get("method", "") for r in results if r.get("status") == "ok"]
-    return {"total": len(results), "success": ok_count, "fail": len(results) - ok_count, "primary_method": methods[0] if methods else "none", "results": results}
+    ok = sum(1 for r in results if r.get("status") == "ok")
+    return {"total": len(results), "success": ok, "fail": len(results)-ok, "results": results}
 
 @app.get("/api/send-review-email")
 async def api_send_review_email():
