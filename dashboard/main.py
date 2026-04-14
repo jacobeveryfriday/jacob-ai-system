@@ -2414,25 +2414,54 @@ async def api_smtp_check():
 
 @app.get("/api/test-all-templates")
 async def api_test_all_templates():
-    import asyncio
-    results = []
-    templates = [
-        ("pitch", "A", "테스트브랜드", "제이콥"),
-        ("pitch", "B", "테스트브랜드", "제이콥"),
-        ("pitch", "C", "테스트브랜드", "제이콥"),
-        ("pitch", "A_EN", "TestBrand", "Jacob"),
-        ("pitch", "B_EN", "TestBrand", "Jacob"),
-        ("luna", "KR_A", "테스트브랜드", "제이콥"),
-        ("luna", "KR_B", "테스트브랜드", "제이콥"),
-        ("luna", "US_A", "TestBrand", "Jacob"),
-        ("luna", "US_B", "TestBrand", "Jacob"),
+    import smtplib, asyncio
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from email.header import Header
+    from pitch_templates import PITCH_TEMPLATES as PT, LUNA_KR_TEMPLATES as LKR, LUNA_US_TEMPLATES as LUS
+    all_t = dict(PT)
+    all_t.update({"KR_" + k: v for k, v in LKR.items()})
+    all_t.update({"US_" + k: v for k, v in LUS.items()})
+    smtp_host = os.getenv("SMTP_HOST", "smtp.worksmobile.com")
+    smtp_port = int(os.getenv("SMTP_PORT", "465"))
+    accounts = {
+        "pitch": {"email": "pitch@08liter.com", "pw": os.getenv("PITCH_EMAIL_PASSWORD", ""), "name": "Pitch | 08liter(0.8L)"},
+        "luna": {"email": "luna@08liter.com", "pw": os.getenv("LUNA_EMAIL_PASSWORD", ""), "name": "Luna | Mili Mili x 08liter(0.8L)"},
+    }
+    tests = [
+        ("pitch", "A", "테스트브랜드", "제이콥"), ("pitch", "B", "테스트브랜드", "제이콥"), ("pitch", "C", "테스트브랜드", "제이콥"),
+        ("pitch", "A_EN", "TestBrand", "Jacob"), ("pitch", "B_EN", "TestBrand", "Jacob"),
+        ("luna", "KR_A", "테스트브랜드", "제이콥"), ("luna", "KR_B", "테스트브랜드", "제이콥"),
+        ("luna", "US_A", "TestBrand", "Jacob"), ("luna", "US_B", "TestBrand", "Jacob"),
     ]
-    for agent, tmpl, brand, contact in templates:
+    results = []
+    for agent, tmpl_key, brand, contact in tests:
+        tmpl = all_t.get(tmpl_key)
+        if not tmpl:
+            results.append({"template": tmpl_key, "error": f"template {tmpl_key} not found"})
+            continue
+        acct = accounts[agent]
+        if not acct["pw"]:
+            results.append({"template": tmpl_key, "error": "no password"})
+            continue
         try:
-            r = _send_template_email(agent, "jacob@08liter.com", tmpl, brand=brand, contact=contact, name=contact)
-            results.append({"template": tmpl, "agent": agent, "result": r})
+            subj = tmpl["subject"].replace("{brand}", brand).replace("{contact}", contact).replace("{name}", contact)
+            body = tmpl["body"].replace("{brand}", brand).replace("{contact}", contact).replace("{name}", contact)
+            # Clean surrogates
+            subj = subj.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
+            body = body.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f'{acct["name"]} <{acct["email"]}>'
+            msg["To"] = "jacob@08liter.com"
+            msg["Subject"] = Header(subj, "utf-8")
+            msg.attach(MIMEText(body, "plain", "utf-8"))
+            msg.attach(MIMEText(f"<html><body><pre>{body}</pre></body></html>", "html", "utf-8"))
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as server:
+                server.login(acct["email"], acct["pw"])
+                server.send_message(msg)
+            results.append({"template": tmpl_key, "agent": agent, "status": "ok", "from": acct["email"]})
         except Exception as e:
-            results.append({"template": tmpl, "agent": agent, "error": str(e)})
+            results.append({"template": tmpl_key, "agent": agent, "error": str(e)})
         await asyncio.sleep(1)
     return {"total": len(results), "results": results}
 
