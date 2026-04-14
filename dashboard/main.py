@@ -2412,6 +2412,34 @@ async def api_smtp_check():
         "luna_password": "설정됨" if os.getenv("LUNA_EMAIL_PASSWORD") else "미설정",
     }
 
+@app.get("/api/debug-templates")
+async def api_debug_templates():
+    """템플릿 import 디버그"""
+    result = {}
+    # 방법1: from pitch_templates import
+    try:
+        from pitch_templates import PITCH_TEMPLATES, LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
+        result["import_method"] = "from pitch_templates"
+        result["pitch_keys"] = list(PITCH_TEMPLATES.keys())
+        result["luna_kr_keys"] = list(LUNA_KR_TEMPLATES.keys())
+        result["luna_us_keys"] = list(LUNA_US_TEMPLATES.keys())
+        result["status"] = "ok"
+    except Exception as e1:
+        result["method1_error"] = str(e1)
+        # 방법2: from dashboard.pitch_templates import
+        try:
+            from dashboard.pitch_templates import PITCH_TEMPLATES, LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
+            result["import_method"] = "from dashboard.pitch_templates"
+            result["pitch_keys"] = list(PITCH_TEMPLATES.keys())
+            result["luna_kr_keys"] = list(LUNA_KR_TEMPLATES.keys())
+            result["luna_us_keys"] = list(LUNA_US_TEMPLATES.keys())
+            result["status"] = "ok"
+        except Exception as e2:
+            result["method2_error"] = str(e2)
+            result["status"] = "import_failed"
+    return result
+
+
 @app.get("/api/test-all-templates")
 async def api_test_all_templates():
     """9개 템플릿 테스트 - Naver Works SMTP 587 STARTTLS + 465 SSL + GAS fallback"""
