@@ -4886,6 +4886,48 @@ async def api_flush_pending(request: Request):
     return {"status": "ok", "flushed": flushed, "total_outreach": len(outreach)}
 
 
+@app.post("/api/upload-pending")
+async def api_upload_pending(request: Request):
+    """로컬 pending 데이터를 서버에 업로드 후 즉시 flush."""
+    body = await request.json()
+    luna_rows = body.get("luna_pending", [])
+    pitch_rows = body.get("pitch_pending", [])
+    pending = load_crawled_pending()
+    if not isinstance(pending, dict):
+        pending = {}
+    pending.setdefault("luna_pending", []).extend(luna_rows)
+    pending.setdefault("pitch_pending", []).extend(pitch_rows)
+    save_crawled(pending)
+
+    # 즉시 flush → outreach_status
+    outreach = load_outreach_status()
+    now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+    flushed = {"luna": 0, "pitch": 0}
+    for row in luna_rows:
+        email = ""
+        name = ""
+        if len(row) > 8 and "@" in str(row[8]):
+            email = str(row[8]).strip()
+            name = str(row[5]).strip() if len(row) > 5 else ""
+        elif len(row) > 9 and "@" in str(row[9]):
+            email = str(row[9]).strip()
+            name = str(row[6]).strip() if len(row) > 6 else ""
+        if email and email not in outreach:
+            outreach[email] = {"agent": "루나", "name": name, "status": "대기",
+                               "registered_at": now_str, "sent_at": "", "template": "", "followup_count": 0}
+            flushed["luna"] += 1
+    for row in pitch_rows:
+        email = str(row[2]).strip() if len(row) > 2 else ""
+        name = str(row[1]).strip() if len(row) > 1 else ""
+        if email and "@" in email and email not in outreach:
+            outreach[email] = {"agent": "피치", "name": name, "status": "대기",
+                               "registered_at": now_str, "sent_at": "", "template": "", "followup_count": 0}
+            flushed["pitch"] += 1
+    save_outreach_status(outreach)
+    return {"status": "ok", "uploaded": {"luna": len(luna_rows), "pitch": len(pitch_rows)},
+            "flushed": flushed, "total_outreach": len(outreach)}
+
+
 import asyncio
 import threading
 
