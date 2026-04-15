@@ -4693,20 +4693,20 @@ async def api_agent_kpi_dashboard():
     inf = await api_influencer_db()
 
     # 맥스: 실제 CPA (ads_performance의 db_cost)
-    live_cpa = ads.get("db_cost", 0)
-    cpa_target = goals.get("cpa", 50000)
+    live_cpa = ads.get("db_cost") or 0
+    cpa_target = goals.get("cpa") or 50000
     max_kpi = min(100, round(cpa_target / max(live_cpa, 1) * 100)) if live_cpa > 0 else 0
 
     # 소피: SNS 팔로워 (sns_performance 연동)
     sns = await api_sns_performance()
-    total_followers = sns.get("total_followers", 0)
-    follower_target = goals.get("followers", 100000)
+    total_followers = sns.get("total_followers") or 0
+    follower_target = goals.get("followers") or 100000
     sophie_kpi = min(100, round(total_followers / max(follower_target, 1) * 100)) if total_followers > 0 else 0
 
     # 하나: CS 응답 (카카오 미응답 기반)
     try:
         kakao = await api_kakao_b2b_messages()
-        unresponded = kakao.get("unresponded_count", 0)
+        unresponded = kakao.get("unresponded_count") or kakao.get("mock_unresponded") or 0
         hana_kpi = max(0, min(100, 100 - unresponded * 10))
         hana_metric = f"미응답 {unresponded}건"
     except Exception:
@@ -4722,7 +4722,7 @@ async def api_agent_kpi_dashboard():
         "카일": {"role": "총괄", "kpi": min(100, round(m.get("revenue", 0) / max(goals.get("revenue", 160000000), 1) * 100)), "metric": f"매출 {m.get('revenue',0):,}원"},
         "루나": {"role": "브랜드영업", "kpi": min(100, round(m.get("contract", 0) / max(goals.get("contracts", 38), 1) * 100)), "metric": f"계약 {m.get('contract',0)}건"},
         "피치": {"role": "인플루언서", "kpi": min(100, round(inf.get("total", 0) / max(goals.get("influencer_pool", 1550000), 1) * 100)), "metric": f"풀 {inf.get('total',0):,}명"},
-        "맥스": {"role": "광고센터", "kpi": max_kpi, "metric": f"CPA {live_cpa:,}원"},
+        "맥스": {"role": "광고센터", "kpi": max_kpi, "metric": f"CPA {int(live_cpa):,}원" if live_cpa else "CPA 데이터 없음"},
         "소피": {"role": "SNS운영", "kpi": sophie_kpi, "metric": f"팔로워 {total_followers:,}"},
         "레이": {"role": "경영지원", "kpi": ray_kpi, "metric": f"계산서 {ray_contracts}건"},
         "하나": {"role": "CS", "kpi": hana_kpi, "metric": hana_metric},
@@ -4746,14 +4746,16 @@ async def api_pitch_outbound():
 
     try:
         pipeline = await api_sheet_pipeline(agent="피치")
+        p_total = pipeline.get("total", {})
         p_today = pipeline.get("today", {})
-        meetings = p_today.get("meeting", 0)
-        working = pipeline.get("funnel", {}).get("working", 0)
+        meetings_total = p_total.get("meeting", 0)
+        working_total = p_total.get("working", 0)
+        today_inbound = p_today.get("inbound", 0)
     except Exception:
-        meetings, working = 0, 0
+        meetings_total, working_total, today_inbound = 0, 0, 0
 
     funnel = []
-    for stage, count in [("발송", today_sent), ("오픈", today_opened), ("답변", today_replied), ("미팅", meetings), ("협상", working)]:
+    for stage, count in [("발송", today_sent), ("오픈", today_opened), ("답변", today_replied), ("미팅(누적)", meetings_total), ("협상(누적)", working_total)]:
         rate = round(count / max(today_sent, 1) * 100, 1) if today_sent > 0 else 0
         funnel.append({"stage": stage, "count": count, "rate": rate})
 
@@ -4770,7 +4772,8 @@ async def api_pitch_outbound():
         })
 
     return {
-        "today": {"sent": today_sent, "replied": today_replied, "opened": today_opened, "meetings": meetings, "negotiating": working},
+        "today": {"sent": today_sent, "replied": today_replied, "opened": today_opened, "inbound": today_inbound},
+        "cumul": {"meetings": meetings_total, "working": working_total},
         "funnel": funnel,
         "weekly": weekly,
         "source": "live",
