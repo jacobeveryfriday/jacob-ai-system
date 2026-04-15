@@ -4969,14 +4969,6 @@ PITCH_TAB = "피치_클로드"
 @app.get("/api/pitch-pipeline")
 async def api_pitch_pipeline():
     """피치 파이프라인 현황 — Google Sheets 피치_클로드 탭 기준."""
-    import traceback as _tb
-    try:
-        return _pitch_pipeline_impl()
-    except Exception as e:
-        return {"ok": False, "error": str(e), "traceback": _tb.format_exc()}
-
-
-def _pitch_pipeline_impl():
     rows = fetch_sheet(SHEET_PITCH, "A:N", PITCH_TAB, ttl_key="default")
     if not rows or len(rows) < 2:
         return {"ok": False, "note": "데이터 없음 또는 시트 연결 실패"}
@@ -5101,14 +5093,6 @@ LUNA_TAB = "루나_클로드"
 @app.get("/api/luna-pipeline")
 async def api_luna_pipeline():
     """루나 파이프라인 현황 — Google Sheets 루나_클로드 탭 기준."""
-    import traceback as _tb
-    try:
-        return _luna_pipeline_impl()
-    except Exception as e:
-        return {"ok": False, "error": str(e), "traceback": _tb.format_exc()}
-
-
-def _luna_pipeline_impl():
     rows = fetch_sheet(SHEET_INFLUENCER, "A:S", LUNA_TAB, ttl_key="default")
     if not rows or len(rows) < 2:
         return {"ok": False, "note": "데이터 없음 또는 시트 연결 실패"}
@@ -5244,8 +5228,8 @@ def _luna_pipeline_impl():
 
 
 # ===== CRM 브랜드 통합 수치 API =====
-CRM_API_URL = os.getenv("CRM_API_URL", "https://mcp-crm.08liter.com")
-CRM_API_KEY = os.getenv("CRM_API_KEY", "")
+CRM_API_URL = os.getenv("MCP_CRM_URL", os.getenv("CRM_API_URL", "https://mcp-crm.08liter.com"))
+CRM_API_KEY = os.getenv("MCP_CRM_API_KEY", os.getenv("CRM_API_KEY", ""))
 
 @app.get("/api/crm-summary")
 async def api_crm_summary():
