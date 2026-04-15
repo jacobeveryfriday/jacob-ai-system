@@ -5378,14 +5378,19 @@ async def api_revenue_dashboard():
                         mr_hdr_idx = ri
                         break
                 mh = [str(h).replace("\n", " ").strip() for h in mr_rows[mr_hdr_idx]]
+                def _fc(default, *kw):
+                    v = _find_col(mh, *kw)
+                    return v if v is not None else default
                 mc = {
-                    "month": _find_col(mh, "월") or 0,
-                    "contracts": _find_col(mh, "당월계약건수", "계약건수") or 1,
-                    "revenue": _find_col(mh, "매출합계") or 2,
-                    "new": _find_col(mh, "매출(신규)", "신규") or 3,
-                    "renew": _find_col(mh, "매출(재계약)", "재계약") or 4,
-                    "avg": _find_col(mh, "평균단가", "월별계약") or 7,
+                    "month": _fc(0, "월"),
+                    "contracts": _fc(1, "당월계약건수", "계약건수"),
+                    "revenue": _fc(2, "매출합계"),
+                    "new": _fc(3, "매출(신규)", "신규"),
+                    "renew": _fc(4, "매출(재계약)", "재계약"),
+                    "avg": _fc(7, "평균단가", "월별계약"),
                 }
+                print(f"[revenue-dashboard] 월별매출 헤더: {mh}")
+                print(f"[revenue-dashboard] 월별매출 컬럼매핑: {mc}")
                 for row in mr_rows[mr_hdr_idx + 1:]:
                     if not row or len(row) < 2:
                         continue
