@@ -1325,7 +1325,7 @@ async def api_ads_performance():
             hdr_idx = _find_header_row(ct_rows, "작성일자", "공급가액", "공급받는자")
             headers = [str(h).replace("\n", " ").strip() for h in ct_rows[hdr_idx]]
             ct_date_idx = _find_col(headers, "계산서 작성일자", "작성일자", "등록기준일", "발행일")
-            ct_amount_idx = _find_col(headers, "총합계", "공급가액")
+            ct_amount_idx = _find_col(headers, "공급가액")
             ct_ch_idx = _find_col(headers, "유입채널")
             if ct_date_idx is None: ct_date_idx = 1
             if ct_amount_idx is None and len(headers) > 21: ct_amount_idx = 21  # V열
@@ -4687,17 +4687,45 @@ async def api_agent_kpi_dashboard():
     """에이전트별 KPI 달성률 — 카일 대시보드용."""
     goals = load_goals()
     brand = await api_brand_pipeline()
+    ads = await api_ads_performance()
     m = brand.get("month", {})
     t = brand.get("today", {})
     inf = await api_influencer_db()
+
+    # 맥스: 실제 CPA (ads_performance의 db_cost)
+    live_cpa = ads.get("db_cost", 0)
+    cpa_target = goals.get("cpa", 50000)
+    max_kpi = min(100, round(cpa_target / max(live_cpa, 1) * 100)) if live_cpa > 0 else 0
+
+    # 소피: SNS 팔로워 (sns_performance 연동)
+    sns = await api_sns_performance()
+    total_followers = sns.get("total_followers", 0)
+    follower_target = goals.get("followers", 100000)
+    sophie_kpi = min(100, round(total_followers / max(follower_target, 1) * 100)) if total_followers > 0 else 0
+
+    # 하나: CS 응답 (카카오 미응답 기반)
+    try:
+        kakao = await api_kakao_b2b_messages()
+        unresponded = kakao.get("unresponded_count", 0)
+        hana_kpi = max(0, min(100, 100 - unresponded * 10))
+        hana_metric = f"미응답 {unresponded}건"
+    except Exception:
+        hana_kpi = 0
+        hana_metric = "데이터 없음"
+
+    # 레이: 계산서 발행 건수
+    ray_contracts = m.get("contract", 0)
+    ray_target = goals.get("contracts", 38)
+    ray_kpi = min(100, round(ray_contracts / max(ray_target, 1) * 100))
+
     agents = {
         "카일": {"role": "총괄", "kpi": min(100, round(m.get("revenue", 0) / max(goals.get("revenue", 160000000), 1) * 100)), "metric": f"매출 {m.get('revenue',0):,}원"},
         "루나": {"role": "브랜드영업", "kpi": min(100, round(m.get("contract", 0) / max(goals.get("contracts", 38), 1) * 100)), "metric": f"계약 {m.get('contract',0)}건"},
         "피치": {"role": "인플루언서", "kpi": min(100, round(inf.get("total", 0) / max(goals.get("influencer_pool", 1550000), 1) * 100)), "metric": f"풀 {inf.get('total',0):,}명"},
-        "맥스": {"role": "광고센터", "kpi": 72, "metric": "CPA 32,000원"},
-        "소피": {"role": "SNS운영", "kpi": 65, "metric": "팔로워 43,370"},
-        "레이": {"role": "경영지원", "kpi": 88, "metric": f"계산서 {m.get('contract',0)}건"},
-        "하나": {"role": "CS", "kpi": 78, "metric": "평균응답 12분"},
+        "맥스": {"role": "광고센터", "kpi": max_kpi, "metric": f"CPA {live_cpa:,}원"},
+        "소피": {"role": "SNS운영", "kpi": sophie_kpi, "metric": f"팔로워 {total_followers:,}"},
+        "레이": {"role": "경영지원", "kpi": ray_kpi, "metric": f"계산서 {ray_contracts}건"},
+        "하나": {"role": "CS", "kpi": hana_kpi, "metric": hana_metric},
     }
     avg_kpi = round(sum(a["kpi"] for a in agents.values()) / len(agents))
     return {"agents": agents, "avg_kpi": avg_kpi}
@@ -4705,28 +4733,48 @@ async def api_agent_kpi_dashboard():
 
 @app.get("/api/pitch-outbound")
 async def api_pitch_outbound():
-    """피치 아웃바운드 성과 대시보드 데이터."""
+    """피치 아웃바운드 성과 — 이메일 로그 + 시트 파이프라인 실데이터."""
+    now = datetime.now(KST)
+    today_str = now.strftime("%Y-%m-%d")
+    log = load_email_log()
+    pitch_log = [e for e in log if e.get("agent") in ("피치", "pitch")]
+
+    today_log = [e for e in pitch_log if e.get("sent_at", "").startswith(today_str)]
+    today_sent = sum(1 for e in today_log if e.get("status") == "sent")
+    today_replied = sum(1 for e in today_log if e.get("replied"))
+    today_opened = sum(1 for e in today_log if e.get("opened"))
+
+    try:
+        pipeline = await api_sheet_pipeline(agent="피치")
+        p_today = pipeline.get("today", {})
+        meetings = p_today.get("meeting", 0)
+        working = pipeline.get("funnel", {}).get("working", 0)
+    except Exception:
+        meetings, working = 0, 0
+
+    funnel = []
+    for stage, count in [("발송", today_sent), ("오픈", today_opened), ("답변", today_replied), ("미팅", meetings), ("협상", working)]:
+        rate = round(count / max(today_sent, 1) * 100, 1) if today_sent > 0 else 0
+        funnel.append({"stage": stage, "count": count, "rate": rate})
+
+    weekly = []
+    for d in range(6, -1, -1):
+        day = now - timedelta(days=d)
+        day_str = day.strftime("%Y-%m-%d")
+        day_log = [e for e in pitch_log if e.get("sent_at", "").startswith(day_str)]
+        weekly.append({
+            "date": day.strftime("%m/%d"),
+            "sent": sum(1 for e in day_log if e.get("status") == "sent"),
+            "replied": sum(1 for e in day_log if e.get("replied")),
+            "meetings": 0,
+        })
+
     return {
-        "today": {"sent": 12, "replied": 3, "handled": 2, "meetings": 1, "negotiating": 2},
-        "funnel": [
-            {"stage": "발송", "count": 12, "rate": 100},
-            {"stage": "답변", "count": 3, "rate": 25},
-            {"stage": "대응", "count": 2, "rate": 16.7},
-            {"stage": "미팅", "count": 1, "rate": 8.3},
-            {"stage": "협상", "count": 2, "rate": 16.7},
-            {"stage": "계약", "count": 0, "rate": 0},
-        ],
-        "weekly": [
-            {"date": "04/03", "sent": 15, "replied": 4, "meetings": 1},
-            {"date": "04/04", "sent": 18, "replied": 5, "meetings": 2},
-            {"date": "04/05", "sent": 12, "replied": 3, "meetings": 0},
-            {"date": "04/06", "sent": 20, "replied": 6, "meetings": 1},
-            {"date": "04/07", "sent": 16, "replied": 4, "meetings": 1},
-            {"date": "04/08", "sent": 14, "replied": 3, "meetings": 1},
-            {"date": "04/09", "sent": 12, "replied": 3, "meetings": 1},
-        ],
-        "source": "pitch-agent",
-        "note": "피치에이전트 발송로그 기반 — 실시간 연동 후 실데이터 전환"
+        "today": {"sent": today_sent, "replied": today_replied, "opened": today_opened, "meetings": meetings, "negotiating": working},
+        "funnel": funnel,
+        "weekly": weekly,
+        "source": "live",
+        "total_log": len(pitch_log),
     }
 
 
