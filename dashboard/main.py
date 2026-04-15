@@ -4984,7 +4984,7 @@ def _pitch_pipeline_impl():
     headers = [str(c).strip() for c in rows[0]]
     data_rows = rows[1:]
 
-    now = _kst_now()
+    now = datetime.now(KST)
     today_str = now.strftime("%Y-%m-%d")
     this_month = now.strftime("%Y-%m")
 
@@ -5116,7 +5116,7 @@ def _luna_pipeline_impl():
     headers = [str(c).strip() for c in rows[0]]
     data_rows = rows[1:]
 
-    now = _kst_now()
+    now = datetime.now(KST)
     today_str = now.strftime("%Y-%m-%d")
     this_month = now.strftime("%Y-%m")
 
@@ -5293,7 +5293,7 @@ async def api_crm_summary():
             "total_campaigns": total_campaigns,
             "segments": segments,
             "drafts": drafts,
-            "updated_at": _kst_now().isoformat(),
+            "updated_at": datetime.now(KST).isoformat(),
         }
     except Exception as e:
         return {"ok": False, "error": str(e)}
