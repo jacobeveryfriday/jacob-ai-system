@@ -1,0 +1,22 @@
+[
+  {
+    "id": 2308290,
+    "agent": "피치",
+    "status": "pending_approval",
+    "proposal": "발송률 0% — 추가 DB 수집 + 발송 가속 필요",
+    "detail": "피치 발송 0건 / 목표 20건. 추가 DB 수집 권장.",
+    "expected_impact": "발송률 80%+ 달성",
+    "action_type": "pitch_boost",
+    "created_at": "2026-04-12T11:51:46.674416+09:00"
+  },
+  {
+    "id": 2308291,
+    "agent": "루나",
+    "status": "pending_approval",
+    "proposal": "답변률 0% — 추가 아웃바운드 필요",
+    "detail": "루나 답변 0건 / 목표 20건. 제안 메시지 개선 권장.",
+    "expected_impact": "답변률 80%+ 달성",
+    "action_type": "luna_boost",
+    "created_at": "2026-04-12T11:51:46.674416+09:00"
+  }
+]

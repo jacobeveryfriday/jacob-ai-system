@@ -962,19 +962,19 @@ def _ensure_daily_proposals():
 
 @app.get("/", response_class=HTMLResponse)
 async def ceo_dashboard(request: Request):
-    """새 CEO 대시보드 — McKinsey 스타일 3섹션 레이아웃."""
+    """Toss-style 피치/루나 파이프라인 대시보드."""
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=302)
-    _ensure_daily_proposals()
-    return templates.TemplateResponse("ceo.html", {"request": request})
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/old", response_class=HTMLResponse)
 async def legacy_dashboard(request: Request):
-    """기존 대시보드 (이전 버전)."""
+    """기존 CEO 대시보드 (이전 버전)."""
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=302)
-    return templates.TemplateResponse("index.html", {"request": request})
+    _ensure_daily_proposals()
+    return templates.TemplateResponse("ceo.html", {"request": request})
 
 @app.get("/api/status")
 async def check_status():
@@ -5007,6 +5007,8 @@ async def api_pitch_pipeline():
         if not row or len(row) < 3:
             continue
         def _g(idx):
+            if idx is None:
+                return ""
             return str(row[idx]).strip() if len(row) > idx and idx >= 0 else ""
 
         total += 1
@@ -5134,6 +5136,8 @@ async def api_luna_pipeline():
         if not row or len(row) < 3:
             continue
         def _g(idx):
+            if idx is None:
+                return ""
             return str(row[idx]).strip() if len(row) > idx and idx >= 0 else ""
 
         total += 1
