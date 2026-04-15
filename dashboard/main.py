@@ -145,18 +145,45 @@ EMAIL_QUEUE_FILE = DATA_DIR / "email_queue.json"
 AGENT_AUTO_SEND_FILE = DATA_DIR / "agent_auto_send.json"
 CRAWLED_DATA_FILE = DATA_DIR / "crawled_data.json"
 EMAIL_LOG_FILE = DATA_DIR / "email_log.json"
+OUTREACH_STATUS_FILE = DATA_DIR / "outreach_status.json"
 
 # 발송 속도 제한
 SEND_LIMITS = {"hourly": 50, "daily": 550, "interval_sec": 30}
 
 def load_crawled() -> list:
     if CRAWLED_DATA_FILE.exists():
-        return json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8"))
+        raw = json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8"))
+        if isinstance(raw, list):
+            return raw
+        if isinstance(raw, dict):
+            # dict 형태: {"pitch_pending": [...], "luna_pending": [...]}
+            return raw
     return []
 
-def save_crawled(data: list):
+def load_crawled_pending() -> dict:
+    """pending 데이터를 dict로 반환. pitch_pending/luna_pending 키."""
+    if CRAWLED_DATA_FILE.exists():
+        raw = json.loads(CRAWLED_DATA_FILE.read_text(encoding="utf-8"))
+        if isinstance(raw, dict):
+            return raw
+        return {"items": raw}
+    return {}
+
+def save_crawled(data):
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    CRAWLED_DATA_FILE.write_text(json.dumps(data[-5000:], ensure_ascii=False, indent=2), encoding="utf-8")
+    if isinstance(data, list):
+        data = data[-5000:]
+    CRAWLED_DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def load_outreach_status() -> dict:
+    """발송상태 추적 데이터. {email: {status, sent_at, template, followup_count}}"""
+    if OUTREACH_STATUS_FILE.exists():
+        return json.loads(OUTREACH_STATUS_FILE.read_text(encoding="utf-8"))
+    return {}
+
+def save_outreach_status(data: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    OUTREACH_STATUS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 def load_email_log() -> list:
     if EMAIL_LOG_FILE.exists():
@@ -4779,6 +4806,84 @@ async def api_pitch_outbound():
         "source": "live",
         "total_log": len(pitch_log),
     }
+
+
+@app.get("/api/outreach-status")
+async def api_outreach_status(agent: Optional[str] = None):
+    """발송상태 조회. 루나_클로드 시트 S~V열 매핑 기준."""
+    status = load_outreach_status()
+    if agent:
+        status = {k: v for k, v in status.items() if v.get("agent") == agent}
+    summary = {"total": len(status)}
+    for s in ["대기", "발송완료", "발송실패", "답변수신", "거절"]:
+        summary[s] = sum(1 for v in status.values() if v.get("status") == s)
+    return {
+        "column_spec": {
+            "S(18)": {"header": "발송상태", "values": ["대기", "발송완료", "발송실패", "답변수신", "거절"]},
+            "T(19)": {"header": "발송일시", "format": "YYYY-MM-DD HH:mm"},
+            "U(20)": {"header": "템플릿", "values": ["A", "B", "A_EN", "B_EN"]},
+            "V(21)": {"header": "팔로업횟수", "values": ["0", "1", "2", "3"]},
+        },
+        "summary": summary,
+        "records": dict(list(status.items())[:50]),
+    }
+
+
+@app.get("/api/pending-data")
+async def api_pending_data():
+    """시트에 못 쓴 pending 데이터 조회."""
+    pending = load_crawled_pending()
+    if isinstance(pending, dict):
+        luna = pending.get("luna_pending", [])
+        pitch = pending.get("pitch_pending", [])
+    else:
+        luna, pitch = [], []
+    return {"luna_pending": len(luna), "pitch_pending": len(pitch),
+            "luna_items": luna, "pitch_items": pitch}
+
+
+@app.post("/api/flush-pending")
+async def api_flush_pending(request: Request):
+    """pending 데이터를 발송큐에 등록하고 outreach_status에 기록. 시트 쓰기 불가 시 로컬 추적."""
+    body = await request.json()
+    agent = body.get("agent", "all")
+    pending = load_crawled_pending()
+    if not isinstance(pending, dict):
+        return {"status": "error", "message": "crawled_data.json is not dict format"}
+
+    outreach = load_outreach_status()
+    now_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+    flushed = {"luna": 0, "pitch": 0}
+
+    if agent in ("all", "luna", "루나"):
+        for row in pending.get("luna_pending", []):
+            email = ""
+            name = ""
+            if len(row) > 8 and "@" in str(row[8]):
+                email = str(row[8]).strip()
+                name = str(row[5]).strip() if len(row) > 5 else ""
+            elif len(row) > 9 and "@" in str(row[9]):
+                email = str(row[9]).strip()
+                name = str(row[6]).strip() if len(row) > 6 else ""
+            if email and email not in outreach:
+                outreach[email] = {"agent": "루나", "name": name, "status": "대기",
+                                   "registered_at": now_str, "sent_at": "", "template": "", "followup_count": 0}
+                flushed["luna"] += 1
+        pending["luna_pending"] = []
+
+    if agent in ("all", "pitch", "피치"):
+        for row in pending.get("pitch_pending", []):
+            email = str(row[2]).strip() if len(row) > 2 else ""
+            name = str(row[1]).strip() if len(row) > 1 else ""
+            if email and "@" in email and email not in outreach:
+                outreach[email] = {"agent": "피치", "name": name, "status": "대기",
+                                   "registered_at": now_str, "sent_at": "", "template": "", "followup_count": 0}
+                flushed["pitch"] += 1
+        pending["pitch_pending"] = []
+
+    save_crawled(pending)
+    save_outreach_status(outreach)
+    return {"status": "ok", "flushed": flushed, "total_outreach": len(outreach)}
 
 
 import asyncio
