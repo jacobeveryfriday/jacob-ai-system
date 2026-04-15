@@ -593,7 +593,11 @@ function renderMonthlyChart() {
   const labels = trend.map(t => t.month);
   const newData = trend.map(t => (t.new_sales || 0) / 10000);
   const renewData = trend.map(t => (t.renew_sales || 0) / 10000);
-  const contracts = trend.map(t => t.contracts || 0);
+  // contracts 필드가 연도(2025)로 잘못 파싱될 수 있으므로, total을 계약건수로 사용
+  const contracts = trend.map(t => {
+    const c = t.contracts || 0;
+    return c > 200 ? (t.total || 0) : c;  // 200 이상이면 연도 오파싱 → total 사용
+  });
 
   monthlyChart = new Chart(ctx, {
     type: 'bar',
