@@ -5283,6 +5283,157 @@ async def api_crm_summary():
         return {"ok": False, "error": str(e)}
 
 
+# ===== 매출 대시보드 API =====
+@app.get("/api/revenue-dashboard")
+async def api_revenue_dashboard():
+    """매출 대시보드 — 일별/월별 매출, 신규·재구매 구분, 상품(브랜드)별 비율."""
+    if not GSHEETS_API_KEY:
+        return {"ok": False, "note": "GOOGLE_SHEETS_API_KEY 미설정"}
+    try:
+        now = datetime.now(KST)
+        today_ymd = now.strftime("%Y%m%d")
+        today_iso = now.strftime("%Y-%m-%d")
+        this_ym = f"{now.year}{now.month:02d}"
+        prev_dt = now.replace(day=1) - timedelta(days=1)
+        prev_ym = f"{prev_dt.year}{prev_dt.month:02d}"
+
+        # 1) 세금계산서(계산서발행) → 일별 매출, 브랜드별, 신규/재계약
+        contract_rows = fetch_sheet(SHEET_CONTRACT, "A:Z", "계산서발행", ttl_key="contract")
+        ct = _parse_contracts(contract_rows) if contract_rows else {}
+
+        # 일별 매출 집계
+        daily_revenue = {}
+        brand_revenue = {}
+        hdr_idx = 0
+        if contract_rows and len(contract_rows) > 2:
+            hdr_idx_val = _find_header_row(contract_rows, "작성일자", "공급가액", "공급받는자")
+            headers = [str(h).replace("\n", " ").strip() for h in contract_rows[hdr_idx_val]]
+            data_rows = contract_rows[hdr_idx_val + 1:]
+            date_idx = _find_col(headers, "작성일자", "등록기준일", "발행일")
+            amount_idx = _find_col(headers, "공급가액")
+            brand_idx = _find_col(headers, "공급받는자 상호")
+            product_idx = _find_col(headers, "품목", "품명", "상품명", "대표상품")
+
+            for row in data_rows:
+                if not row or len(row) < 3:
+                    continue
+                def _g(idx):
+                    return str(row[idx]).strip() if idx is not None and idx < len(row) else ""
+                date_raw = _g(date_idx)
+                rev_raw = _g(amount_idx)
+                brand = _g(brand_idx)
+                product = _g(product_idx) if product_idx is not None else ""
+
+                try:
+                    rev = int(float(rev_raw.replace(",", "").replace("₩", "").replace(" ", ""))) if rev_raw and rev_raw not in ["-", ""] else 0
+                except (ValueError, TypeError):
+                    rev = 0
+                if rev <= 0:
+                    continue
+
+                date_clean = date_raw.replace("-", "").replace(".", "").replace("/", "").replace(" ", "")
+                if len(date_clean) < 6 or not date_clean[:6].isdigit():
+                    continue
+
+                # 이번달 일별 집계
+                if date_clean[:6] == this_ym:
+                    day_key = date_clean[:8]
+                    day_label = f"{day_key[4:6]}/{day_key[6:8]}"
+                    if day_label not in daily_revenue:
+                        daily_revenue[day_label] = {"total": 0, "new": 0, "renewal": 0}
+                    daily_revenue[day_label]["total"] += rev
+
+                    # 브랜드별 매출 (이번달)
+                    bname = brand or "미분류"
+                    brand_revenue[bname] = brand_revenue.get(bname, 0) + rev
+
+        # 일별 → sorted list
+        daily_list = []
+        for day in sorted(daily_revenue.keys()):
+            daily_list.append({"date": day, **daily_revenue[day]})
+
+        # 브랜드별 → Top 10
+        brand_top = sorted(brand_revenue.items(), key=lambda x: -x[1])[:10]
+
+        # 2) 월별매출&로하스 탭 → 월별 추이 + 신규/재계약 구분
+        monthly_trend = []
+        def _safe_val(row, idx):
+            if idx is None or idx >= len(row):
+                return 0
+            v = str(row[idx]).strip().replace(",", "").replace("₩", "")
+            if not v or v == "-" or v.startswith("#"):
+                return 0
+            try:
+                return int(float(v))
+            except:
+                return 0
+
+        try:
+            mr_rows = fetch_sheet(SHEET_CONTRACT, "A:H", "월별매출&로하스", ttl_key="contract")
+            if mr_rows and len(mr_rows) > 2:
+                mr_hdr_idx = 2
+                for ri, row in enumerate(mr_rows[:5]):
+                    rt = " ".join(str(c).replace("\n", " ") for c in row)
+                    if ("계약" in rt or "매출" in rt) and "월" in rt:
+                        mr_hdr_idx = ri
+                        break
+                mh = [str(h).replace("\n", " ").strip() for h in mr_rows[mr_hdr_idx]]
+                mc = {
+                    "month": _find_col(mh, "월") or 0,
+                    "contracts": _find_col(mh, "당월계약건수", "계약건수") or 1,
+                    "revenue": _find_col(mh, "매출합계") or 2,
+                    "new": _find_col(mh, "매출(신규)", "신규") or 3,
+                    "renew": _find_col(mh, "매출(재계약)", "재계약") or 4,
+                    "avg": _find_col(mh, "평균단가", "월별계약") or 7,
+                }
+                for row in mr_rows[mr_hdr_idx + 1:]:
+                    if not row or len(row) < 2:
+                        continue
+                    mv = str(row[mc["month"]]).strip() if mc["month"] < len(row) else ""
+                    if not mv or not (mv.startswith("2025") or mv.startswith("2026")):
+                        continue
+                    monthly_trend.append({
+                        "month": mv,
+                        "contracts": _safe_val(row, mc["contracts"]),
+                        "total": _safe_val(row, mc["revenue"]),
+                        "new_sales": _safe_val(row, mc["new"]),
+                        "renew_sales": _safe_val(row, mc["renew"]),
+                        "avg_price": _safe_val(row, mc["avg"]),
+                    })
+        except Exception as e:
+            print(f"[revenue-dashboard] 월별매출탭 error: {e}")
+
+        # 3) 요약
+        month_rev = ct.get("month_revenue", 0)
+        prev_rev = ct.get("prev_month_revenue", 0)
+        growth = round((month_rev - prev_rev) / max(prev_rev, 1) * 100, 1) if prev_rev > 0 else 0
+
+        return {
+            "ok": True,
+            "summary": {
+                "today_revenue": ct.get("today_revenue", 0),
+                "month_revenue": month_rev,
+                "prev_month_revenue": prev_rev,
+                "last_year_revenue": ct.get("last_year_revenue", 0),
+                "month_growth_pct": growth,
+                "month_contracts": ct.get("month_contract", 0),
+                "month_new": ct.get("month_new", 0),
+                "month_renewal": ct.get("month_renewal", 0),
+                "prev_month_new": ct.get("prev_month_new", 0),
+                "prev_month_renewal": ct.get("prev_month_renewal", 0),
+            },
+            "daily": daily_list,
+            "monthly_trend": monthly_trend,
+            "brand_top10": [{"brand": b, "revenue": r} for b, r in brand_top],
+            "today_brands": ct.get("today_brands", []),
+            "updated_at": now.isoformat(),
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"ok": False, "error": str(e)}
+
+
 if __name__ == "__main__":
     import uvicorn
     print("08L_AI Command Center -> http://localhost:8000")

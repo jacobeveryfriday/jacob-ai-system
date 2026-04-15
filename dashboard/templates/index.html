@@ -104,6 +104,19 @@ body{font-family:-apple-system,'Pretendard',sans-serif;background:var(--bg);colo
 .auto-refresh .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
+/* Chart */
+.chart-container{position:relative;background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:24px}
+.chart-container canvas{width:100%!important;max-height:280px}
+.chart-legend{display:flex;gap:16px;margin-top:12px;justify-content:center}
+.chart-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)}
+.chart-legend-dot{width:10px;height:10px;border-radius:3px}
+.bar-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.bar-label{font-size:13px;color:var(--text-secondary);width:120px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.bar-track{flex:1;height:28px;background:#F2F4F6;border-radius:6px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;transition:width .5s}
+.bar-fill span{font-size:11px;font-weight:700;color:#fff;white-space:nowrap}
+.bar-amount{font-size:12px;font-weight:700;color:var(--text-primary);width:90px;text-align:right;flex-shrink:0}
+
 /* Responsive */
 @media(max-width:768px){
 .sidebar{display:none}
@@ -123,6 +136,9 @@ body{font-family:-apple-system,'Pretendard',sans-serif;background:var(--bg);colo
 <div class="sidebar-logo"><span>08L</span> Sales Hub</div>
 <div class="nav-section">Overview</div>
 <a class="nav-item active" onclick="showPage('overview')"><div class="nav-icon">📊</div> 전체 현황</a>
+
+<div class="nav-section">Revenue</div>
+<a class="nav-item" onclick="showPage('revenue')"><div class="nav-icon">💰</div> 매출 현황</a>
 
 <div class="nav-section">Pipeline</div>
 <a class="nav-item" onclick="showPage('pitch')"><div class="nav-icon">🎯</div> 피치 (브랜드)</a>
@@ -254,6 +270,44 @@ body{font-family:-apple-system,'Pretendard',sans-serif;background:var(--bg);colo
 </div>
 </div>
 
+<!-- ===== REVENUE PAGE ===== -->
+<div data-page="revenue">
+<div class="kpi-row" id="revKpi">
+<div class="loading"><div class="spinner"></div>로딩 중...</div>
+</div>
+
+<div class="cards-grid">
+<div class="chart-container" style="grid-column:span 2">
+<div class="card-title">월별 매출 추이 (신규 vs 재계약) <span class="sheet-badge">Google Sheets</span></div>
+<canvas id="monthlyRevenueChart" height="260"></canvas>
+<div class="chart-legend">
+<div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--blue)"></div>신규 매출</div>
+<div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--orange)"></div>재계약 매출</div>
+<div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--text-tertiary)"></div>계약건수</div>
+</div>
+</div>
+</div>
+
+<div class="cards-grid">
+<div class="chart-container">
+<div class="card-title">이번달 일별 매출</div>
+<canvas id="dailyRevenueChart" height="220"></canvas>
+</div>
+<div class="card" id="revBrandCard">
+<div class="card-title">이번달 브랜드별 매출 TOP 10</div>
+</div>
+</div>
+
+<div class="cards-grid">
+<div class="card" id="revNewVsRenewalCard">
+<div class="card-title">신규 vs 재계약 비율</div>
+</div>
+<div class="card" id="revTodayCard">
+<div class="card-title">오늘 매출 상세</div>
+</div>
+</div>
+</div>
+
 <!-- ===== AGENTS PAGE ===== -->
 <div data-page="agents">
 <div class="kpi-row" id="agentKpi"></div>
@@ -262,10 +316,12 @@ body{font-family:-apple-system,'Pretendard',sans-serif;background:var(--bg);colo
 
 </div>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <script>
 // ===== State =====
-let pitchData = null, lunaData = null, crmData = null, revenueData = null;
+let pitchData = null, lunaData = null, crmData = null, revenueData = null, revDashData = null;
+let monthlyChart = null, dailyChart = null;
 
 // ===== Date =====
 const now = new Date();
@@ -278,7 +334,7 @@ function showPage(page) {
   document.querySelector(`[data-page="${page}"]`).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   event.currentTarget.classList.add('active');
-  const titles = {overview:'전체 현황', pitch:'피치 — 브랜드 영업', luna:'루나 — 인플루언서 모집', agents:'에이전트 현황'};
+  const titles = {overview:'전체 현황', revenue:'매출 현황', pitch:'피치 — 브랜드 영업', luna:'루나 — 인플루언서 모집', agents:'에이전트 현황'};
   document.getElementById('pageTitle').textContent = titles[page] || page;
 }
 
@@ -350,9 +406,17 @@ async function fetchRevenue() {
   } catch(e) { console.error('Revenue fetch error:', e); }
 }
 
+async function fetchRevDash() {
+  try {
+    const r = await fetch('/api/revenue-dashboard');
+    revDashData = await r.json();
+    renderRevDash();
+  } catch(e) { console.error('RevDash fetch error:', e); }
+}
+
 function refreshAll() {
   fetch('/api/cache-clear').then(() => {
-    fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue();
+    fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue(); fetchRevDash();
   });
 }
 
@@ -360,7 +424,17 @@ function refreshAll() {
 function renderOverview() {
   const ps = pitchData?.summary || {};
   const ls = lunaData?.summary || {};
+  const rs = revDashData?.summary || {};
+  const growth = rs.month_growth_pct || 0;
+  const growthCls = growth >= 0 ? 'up' : 'down';
+  const growthIcon = growth >= 0 ? '▲' : '▼';
   document.getElementById('overviewKpi').innerHTML = `
+    <div class="kpi-card orange">
+      <div class="kpi-label">💰 이번달 매출</div>
+      <div class="kpi-value">${fmtWon(rs.month_revenue)}</div>
+      <div class="kpi-sub">오늘 ${fmtWon(rs.today_revenue)}</div>
+      ${rs.month_revenue ? `<div class="kpi-change ${growthCls}">${growthIcon} ${Math.abs(growth)}% 전월대비</div>` : ''}
+    </div>
     <div class="kpi-card blue">
       <div class="kpi-label">🎯 피치 총 브랜드</div>
       <div class="kpi-value">${fmt(ps.total_brands)}</div>
@@ -372,14 +446,9 @@ function renderOverview() {
       <div class="kpi-sub">오늘 +${fmt(ls.today_new)} · 이번달 +${fmt(ls.month_new)}</div>
     </div>
     <div class="kpi-card green">
-      <div class="kpi-label">📧 피치 이메일 보유율</div>
-      <div class="kpi-value">${ps.email_rate || 0}%</div>
-      <div class="kpi-sub">${fmt(ps.has_email)} / ${fmt(ps.total_brands)}</div>
-    </div>
-    <div class="kpi-card orange">
-      <div class="kpi-label">👥 루나 총 팔로워</div>
-      <div class="kpi-value">${fmt(ls.total_followers_k)}K</div>
-      <div class="kpi-sub">이메일 ${fmt(ls.has_email)}명 · 연락처 ${fmt(ls.has_phone)}명</div>
+      <div class="kpi-label">📋 이번달 계약</div>
+      <div class="kpi-value">${fmt(rs.month_contracts)}건</div>
+      <div class="kpi-sub">신규 ${fmt(rs.month_new)} · 재계약 ${fmt(rs.month_renewal)}</div>
     </div>
   `;
 }
@@ -426,28 +495,228 @@ function renderCrm() {
 
 function renderRevenue() {
   const el = document.getElementById('overviewRevenueCard');
-  if (!revenueData?.revenue) {
+  const s = revDashData?.summary;
+  if (!s) {
     el.innerHTML = `<div class="card-title">이번달 매출 <span class="sheet-badge">Google Sheets</span></div>
       <div style="color:var(--text-tertiary);font-size:13px">매출 데이터 로딩 중...</div>`;
     return;
   }
-  const rev = revenueData.revenue;
+  const mRev = s.month_revenue || 0;
+  const growth = s.month_growth_pct || 0;
+  const growthCls = growth >= 0 ? 'up' : 'down';
+  const growthIcon = growth >= 0 ? '▲' : '▼';
   el.innerHTML = `
     <div class="card-title">이번달 매출 <span class="sheet-badge">Google Sheets</span></div>
     <div style="text-align:center;padding:24px;background:var(--orange-light);border-radius:12px;margin-bottom:16px">
-      <div style="font-size:32px;font-weight:800;color:var(--orange)">${rev.month_revenue_display || '—'}</div>
+      <div style="font-size:32px;font-weight:800;color:var(--orange)">${fmtWon(mRev)}</div>
       <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">이번달 누적</div>
+      <div class="kpi-change ${growthCls}" style="margin-top:4px">${growthIcon} ${Math.abs(growth)}% 전월대비</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div style="padding:12px;background:#FAFBFC;border-radius:10px;text-align:center">
-        <div style="font-size:18px;font-weight:700">${fmt(rev.new_contracts || 0)}건</div>
+        <div style="font-size:18px;font-weight:700">${fmt(s.month_new || 0)}건</div>
         <div style="font-size:11px;color:var(--text-tertiary)">신규 계약</div>
       </div>
       <div style="padding:12px;background:#FAFBFC;border-radius:10px;text-align:center">
-        <div style="font-size:18px;font-weight:700">${fmt(rev.renewals || 0)}건</div>
+        <div style="font-size:18px;font-weight:700">${fmt(s.month_renewal || 0)}건</div>
         <div style="font-size:11px;color:var(--text-tertiary)">재계약</div>
       </div>
     </div>
+  `;
+}
+
+function fmtWon(n) {
+  if (n == null || n === 0) return '—';
+  if (n >= 100000000) return (n / 100000000).toFixed(1) + '억';
+  if (n >= 10000) return Math.round(n / 10000).toLocaleString() + '만';
+  return n.toLocaleString() + '원';
+}
+
+// ===== Render Revenue Dashboard =====
+function renderRevDash() {
+  if (!revDashData?.ok) return;
+  const s = revDashData.summary;
+  const growth = s.month_growth_pct || 0;
+  const growthCls = growth >= 0 ? 'up' : 'down';
+  const growthIcon = growth >= 0 ? '▲' : '▼';
+
+  // KPI Cards
+  document.getElementById('revKpi').innerHTML = `
+    <div class="kpi-card orange">
+      <div class="kpi-label">💰 이번달 매출</div>
+      <div class="kpi-value">${fmtWon(s.month_revenue)}</div>
+      <div class="kpi-change ${growthCls}">${growthIcon} ${Math.abs(growth)}% 전월대비</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-label">📅 오늘 매출</div>
+      <div class="kpi-value">${fmtWon(s.today_revenue)}</div>
+      <div class="kpi-sub">오늘 ${fmt(revDashData.today_brands?.length || 0)}건 발행</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">🆕 신규 계약</div>
+      <div class="kpi-value">${fmt(s.month_new)}건</div>
+      <div class="kpi-sub">전월 ${fmt(s.prev_month_new)}건</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">🔄 재계약</div>
+      <div class="kpi-value">${fmt(s.month_renewal)}건</div>
+      <div class="kpi-sub">전월 ${fmt(s.prev_month_renewal)}건</div>
+    </div>
+  `;
+
+  // Monthly Revenue Chart (bar + line)
+  renderMonthlyChart();
+
+  // Daily Revenue Chart
+  renderDailyChart();
+
+  // Brand Top 10
+  renderBrandTop10();
+
+  // New vs Renewal ratio
+  renderNewVsRenewal();
+
+  // Today detail
+  renderTodayRevenue();
+
+  // Also update overview card
+  renderRevenue();
+}
+
+function renderMonthlyChart() {
+  const trend = revDashData.monthly_trend || [];
+  if (!trend.length) return;
+  const ctx = document.getElementById('monthlyRevenueChart');
+  if (!ctx) return;
+  if (monthlyChart) monthlyChart.destroy();
+
+  const labels = trend.map(t => t.month);
+  const newData = trend.map(t => (t.new_sales || 0) / 10000);
+  const renewData = trend.map(t => (t.renew_sales || 0) / 10000);
+  const contracts = trend.map(t => t.contracts || 0);
+
+  monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '신규 매출(만원)', data: newData, backgroundColor: '#3182F6', borderRadius: 4, order: 2 },
+        { label: '재계약 매출(만원)', data: renewData, backgroundColor: '#F97316', borderRadius: 4, order: 2 },
+        { label: '계약건수', data: contracts, type: 'line', borderColor: '#ADB5BD', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#ADB5BD', yAxisID: 'y1', order: 1 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { stacked: true, ticks: { font: { size: 11 }, callback: v => fmtWon(v * 10000) }, grid: { color: '#F2F4F6' } },
+        y1: { position: 'right', grid: { display: false }, ticks: { font: { size: 11 }, callback: v => v + '건' }, suggestedMin: 0 },
+      }
+    }
+  });
+}
+
+function renderDailyChart() {
+  const daily = revDashData.daily || [];
+  if (!daily.length) return;
+  const ctx = document.getElementById('dailyRevenueChart');
+  if (!ctx) return;
+  if (dailyChart) dailyChart.destroy();
+
+  dailyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: daily.map(d => d.date),
+      datasets: [{
+        label: '일별 매출(만원)',
+        data: daily.map(d => (d.total || 0) / 10000),
+        backgroundColor: daily.map((d, i) => i === daily.length - 1 ? '#F97316' : '#3182F6'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { ticks: { font: { size: 11 }, callback: v => fmtWon(v * 10000) }, grid: { color: '#F2F4F6' } },
+      }
+    }
+  });
+}
+
+function renderBrandTop10() {
+  const brands = revDashData.brand_top10 || [];
+  const el = document.getElementById('revBrandCard');
+  if (!brands.length) {
+    el.innerHTML = '<div class="card-title">이번달 브랜드별 매출 TOP 10</div><div style="color:var(--text-tertiary);font-size:13px">데이터 없음</div>';
+    return;
+  }
+  const max = brands[0]?.revenue || 1;
+  const colors = ['#3182F6','#7C3AED','#F97316','#34C759','#FF3B30','#3182F6','#7C3AED','#F97316','#34C759','#FF3B30'];
+  el.innerHTML = `<div class="card-title">이번달 브랜드별 매출 TOP 10</div>` +
+    brands.map((b, i) => `
+      <div class="bar-row">
+        <div class="bar-label">${b.brand}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${b.revenue/max*100}%;background:${colors[i%10]}"><span>${fmtWon(b.revenue)}</span></div></div>
+      </div>`).join('');
+}
+
+function renderNewVsRenewal() {
+  const s = revDashData.summary;
+  const el = document.getElementById('revNewVsRenewalCard');
+  const total = (s.month_new || 0) + (s.month_renewal || 0);
+  const newPct = total > 0 ? Math.round(s.month_new / total * 100) : 0;
+  const renewPct = total > 0 ? 100 - newPct : 0;
+
+  el.innerHTML = `
+    <div class="card-title">신규 vs 재계약 비율</div>
+    <div style="display:flex;height:24px;border-radius:8px;overflow:hidden;margin:16px 0">
+      <div style="width:${newPct}%;background:var(--blue);transition:width .5s"></div>
+      <div style="width:${renewPct}%;background:var(--orange);transition:width .5s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:13px">
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--blue);border-radius:3px;margin-right:6px"></span>신규 ${newPct}% (${fmt(s.month_new)}건)</div>
+      <div><span style="display:inline-block;width:10px;height:10px;background:var(--orange);border-radius:3px;margin-right:6px"></span>재계약 ${renewPct}% (${fmt(s.month_renewal)}건)</div>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">전월 비교</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="padding:12px;background:var(--blue-light);border-radius:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:var(--blue)">${fmt(s.month_new)} → ${fmt(s.prev_month_new)}</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">신규 (이번달 → 전월)</div>
+        </div>
+        <div style="padding:12px;background:var(--orange-light);border-radius:10px;text-align:center">
+          <div style="font-size:16px;font-weight:700;color:var(--orange)">${fmt(s.month_renewal)} → ${fmt(s.prev_month_renewal)}</div>
+          <div style="font-size:11px;color:var(--text-tertiary)">재계약 (이번달 → 전월)</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTodayRevenue() {
+  const el = document.getElementById('revTodayCard');
+  const brands = revDashData.today_brands || [];
+  const todayRev = revDashData.summary?.today_revenue || 0;
+
+  if (!brands.length) {
+    el.innerHTML = `<div class="card-title">오늘 매출 상세</div>
+      <div style="text-align:center;padding:32px;color:var(--text-tertiary);font-size:13px">오늘 발행된 계산서가 없습니다</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="card-title">오늘 매출 상세 <span style="font-size:14px;font-weight:800;color:var(--orange)">${fmtWon(todayRev)}</span></div>
+    <table class="data-table">
+      <thead><tr><th>브랜드</th><th>유형</th><th>담당자</th><th style="text-align:right">금액</th></tr></thead>
+      <tbody>${brands.map(b => `<tr>
+        <td style="font-weight:600">${b.name}</td>
+        <td>${b.type === '재계약' ? '<span class="status-tag review">재계약</span>' : '<span class="status-tag success">신규</span>'}</td>
+        <td>${b.staff || '-'}</td>
+        <td style="text-align:right;font-weight:700;font-family:monospace">${fmtWon(b.revenue)}</td>
+      </tr>`).join('')}</tbody>
+    </table>
   `;
 }
 
@@ -561,9 +830,10 @@ fetchPitch();
 fetchLuna();
 fetchCrm();
 fetchRevenue();
+fetchRevDash();
 
 // Auto-refresh every 5 minutes
-setInterval(() => { fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue(); }, 300000);
+setInterval(() => { fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue(); fetchRevDash(); }, 300000);
 </script>
 </body>
 </html>
