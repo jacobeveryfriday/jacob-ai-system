@@ -1606,16 +1606,19 @@ async def api_ads_performance():
     try:
         mr_rows = fetch_sheet(SHEET_CONTRACT, "A:H", "월별매출&로하스", ttl_key="contract")
         if mr_rows and len(mr_rows) > 2:
-            mr_hdr_idx = 2
-            for ri, row in enumerate(mr_rows[:5]):
+            mr_hdr_idx = 3  # 기본: row3이 실제 헤더
+            for ri, row in enumerate(mr_rows[:6]):
                 rt = " ".join(str(c).replace("\n"," ") for c in row)
-                if ("계약" in rt or "매출" in rt) and "월" in rt: mr_hdr_idx = ri; break
+                if "당월계약건수" in rt or ("매출합계" in rt and "월" in rt): mr_hdr_idx = ri; break
             mh = [str(h).replace("\n"," ").strip() for h in mr_rows[mr_hdr_idx]]
             print(f"[ads-perf] 월별매출 헤더(row{mr_hdr_idx}): {mh}")
-            mc = {"month": _find_col(mh,"월") or 0, "contracts": _find_col(mh,"당월계약건수","계약건수") or 1,
-                  "revenue": _find_col(mh,"매출합계") or 2, "new": _find_col(mh,"매출(신규)","신규") or 3,
-                  "renew": _find_col(mh,"매출(재계약)","재계약") or 4,
-                  "roas": _find_col(mh,"ROAS","로하스") or 6, "avg": _find_col(mh,"평균단가","월별계약") or 7}
+            def _fc_ads(default, *kw):
+                v = _find_col(mh, *kw)
+                return v if v is not None else default
+            mc = {"month": _fc_ads(1,"월"), "contracts": _fc_ads(2,"당월계약건수","계약건수"),
+                  "revenue": _fc_ads(3,"매출합계"), "new": _fc_ads(4,"매출(신규)","신규"),
+                  "renew": _fc_ads(5,"매출(재계약)","재계약"),
+                  "roas": _fc_ads(7,"ROAS","로하스"), "avg": _fc_ads(7,"평균단가","월별계약")}
             print(f"[ads-perf] 월별매출 컬럼: {mc}")
             for row in mr_rows[mr_hdr_idx+1:]:
                 if not row or len(row) < 2: continue
@@ -5371,10 +5374,12 @@ async def api_revenue_dashboard():
         try:
             mr_rows = fetch_sheet(SHEET_CONTRACT, "A:H", "월별매출&로하스", ttl_key="contract")
             if mr_rows and len(mr_rows) > 2:
-                mr_hdr_idx = 2
-                for ri, row in enumerate(mr_rows[:5]):
+                mr_hdr_idx = 3  # 기본: row3이 실제 헤더
+                for ri, row in enumerate(mr_rows[:6]):
                     rt = " ".join(str(c).replace("\n", " ") for c in row)
-                    if ("계약" in rt or "매출" in rt) and "월" in rt:
+                    # 타이틀 행("[월별 매출&ROAS]")과 구분하기 위해
+                    # "당월계약건수" 또는 "매출합계"가 포함된 행을 찾음
+                    if "당월계약건수" in rt or ("매출합계" in rt and "월" in rt):
                         mr_hdr_idx = ri
                         break
                 mh = [str(h).replace("\n", " ").strip() for h in mr_rows[mr_hdr_idx]]
@@ -5382,11 +5387,11 @@ async def api_revenue_dashboard():
                     v = _find_col(mh, *kw)
                     return v if v is not None else default
                 mc = {
-                    "month": _fc(0, "월"),
-                    "contracts": _fc(1, "당월계약건수", "계약건수"),
-                    "revenue": _fc(2, "매출합계"),
-                    "new": _fc(3, "매출(신규)", "신규"),
-                    "renew": _fc(4, "매출(재계약)", "재계약"),
+                    "month": _fc(1, "월"),
+                    "contracts": _fc(2, "당월계약건수", "계약건수"),
+                    "revenue": _fc(3, "매출합계"),
+                    "new": _fc(4, "매출(신규)", "신규"),
+                    "renew": _fc(5, "매출(재계약)", "재계약"),
                     "avg": _fc(7, "평균단가", "월별계약"),
                 }
                 print(f"[revenue-dashboard] 월별매출 헤더: {mh}")
