@@ -4961,6 +4961,324 @@ _cache_warm()
 _bg_thread = threading.Thread(target=_cache_refresh_loop, daemon=True)
 _bg_thread.start()
 
+
+# ===== 피치(Pitch) 파이프라인 API =====
+SHEET_PITCH = "1ISL7s96ylMGhZzxeC0ABzwHgZWszA7yqoY_deXPMce8"
+PITCH_TAB = "피치_클로드"
+
+@app.get("/api/pitch-pipeline")
+async def api_pitch_pipeline():
+    """피치 파이프라인 현황 — Google Sheets 피치_클로드 탭 기준."""
+    rows = fetch_sheet(SHEET_PITCH, "A:N", PITCH_TAB, ttl_key="default")
+    if not rows or len(rows) < 2:
+        return {"ok": False, "note": "데이터 없음 또는 시트 연결 실패"}
+
+    headers = [str(c).strip() for c in rows[0]]
+    data_rows = rows[1:]
+
+    now = _kst_now()
+    today_str = now.strftime("%Y-%m-%d")
+    this_month = now.strftime("%Y-%m")
+
+    col_date = _find_col(headers, "디비확보", "날짜", "수집일자")
+    col_category = _find_col(headers, "카테고리")
+    col_brand = _find_col(headers, "브랜드명", "브랜드")
+    col_product = _find_col(headers, "대표상품")
+    col_marketplace = _find_col(headers, "마켓플레이스")
+    col_email = _find_col(headers, "이메일")
+    col_phone = _find_col(headers, "연락처")
+    col_source = _find_col(headers, "출처", "DB확보")
+    col_collect_date = _find_col(headers, "수집일자", "수집")
+    col_status = _find_col(headers, "발송상태", "상태")
+    col_staff = _find_col(headers, "확보담당자", "담당자")
+
+    total = 0
+    status_counts = {}
+    today_new = 0
+    month_new = 0
+    category_counts = {}
+    source_counts = {}
+    staff_counts = {}
+    has_email = 0
+    has_phone = 0
+    recent_brands = []
+
+    for row in data_rows:
+        if not row or len(row) < 3:
+            continue
+        def _g(idx):
+            return str(row[idx]).strip() if len(row) > idx and idx >= 0 else ""
+
+        total += 1
+        status = _g(col_status)
+        if status:
+            status_counts[status] = status_counts.get(status, 0) + 1
+
+        cat = _g(col_category)
+        if cat:
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        src = _g(col_source)
+        if src:
+            source_counts[src] = source_counts.get(src, 0) + 1
+
+        staff = _g(col_staff)
+        if staff:
+            staff_counts[staff] = staff_counts.get(staff, 0) + 1
+
+        if _g(col_email):
+            has_email += 1
+        if _g(col_phone):
+            has_phone += 1
+
+        collect_date = _g(col_collect_date) or _g(col_date)
+        if collect_date:
+            try:
+                if "T" in collect_date:
+                    collect_date = collect_date.split("T")[0]
+                if collect_date.startswith(today_str):
+                    today_new += 1
+                if collect_date.startswith(this_month):
+                    month_new += 1
+            except Exception:
+                pass
+
+        brand_name = _g(col_brand)
+        if brand_name and total <= 500:
+            recent_brands.append({
+                "brand": brand_name,
+                "category": cat,
+                "product": _g(col_product),
+                "status": status,
+                "date": collect_date,
+                "email": bool(_g(col_email)),
+                "phone": bool(_g(col_phone)),
+                "staff": staff,
+            })
+
+    pipeline = {
+        "미발송": status_counts.get("미발송", 0) + status_counts.get("", 0),
+        "발송성공": status_counts.get("발송성공", 0),
+        "발송실패": status_counts.get("발송실패", 0),
+        "응답": status_counts.get("응답", 0) + status_counts.get("회신", 0),
+        "미팅": status_counts.get("미팅", 0) + status_counts.get("미팅완료", 0),
+        "계약": status_counts.get("계약", 0) + status_counts.get("계약완료", 0),
+    }
+
+    return {
+        "ok": True,
+        "summary": {
+            "total_brands": total,
+            "today_new": today_new,
+            "month_new": month_new,
+            "has_email": has_email,
+            "has_phone": has_phone,
+            "email_rate": round(has_email / max(total, 1) * 100, 1),
+        },
+        "pipeline": pipeline,
+        "status_counts": status_counts,
+        "category_top5": dict(sorted(category_counts.items(), key=lambda x: -x[1])[:5]),
+        "source_counts": source_counts,
+        "staff_counts": staff_counts,
+        "recent_brands": recent_brands[-20:],
+        "updated_at": now.isoformat(),
+    }
+
+
+# ===== 루나(Luna) 파이프라인 API =====
+LUNA_TAB = "루나_클로드"
+
+@app.get("/api/luna-pipeline")
+async def api_luna_pipeline():
+    """루나 파이프라인 현황 — Google Sheets 루나_클로드 탭 기준."""
+    rows = fetch_sheet(SHEET_INFLUENCER, "A:S", LUNA_TAB, ttl_key="default")
+    if not rows or len(rows) < 2:
+        return {"ok": False, "note": "데이터 없음 또는 시트 연결 실패"}
+
+    headers = [str(c).strip() for c in rows[0]]
+    data_rows = rows[1:]
+
+    now = _kst_now()
+    today_str = now.strftime("%Y-%m-%d")
+    this_month = now.strftime("%Y-%m")
+
+    col_date = _find_col(headers, "컨택날짜", "날짜")
+    col_staff = _find_col(headers, "모집 담당자", "담당자")
+    col_type = _find_col(headers, "모집형태")
+    col_country = _find_col(headers, "국가")
+    col_category = _find_col(headers, "카테고리")
+    col_platform = _find_col(headers, "플랫폼")
+    col_name = _find_col(headers, "인플루언서", "채널명")
+    col_link = _find_col(headers, "계정 링크", "링크")
+    col_followers = _find_col(headers, "팔로워", "팔로워 수")
+    col_email = _find_col(headers, "이메일")
+    col_phone = _find_col(headers, "연락처")
+    col_status = _find_col(headers, "진행 상태", "상태")
+    col_currency = _find_col(headers, "통화")
+    col_price = _find_col(headers, "협업단가")
+
+    total = 0
+    status_counts = {}
+    today_new = 0
+    month_new = 0
+    country_counts = {}
+    platform_counts = {}
+    category_counts = {}
+    staff_counts = {}
+    has_email = 0
+    has_phone = 0
+    total_followers_k = 0
+    recent_influencers = []
+
+    for row in data_rows:
+        if not row or len(row) < 3:
+            continue
+        def _g(idx):
+            return str(row[idx]).strip() if len(row) > idx and idx >= 0 else ""
+
+        total += 1
+        status = _g(col_status)
+        if status:
+            status_counts[status] = status_counts.get(status, 0) + 1
+
+        country = _g(col_country)
+        if country:
+            country_counts[country] = country_counts.get(country, 0) + 1
+
+        platform = _g(col_platform)
+        if platform:
+            platform_counts[platform] = platform_counts.get(platform, 0) + 1
+
+        cat = _g(col_category)
+        if cat:
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        staff = _g(col_staff)
+        if staff:
+            staff_counts[staff] = staff_counts.get(staff, 0) + 1
+
+        if _g(col_email):
+            has_email += 1
+        if _g(col_phone):
+            has_phone += 1
+
+        followers_str = _g(col_followers)
+        try:
+            fk = float(followers_str.replace(",", "").replace("K", "").replace("k", ""))
+            total_followers_k += fk
+        except Exception:
+            pass
+
+        contact_date = _g(col_date)
+        if contact_date:
+            try:
+                if "T" in contact_date:
+                    contact_date = contact_date.split("T")[0]
+                if contact_date.startswith(today_str):
+                    today_new += 1
+                if contact_date.startswith(this_month):
+                    month_new += 1
+            except Exception:
+                pass
+
+        inf_name = _g(col_name)
+        if inf_name:
+            recent_influencers.append({
+                "name": inf_name,
+                "platform": platform,
+                "country": country,
+                "followers_k": followers_str,
+                "status": status,
+                "date": contact_date,
+                "category": cat,
+                "staff": staff,
+            })
+
+    pipeline = {
+        "단순리스트업": status_counts.get("단순리스트업", 0),
+        "제안발송": status_counts.get("제안발송", 0) + status_counts.get("발송완료", 0),
+        "응답대기": status_counts.get("응답대기", 0),
+        "협상중": status_counts.get("협상중", 0) + status_counts.get("단가협의", 0),
+        "계약완료": status_counts.get("계약완료", 0) + status_counts.get("캠페인진행", 0),
+    }
+
+    return {
+        "ok": True,
+        "summary": {
+            "total_influencers": total,
+            "today_new": today_new,
+            "month_new": month_new,
+            "has_email": has_email,
+            "has_phone": has_phone,
+            "total_followers_k": round(total_followers_k, 1),
+        },
+        "pipeline": pipeline,
+        "status_counts": status_counts,
+        "country_top5": dict(sorted(country_counts.items(), key=lambda x: -x[1])[:5]),
+        "platform_counts": platform_counts,
+        "category_top5": dict(sorted(category_counts.items(), key=lambda x: -x[1])[:5]),
+        "staff_counts": staff_counts,
+        "recent_influencers": recent_influencers[-20:],
+        "updated_at": now.isoformat(),
+    }
+
+
+# ===== CRM 브랜드 통합 수치 API =====
+CRM_API_URL = os.getenv("CRM_API_URL", "https://mcp-crm.08liter.com")
+CRM_API_KEY = os.getenv("CRM_API_KEY", "")
+
+@app.get("/api/crm-summary")
+async def api_crm_summary():
+    """MCP CRM에서 브랜드/캠페인 총 수치 조회."""
+    if not CRM_API_KEY:
+        return {"ok": False, "note": "CRM_API_KEY 미설정"}
+    try:
+        import httpx as _httpx
+        async with _httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{CRM_API_URL}/api/tools/search_brands",
+                headers={"Authorization": f"Bearer {CRM_API_KEY}", "Content-Type": "application/json"},
+                json={"hasVerifiedContact": True, "limit": 1, "offset": 0}
+            )
+            brand_data = resp.json()
+            total_brands = brand_data.get("data", {}).get("count", 0)
+
+            resp2 = await client.post(
+                f"{CRM_API_URL}/api/tools/search_campaigns",
+                headers={"Authorization": f"Bearer {CRM_API_KEY}", "Content-Type": "application/json"},
+                json={"statusCodes": ["1209"], "limit": 1}
+            )
+            campaign_data = resp2.json()
+            total_campaigns = campaign_data.get("data", {}).get("count", 0)
+
+            resp3 = await client.post(
+                f"{CRM_API_URL}/api/tools/list_segments",
+                headers={"Authorization": f"Bearer {CRM_API_KEY}", "Content-Type": "application/json"},
+                json={"limit": 100}
+            )
+            seg_data = resp3.json()
+            segments = seg_data.get("data", {}).get("segments", [])
+
+            resp4 = await client.post(
+                f"{CRM_API_URL}/api/tools/list_drafts",
+                headers={"Authorization": f"Bearer {CRM_API_KEY}", "Content-Type": "application/json"},
+                json={"limit": 100}
+            )
+            draft_data = resp4.json()
+            drafts = draft_data.get("data", {}).get("drafts", [])
+
+        return {
+            "ok": True,
+            "total_brands_crm": total_brands,
+            "total_campaigns": total_campaigns,
+            "segments": segments,
+            "drafts": drafts,
+            "updated_at": _kst_now().isoformat(),
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 if __name__ == "__main__":
     import uvicorn
     print("08L_AI Command Center -> http://localhost:8000")
