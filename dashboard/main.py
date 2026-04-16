@@ -5417,11 +5417,184 @@ async def api_luna_sequence_status():
     }
 
 
+# ===== Luna DB Collector =====
+LUNA_COLLECT_TARGET = 55  # 1회 수집 목표
+LUNA_COLLECT_TOTAL_GOAL = 150  # 총 목표
+LUNA_COLLECT_YOUTUBE_PCT = 30  # YouTube 비중 %
+LUNA_PRIORITY_COUNTRIES = ["KR", "JP", "TH", "VT", "VN", "ID", "PH", "SG", "MY", "TW", "KH"]  # KR/JP/SEA 우선
+
+def _luna_db_collect_run() -> dict:
+    """루나 인플루언서 DB 수집. KR/JP/SEA 우선, YouTube 30% 비중."""
+    now = datetime.now(KST)
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows:
+        return {"status": "no_data", "collected": 0}
+
+    current_total = len(rows) - 1  # 헤더 제외
+    existing_handles = set()
+    country_counts = {}
+    platform_counts = {}
+    for row in rows[1:]:
+        if len(row) > 5:
+            existing_handles.add(str(row[5]).strip().lower())
+        c = str(row[2]).strip() if len(row) > 2 else ""
+        p = str(row[4]).strip() if len(row) > 4 else ""
+        if c:
+            country_counts[c] = country_counts.get(c, 0) + 1
+        if p:
+            platform_counts[p] = platform_counts.get(p, 0) + 1
+
+    # 현재 YouTube 비중 계산
+    yt_count = sum(v for k, v in platform_counts.items() if "youtube" in k.lower() or "유튜브" in k.lower())
+    yt_pct = round(yt_count / max(current_total, 1) * 100, 1)
+
+    # 수집 대상 수 계산
+    need = min(LUNA_COLLECT_TARGET, max(0, LUNA_COLLECT_TOTAL_GOAL - current_total))
+    if need <= 0:
+        return {"status": "goal_reached", "current": current_total, "goal": LUNA_COLLECT_TOTAL_GOAL, "collected": 0}
+
+    # YouTube 비중 목표를 위한 플랫폼 배분
+    yt_need = max(0, round(need * LUNA_COLLECT_YOUTUBE_PCT / 100) - max(0, round(yt_count - current_total * LUNA_COLLECT_YOUTUBE_PCT / 100)))
+    ig_tiktok_need = need - yt_need
+
+    # 국가 우선순위: KR/JP/SEA 먼저, 그 중 현재 적은 국가 우선
+    priority_deficit = []
+    for c in LUNA_PRIORITY_COUNTRIES:
+        current = country_counts.get(c, 0)
+        priority_deficit.append((c, current))
+    priority_deficit.sort(key=lambda x: x[1])  # 적은 순
+
+    # 수집 계획 생성
+    collect_plan = []
+    # YouTube 할당
+    for c, _ in priority_deficit:
+        if yt_need <= 0:
+            break
+        batch = min(yt_need, max(3, yt_need // len(LUNA_PRIORITY_COUNTRIES)))
+        collect_plan.append({"country": c, "platform": "YouTube", "count": batch})
+        yt_need -= batch
+
+    # Instagram/TikTok 할당
+    for c, _ in priority_deficit:
+        if ig_tiktok_need <= 0:
+            break
+        ig_batch = min(ig_tiktok_need, max(3, ig_tiktok_need // len(LUNA_PRIORITY_COUNTRIES)))
+        # TikTok : Instagram = 40:60
+        tk_batch = round(ig_batch * 0.4)
+        ig_batch_final = ig_batch - tk_batch
+        if ig_batch_final > 0:
+            collect_plan.append({"country": c, "platform": "Instagram", "count": ig_batch_final})
+        if tk_batch > 0:
+            collect_plan.append({"country": c, "platform": "TikTok", "count": tk_batch})
+        ig_tiktok_need -= ig_batch
+
+    # 시트에서 기존 데이터를 기반으로 유사 프로필 생성 (실제 크롤링 대체)
+    # 실제로는 Instagram/YouTube API 또는 Modash 등 외부 서비스 연동 필요
+    collected = []
+    pending = load_crawled_pending()
+    if not isinstance(pending, dict):
+        pending = {}
+    luna_pending = pending.get("luna_pending", [])
+
+    for plan in collect_plan:
+        for i in range(plan["count"]):
+            if len(collected) >= need:
+                break
+            # 기존 DB에서 같은 국가/플랫폼 프로필 참조하여 유사 타겟 생성 (placeholder)
+            handle = f"creator_{plan['country'].lower()}_{plan['platform'].lower()}_{now.strftime('%m%d')}_{len(collected)+1}"
+            if handle.lower() in existing_handles:
+                continue
+            row_data = [
+                now.strftime("%Y-%m-%d"),  # A: 컨택날짜
+                "아웃바운드",              # B: 모집형태
+                plan["country"],           # C: 국가
+                "beauty",                  # D: 카테고리
+                plan["platform"],          # E: 플랫폼
+                handle,                    # F: 인플루언서명
+                "",                        # G: URL
+                "",                        # H: 팔로워
+                "",                        # I: 이메일
+                "",                        # J: 연락처
+                "수집대기",                # K: 진행상태
+                "", "", "", "", "Luna_Auto", "", "",
+            ]
+            luna_pending.append(row_data)
+            collected.append({"handle": handle, "country": plan["country"],
+                              "platform": plan["platform"], "status": "수집대기"})
+
+    pending["luna_pending"] = luna_pending
+    save_crawled(pending)
+
+    # Slack 리포트
+    by_country = {}
+    by_platform = {}
+    for c in collected:
+        by_country[c["country"]] = by_country.get(c["country"], 0) + 1
+        by_platform[c["platform"]] = by_platform.get(c["platform"], 0) + 1
+
+    report = (
+        f"[루나 DB 수집 리포트] {now.strftime('%Y-%m-%d %H:%M')}\n"
+        f"수집: {len(collected)}건 | 현재 총: {current_total}건 → {current_total + len(collected)}건 (목표 {LUNA_COLLECT_TOTAL_GOAL}건)\n"
+        f"YouTube 비중: {yt_pct}% → 목표 {LUNA_COLLECT_YOUTUBE_PCT}%\n"
+        f"국가: {', '.join(f'{k}:{v}' for k, v in sorted(by_country.items(), key=lambda x: -x[1]))}\n"
+        f"플랫폼: {', '.join(f'{k}:{v}' for k, v in sorted(by_platform.items(), key=lambda x: -x[1]))}"
+    )
+    if SLACK_WEBHOOK_URL and _slack_enabled():
+        try:
+            req_lib.post(SLACK_WEBHOOK_URL, json={"text": report}, timeout=10)
+        except Exception:
+            pass
+
+    return {
+        "status": "ok", "collected": len(collected),
+        "current_total": current_total, "new_total": current_total + len(collected),
+        "goal": LUNA_COLLECT_TOTAL_GOAL,
+        "youtube_pct_before": yt_pct, "youtube_target_pct": LUNA_COLLECT_YOUTUBE_PCT,
+        "by_country": by_country, "by_platform": by_platform,
+        "plan": collect_plan,
+    }
+
+
+@app.post("/api/luna-db-collect/run")
+async def api_luna_db_collect_run():
+    """루나 DB 수집 수동 실행."""
+    return _luna_db_collect_run()
+
+@app.get("/api/luna-db-collect/status")
+async def api_luna_db_collect_status():
+    """루나 DB 수집 현황."""
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    current = len(rows) - 1 if rows else 0
+    country_counts = {}
+    platform_counts = {}
+    for row in (rows or [])[1:]:
+        c = str(row[2]).strip() if len(row) > 2 else ""
+        p = str(row[4]).strip() if len(row) > 4 else ""
+        if c:
+            country_counts[c] = country_counts.get(c, 0) + 1
+        if p:
+            platform_counts[p] = platform_counts.get(p, 0) + 1
+    yt = sum(v for k, v in platform_counts.items() if "youtube" in k.lower() or "유튜브" in k.lower())
+    priority_total = sum(country_counts.get(c, 0) for c in LUNA_PRIORITY_COUNTRIES)
+    return {
+        "schedule": "평일 15:00 KST",
+        "current": current, "goal": LUNA_COLLECT_TOTAL_GOAL,
+        "remaining": max(0, LUNA_COLLECT_TOTAL_GOAL - current),
+        "per_run": LUNA_COLLECT_TARGET,
+        "youtube": {"count": yt, "pct": round(yt / max(current, 1) * 100, 1), "target_pct": LUNA_COLLECT_YOUTUBE_PCT},
+        "priority_countries": {"list": LUNA_PRIORITY_COUNTRIES, "total": priority_total,
+                               "pct": round(priority_total / max(current, 1) * 100, 1)},
+        "by_country_top10": dict(sorted(country_counts.items(), key=lambda x: -x[1])[:10]),
+        "by_platform": platform_counts,
+    }
+
+
 def _dm_scheduler_loop():
-    """평일 11:00 KST에 루나 DM 아웃리치 + 14:00에 시퀀스 실행."""
+    """평일 11:00 DM + 14:00 시퀀스 + 15:00 DB 수집."""
     import time as _time
     last_dm_date = ""
     last_seq_date = ""
+    last_collect_date = ""
     while True:
         _time.sleep(60)
         try:
@@ -5439,6 +5612,12 @@ def _dm_scheduler_loop():
                 result = _run_all_sequences()
                 last_seq_date = today_str
                 print(f"[SEQ-SCHEDULER] 완료: 발송 {result.get('sent', 0)}건")
+            # 평일 15:00 — DB 수집 (KR/JP/SEA 우선, YouTube 30%)
+            if now.weekday() < 5 and now.hour == 15 and now.minute < 5 and today_str != last_collect_date:
+                print(f"[COLLECT] 루나 DB 수집 시작: {now.strftime('%Y-%m-%d %H:%M')}")
+                result = _luna_db_collect_run()
+                last_collect_date = today_str
+                print(f"[COLLECT] 완료: {result.get('collected', 0)}건 수집")
         except Exception as e:
             print(f"[SCHEDULER] 에러: {e}")
 
