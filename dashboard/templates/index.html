@@ -414,9 +414,64 @@ async function fetchRevDash() {
   } catch(e) { console.error('RevDash fetch error:', e); }
 }
 
+async function fetchAgents() {
+  try {
+    const r = await fetch('/api/agent-kpi-dashboard');
+    const data = await r.json();
+    renderAgents(data);
+  } catch(e) { console.error('Agents fetch error:', e); }
+}
+
+function renderAgents(data) {
+  const agents = data?.agents || {};
+  const avgKpi = data?.avg_kpi || 0;
+  const colors = {'카일':'#f0883e','루나':'#8b5cf6','피치':'#3b82f6','맥스':'#ef4444','소피':'#ec4899','레이':'#10b981','하나':'#06b6d4'};
+
+  const kpiEl = document.getElementById('agentKpi');
+  kpiEl.textContent = '';
+  const kpiCard = document.createElement('div');
+  kpiCard.className = 'kpi-card orange';
+  const lbl = document.createElement('div'); lbl.className = 'kpi-label'; lbl.textContent = '평균 KPI 달성률';
+  const val = document.createElement('div'); val.className = 'kpi-value'; val.textContent = avgKpi + '%';
+  const sub = document.createElement('div'); sub.className = 'kpi-sub'; sub.textContent = Object.keys(agents).length + '개 에이전트';
+  kpiCard.append(lbl, val, sub);
+  kpiEl.appendChild(kpiCard);
+
+  const cardsEl = document.getElementById('agentCards');
+  cardsEl.textContent = '';
+  Object.entries(agents).forEach(([name, a]) => {
+    const c = colors[name] || '#6b7280';
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'margin-bottom:12px;padding:20px';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px';
+    const nameDiv = document.createElement('div');
+    const strong = document.createElement('strong'); strong.style.fontSize = '16px'; strong.textContent = name;
+    const role = document.createElement('span'); role.style.cssText = 'color:var(--text-secondary);font-size:13px;margin-left:8px'; role.textContent = a.role;
+    nameDiv.append(strong, role);
+    const kpiDiv = document.createElement('div'); kpiDiv.style.cssText = 'font-size:20px;font-weight:700;color:' + c; kpiDiv.textContent = a.kpi + '%';
+    header.append(nameDiv, kpiDiv);
+
+    const barBg = document.createElement('div');
+    barBg.style.cssText = 'background:var(--bg-secondary);border-radius:6px;height:8px;margin-bottom:6px';
+    const barFill = document.createElement('div');
+    barFill.style.cssText = 'height:100%;border-radius:6px;transition:width .5s;width:' + Math.min(a.kpi, 100) + '%;background:' + c;
+    barBg.appendChild(barFill);
+
+    const metric = document.createElement('div');
+    metric.style.cssText = 'font-size:13px;color:var(--text-secondary)';
+    metric.textContent = a.metric;
+
+    card.append(header, barBg, metric);
+    cardsEl.appendChild(card);
+  });
+}
+
 function refreshAll() {
   fetch('/api/cache-clear').then(() => {
-    fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue(); fetchRevDash();
+    fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue(); fetchRevDash(); fetchAgents();
   });
 }
 
@@ -835,9 +890,10 @@ fetchLuna();
 fetchCrm();
 fetchRevenue();
 fetchRevDash();
+fetchAgents();
 
 // Auto-refresh every 5 minutes
-setInterval(() => { fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue(); fetchRevDash(); }, 300000);
+setInterval(() => { fetchPitch(); fetchLuna(); fetchCrm(); fetchRevenue(); fetchRevDash(); fetchAgents(); }, 300000);
 </script>
 </body>
 </html>
