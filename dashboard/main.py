@@ -5189,26 +5189,261 @@ async def api_luna_dm_outreach_status():
     }
 
 
+# ===== Luna Email Sequence Engine =====
+SEQUENCE_FILE = DATA_DIR / "email_sequences.json"
+
+# 시퀀스 정의: 회신자 / 미회신자 별 단계
+LUNA_SEQUENCES = {
+    "replied": {
+        "name": "회신자 후속 시퀀스",
+        "steps": [
+            {"day": 0, "action": "reply_ack", "subject_kr": "{name}님, 답변 감사합니다! 다음 단계 안내드려요",
+             "subject_en": "Thanks for your reply, {name}! Here's what's next",
+             "body_kr": "{name}님 안녕하세요!\n\n답변 주셔서 정말 감사합니다.\n캠페인 세부사항과 조건을 안내드릴게요.\n\n✅ 무료 K-뷰티 제품 배송\n✅ 콘텐츠 제작비 월 정산\n✅ 크리에이티브 자유 보장\n\n편하신 시간에 15분 통화 가능하실까요?\n아래 링크에서 일정 예약해주세요.\n\nBest,\nLuna | 08liter Global",
+             "body_en": "Hi {name}!\n\nThanks so much for your reply!\nHere are the campaign details:\n\n✅ Free K-beauty products shipped to you\n✅ Content fee paid monthly\n✅ Full creative freedom\n\nWould you be available for a quick 15-min call?\nBook a time here: {meeting_link}\n\nBest,\nLuna | 08liter Global"},
+            {"day": 3, "action": "portfolio_request", "subject_kr": "{name}님, 포트폴리오 공유 요청",
+             "subject_en": "{name}, could you share your media kit?",
+             "body_kr": "{name}님!\n\n지난번 연락에 이어, 캠페인 매칭을 위해 간단한 포트폴리오나 미디어킷을 공유해주시면 감사하겠습니다.\n\n없으시면 최근 인스타그램 3개 게시물 링크만 보내주셔도 됩니다.\n\nBest,\nLuna",
+             "body_en": "Hi {name}!\n\nFollowing up on our conversation — could you share your media kit or portfolio?\n\nIf you don't have one, just send me links to 3 recent posts and I'll handle the rest.\n\nBest,\nLuna"},
+            {"day": 7, "action": "contract_offer", "subject_kr": "{name}님, 캠페인 계약서 안내",
+             "subject_en": "{name}, your campaign contract is ready",
+             "body_kr": "{name}님!\n\n검토 결과 {name}님과 함께 하고 싶습니다.\n첨부된 계약 조건을 확인해주세요.\n\n궁금한 점이 있으시면 언제든 답변 주세요.\n\nBest,\nLuna",
+             "body_en": "Hi {name}!\n\nGreat news — we'd love to work with you!\nPlease review the attached campaign terms.\n\nFeel free to reply with any questions.\n\nBest,\nLuna"},
+        ],
+    },
+    "no_reply": {
+        "name": "미회신 팔로업 시퀀스",
+        "steps": [
+            {"day": 7, "action": "followup_1", "subject_kr": "{name}님, 혹시 메일 확인하셨나요?",
+             "subject_en": "Quick follow-up, {name}",
+             "body_kr": "{name}님 안녕하세요!\n\n지난주 보내드린 K-뷰티 캠페인 제안, 혹시 확인하셨나요?\n\n이번 시즌 한정 모집이라 빠르게 답변 주시면 좋겠습니다.\n간단히 '관심있어요'라고 답장만 주셔도 됩니다!\n\nBest,\nLuna | 08liter Global",
+             "body_en": "Hi {name}!\n\nJust following up on my previous email about K-beauty campaign opportunities.\n\nWe still have spots open this season. Simply reply 'interested' and I'll send you the details!\n\nBest,\nLuna | 08liter Global"},
+            {"day": 14, "action": "followup_2", "subject_kr": "{name}님, 마지막 안내드려요",
+             "subject_en": "Last chance, {name} — Limited spots remaining",
+             "body_kr": "{name}님!\n\n두 번째 안내드립니다.\n이번 시즌 크리에이터 모집이 곧 마감됩니다.\n\n💰 팔로워 2만 기준 월 200-300만원\n📦 무료 K-뷰티 제품\n🎨 크리에이티브 자유 보장\n\n관심 있으시면 이번 주 내로 답변 부탁드려요!\n\nBest,\nLuna",
+             "body_en": "Hi {name}!\n\nThis is my final follow-up — our creator program spots are filling up fast.\n\n💰 $1,500-2,500/month for 20K+ followers\n📦 Free K-beauty products\n🎨 Full creative freedom\n\nReply by end of this week if interested!\n\nBest,\nLuna"},
+            {"day": 30, "action": "reactivation", "subject_kr": "{name}님, 새 시즌 캠페인 안내",
+             "subject_en": "New season, new opportunities — {name}",
+             "body_kr": "{name}님!\n\n새 시즌 캠페인이 시작되었습니다.\n이전에 타이밍이 안 맞으셨다면, 이번에 함께 해보시는 건 어떨까요?\n\n답변 기다리겠습니다!\n\nBest,\nLuna",
+             "body_en": "Hi {name}!\n\nNew season, new campaigns! If the timing wasn't right before, we'd love to reconnect.\n\nReply anytime — I'm here to chat.\n\nBest,\nLuna"},
+        ],
+    },
+}
+
+MEETING_LINK = os.getenv("MEETING_LINK", "https://cal.com/08liter/luna")
+
+def _load_sequences() -> dict:
+    if SEQUENCE_FILE.exists():
+        return json.loads(SEQUENCE_FILE.read_text(encoding="utf-8"))
+    return {}
+
+def _save_sequences(data: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    SEQUENCE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _enroll_in_sequence(email: str, name: str, country: str, seq_type: str, sent_at: str):
+    """인플루언서를 이메일 시퀀스에 등록."""
+    seqs = _load_sequences()
+    if email in seqs:
+        return  # 이미 등록됨
+    seqs[email] = {
+        "name": name, "country": country, "type": seq_type,
+        "enrolled_at": sent_at, "current_step": 0,
+        "last_sent_at": sent_at, "status": "active",
+        "history": [],
+    }
+    _save_sequences(seqs)
+
+def _run_sequence_step(email: str, entry: dict) -> dict:
+    """시퀀스의 다음 단계 실행."""
+    seq_def = LUNA_SEQUENCES.get(entry["type"])
+    if not seq_def:
+        return {"status": "skip", "reason": "unknown sequence type"}
+
+    steps = seq_def["steps"]
+    step_idx = entry["current_step"]
+    if step_idx >= len(steps):
+        return {"status": "completed", "reason": "all steps done"}
+
+    step = steps[step_idx]
+    enrolled_dt = datetime.fromisoformat(entry["enrolled_at"])
+    now = datetime.now(KST)
+    days_since = (now - enrolled_dt).days
+
+    if days_since < step["day"]:
+        return {"status": "waiting", "days_until": step["day"] - days_since}
+
+    # 국가별 언어 선택
+    is_kr = entry.get("country", "").upper() in ("KR", "한국")
+    subject = (step["subject_kr"] if is_kr else step["subject_en"]).format(
+        name=entry["name"], meeting_link=MEETING_LINK)
+    body = (step["body_kr"] if is_kr else step["body_en"]).format(
+        name=entry["name"], meeting_link=MEETING_LINK)
+
+    # 이메일 발송
+    result = _send_email_webhook(email, subject, body, agent_name="Luna | Mili Mili x 08liter(0.8L)")
+
+    return {"status": result.get("status", "error"), "step": step["action"], "step_idx": step_idx}
+
+
+def _run_all_sequences():
+    """모든 활성 시퀀스의 다음 단계 실행."""
+    seqs = _load_sequences()
+    now = datetime.now(KST)
+    results = {"processed": 0, "sent": 0, "waiting": 0, "completed": 0, "errors": 0}
+
+    for email, entry in seqs.items():
+        if entry.get("status") != "active":
+            continue
+
+        result = _run_sequence_step(email, entry)
+        results["processed"] += 1
+
+        if result["status"] == "ok":
+            entry["current_step"] += 1
+            entry["last_sent_at"] = now.isoformat()
+            entry["history"].append({
+                "step": result.get("step"), "sent_at": now.isoformat(), "status": "sent"})
+            if entry["current_step"] >= len(LUNA_SEQUENCES.get(entry["type"], {}).get("steps", [])):
+                entry["status"] = "completed"
+                results["completed"] += 1
+            results["sent"] += 1
+        elif result["status"] == "waiting":
+            results["waiting"] += 1
+        elif result["status"] == "completed":
+            entry["status"] = "completed"
+            results["completed"] += 1
+        else:
+            results["errors"] += 1
+
+    _save_sequences(seqs)
+
+    # Slack 리포트
+    if results["sent"] > 0 and SLACK_WEBHOOK_URL and _slack_enabled():
+        report = (
+            f"[루나 시퀀스 리포트] {now.strftime('%Y-%m-%d %H:%M')}\n"
+            f"처리: {results['processed']}건 | 발송: {results['sent']}건 | "
+            f"대기: {results['waiting']}건 | 완료: {results['completed']}건"
+        )
+        try:
+            req_lib.post(SLACK_WEBHOOK_URL, json={"text": report}, timeout=10)
+        except Exception:
+            pass
+
+    return results
+
+
+@app.post("/api/luna-sequence/enroll")
+async def api_luna_sequence_enroll(request: Request):
+    """인플루언서를 이메일 시퀀스에 수동 등록."""
+    body = await request.json()
+    email = body.get("email", "")
+    name = body.get("name", "")
+    country = body.get("country", "US")
+    seq_type = body.get("type", "no_reply")  # replied / no_reply
+    if not email or "@" not in email:
+        return {"status": "error", "message": "invalid email"}
+    _enroll_in_sequence(email, name, country, seq_type, datetime.now(KST).isoformat())
+    return {"status": "ok", "email": email, "type": seq_type}
+
+@app.post("/api/luna-sequence/enroll-us-noreply")
+async def api_luna_sequence_enroll_us_noreply():
+    """US 미회신 인플루언서 일괄 등록 (7일 후 팔로업)."""
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows:
+        return {"status": "no_data"}
+
+    seqs = _load_sequences()
+    now = datetime.now(KST)
+    enrolled = 0
+    dm_log = _load_luna_dm_log()
+    sent_handles = {e.get("handle") for e in dm_log}
+
+    for row in rows[1:]:
+        if len(row) < 11:
+            continue
+        country = str(row[2]).strip() if len(row) > 2 else ""
+        if country.upper() not in ("US", "미국"):
+            continue
+        email = str(row[8]).strip() if len(row) > 8 else ""
+        handle = str(row[5]).strip() if len(row) > 5 else ""
+        status = str(row[10]).strip() if len(row) > 10 else ""
+
+        # 이미 회신/계약 진행 중이면 스킵
+        if "답변" in status or "계약" in status or "협상" in status or "진행확정" in status:
+            continue
+        # 이메일 없으면 스킵
+        if not email or "@" not in email:
+            continue
+        # 이미 시퀀스에 있으면 스킵
+        if email in seqs:
+            continue
+
+        seqs[email] = {
+            "name": handle or email.split("@")[0], "country": "US",
+            "type": "no_reply", "enrolled_at": now.isoformat(),
+            "current_step": 0, "last_sent_at": "", "status": "active",
+            "history": [],
+        }
+        enrolled += 1
+
+    _save_sequences(seqs)
+    return {"status": "ok", "enrolled": enrolled, "total_sequences": len(seqs)}
+
+@app.post("/api/luna-sequence/run")
+async def api_luna_sequence_run():
+    """시퀀스 수동 실행 — 모든 활성 시퀀스의 다음 단계."""
+    result = _run_all_sequences()
+    return result
+
+@app.get("/api/luna-sequence/status")
+async def api_luna_sequence_status():
+    """시퀀스 현황 조회."""
+    seqs = _load_sequences()
+    by_type = {"replied": 0, "no_reply": 0}
+    by_status = {"active": 0, "completed": 0, "paused": 0}
+    by_step = {}
+    for entry in seqs.values():
+        by_type[entry.get("type", "no_reply")] = by_type.get(entry.get("type"), 0) + 1
+        by_status[entry.get("status", "active")] = by_status.get(entry.get("status"), 0) + 1
+        step_key = f"{entry.get('type')}_{entry.get('current_step', 0)}"
+        by_step[step_key] = by_step.get(step_key, 0) + 1
+    return {
+        "total": len(seqs),
+        "by_type": by_type,
+        "by_status": by_status,
+        "by_step": by_step,
+        "sequence_definitions": {k: {"name": v["name"], "steps": len(v["steps"])} for k, v in LUNA_SEQUENCES.items()},
+    }
+
+
 def _dm_scheduler_loop():
-    """평일 11:00 KST에 루나 DM 아웃리치 실행."""
+    """평일 11:00 KST에 루나 DM 아웃리치 + 14:00에 시퀀스 실행."""
     import time as _time
-    last_run_date = ""
+    last_dm_date = ""
+    last_seq_date = ""
     while True:
-        _time.sleep(60)  # 1분마다 체크
+        _time.sleep(60)
         try:
             now = datetime.now(KST)
             today_str = now.strftime("%Y-%m-%d")
-            # 평일(월~금) + 11:00~11:05 + 오늘 미실행
-            if now.weekday() < 5 and now.hour == 11 and now.minute < 5 and today_str != last_run_date:
+            # 평일 11:00 — DM 아웃리치
+            if now.weekday() < 5 and now.hour == 11 and now.minute < 5 and today_str != last_dm_date:
                 print(f"[DM-SCHEDULER] 루나 DM 아웃리치 시작: {now.strftime('%Y-%m-%d %H:%M')}")
                 result = _luna_dm_outreach_run()
-                last_run_date = today_str
+                last_dm_date = today_str
                 print(f"[DM-SCHEDULER] 완료: {result.get('sent', 0)}건 발송")
+            # 평일 14:00 — 이메일 시퀀스 실행
+            if now.weekday() < 5 and now.hour == 14 and now.minute < 5 and today_str != last_seq_date:
+                print(f"[SEQ-SCHEDULER] 이메일 시퀀스 실행: {now.strftime('%Y-%m-%d %H:%M')}")
+                result = _run_all_sequences()
+                last_seq_date = today_str
+                print(f"[SEQ-SCHEDULER] 완료: 발송 {result.get('sent', 0)}건")
         except Exception as e:
-            print(f"[DM-SCHEDULER] 에러: {e}")
+            print(f"[SCHEDULER] 에러: {e}")
 
 
-# 서버 시작 시 캐시 워밍 + 백그라운드 갱신 스레드 + DM 스케줄러
+# 서버 시작 시 캐시 워밍 + 백그라운드 갱신 스레드 + DM/시퀀스 스케줄러
 _cache_warm()
 _bg_thread = threading.Thread(target=_cache_refresh_loop, daemon=True)
 _bg_thread.start()
