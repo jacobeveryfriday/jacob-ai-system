@@ -4959,10 +4959,262 @@ def _cache_refresh_loop():
         except Exception:
             pass
 
-# 서버 시작 시 캐시 워밍 + 백그라운드 갱신 스레드
+# ===== Luna DM Outreach Scheduler =====
+LUNA_DM_LOG_FILE = DATA_DIR / "luna_dm_log.json"
+INSTAGRAM_TOKEN = os.getenv("META_INSTAGRAM_TOKEN", "")
+INSTAGRAM_PAGE_ID = os.getenv("INSTAGRAM_PAGE_ID", "")
+
+# 국가별 DM 템플릿 로테이션
+LUNA_DM_TEMPLATES = {
+    "KR": [
+        "안녕하세요 {name}님! 공팔리터(0.8L)의 루나입니다. K-뷰티 브랜드와 인플루언서를 연결하는 플랫폼이에요. {name}님의 콘텐츠가 너무 좋아서 연락드립니다. 협업 기회에 관심 있으시면 답장 부탁드려요!",
+        "안녕하세요 {name}님! 저희 K-뷰티 캠페인에 딱 맞는 크리에이터를 찾고 있었는데, {name}님이 정말 잘 어울릴 것 같아요. 관심 있으시면 편하게 답장 주세요!",
+    ],
+    "US": [
+        "Hi {name}! I'm Luna from 08Liter, a K-beauty influencer marketing agency. I love your content and think you'd be a great fit for our upcoming campaigns. Interested? Just reply!",
+        "Hey {name}! We're looking for talented creators like you for K-beauty brand campaigns. Competitive compensation + amazing products. DM me back if interested!",
+    ],
+    "JP": [
+        "こんにちは{name}さん！08Literのルナです。K-beautyブランドとのコラボにご興味ありましたら、お気軽にご返信ください！",
+    ],
+    "DEFAULT": [
+        "Hi {name}! I'm Luna from 08Liter Global. We connect K-beauty brands with amazing creators like you. Would you be interested in a campaign collaboration? Reply to learn more!",
+    ],
+}
+
+def _load_luna_dm_log() -> list:
+    if LUNA_DM_LOG_FILE.exists():
+        return json.loads(LUNA_DM_LOG_FILE.read_text(encoding="utf-8"))
+    return []
+
+def _save_luna_dm_log(data: list):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    LUNA_DM_LOG_FILE.write_text(json.dumps(data[-2000:], ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _get_dm_template(country: str, idx: int) -> str:
+    """국가별 템플릿 로테이션."""
+    templates_list = LUNA_DM_TEMPLATES.get(country, LUNA_DM_TEMPLATES["DEFAULT"])
+    return templates_list[idx % len(templates_list)]
+
+def _send_instagram_dm(ig_user_id: str, message: str) -> dict:
+    """Instagram Graph API로 DM 발송. ig_messaging 권한 필요."""
+    if not INSTAGRAM_TOKEN or not INSTAGRAM_PAGE_ID:
+        return {"status": "not_configured", "message": "META_INSTAGRAM_TOKEN 또는 INSTAGRAM_PAGE_ID 미설정"}
+    try:
+        resp = req_lib.post(
+            f"https://graph.facebook.com/v18.0/{INSTAGRAM_PAGE_ID}/messages",
+            headers={"Authorization": f"Bearer {INSTAGRAM_TOKEN}"},
+            json={"recipient": {"id": ig_user_id}, "message": {"text": message}},
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            return {"status": "ok", "response": resp.json()}
+        return {"status": "error", "code": resp.status_code, "message": resp.text[:200]}
+    except Exception as e:
+        return {"status": "error", "message": str(e)[:200]}
+
+def _send_dm_via_email_fallback(name: str, email: str, message: str) -> dict:
+    """Instagram DM 불가 시 이메일 fallback 발송."""
+    if not email or "@" not in email:
+        return {"status": "skip", "message": "no email"}
+    subject = f"[08Liter] Campaign opportunity for {name}"
+    return _send_email_webhook(email, subject, message, agent_name="Luna | Mili Mili x 08liter(0.8L)")
+
+def _update_sheet_status_via_gas(sheet_id: str, tab: str, row_num: int, col: str, value: str) -> dict:
+    """GAS 웹훅으로 시트 셀 업데이트. GAS 측에 updateCell action 필요."""
+    webhook_url = os.getenv("SHEET_WEBHOOK_URL", os.getenv("EMAIL_WEBHOOK_URL", ""))
+    if not webhook_url:
+        return {"status": "not_configured"}
+    try:
+        resp = req_lib.post(webhook_url, json={
+            "action": "updateCell",
+            "sheetId": sheet_id,
+            "tab": tab,
+            "cell": f"{col}{row_num}",
+            "value": value,
+        }, timeout=10)
+        return {"status": "ok" if resp.status_code == 200 else "error", "code": resp.status_code}
+    except Exception as e:
+        return {"status": "error", "message": str(e)[:100]}
+
+def _luna_dm_outreach_run():
+    """루나 DM 아웃리치 1회 실행. 평일 11시 스케줄용."""
+    now = datetime.now(KST)
+    dm_log = _load_luna_dm_log()
+    sent_handles = {e.get("handle") for e in dm_log if e.get("handle")}
+    outreach = load_outreach_status()
+
+    # 루나 시트에서 DM 대상 추출: 이메일 없고 인스타 핸들 있는 인플루언서
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows or len(rows) < 2:
+        return {"status": "no_data", "sent": 0}
+
+    candidates = []
+    for i, row in enumerate(rows[1:], start=2):  # row_num = i (1-indexed header + data)
+        if len(row) < 11:
+            continue
+        status = str(row[10]).strip() if len(row) > 10 else ""
+        # K열(10)이 이미 DM발송완료면 스킵
+        if "DM발송" in status or "발송완료" in status:
+            continue
+        # 단순리스트업 또는 빈 상태만 대상
+        if status and "리스트" not in status and not status.startswith("1."):
+            continue
+
+        handle = str(row[5]).strip() if len(row) > 5 else ""  # F열: 인플루언서명/핸들
+        email = str(row[8]).strip() if len(row) > 8 else ""   # I열: 이메일
+        country = str(row[2]).strip() if len(row) > 2 else ""  # C열: 국가
+        followers_raw = str(row[7]).strip() if len(row) > 7 else "0"  # H열: 팔로워
+        platform = str(row[4]).strip() if len(row) > 4 else ""  # E열: 플랫폼
+
+        if not handle or handle in sent_handles:
+            continue
+
+        # 팔로워 수 파싱
+        try:
+            fl = followers_raw.upper().replace(",", "").replace(" ", "")
+            if "K" in fl:
+                followers = int(float(fl.replace("K", "")) * 1000)
+            elif "M" in fl:
+                followers = int(float(fl.replace("M", "")) * 1000000)
+            else:
+                followers = int(float(fl)) if fl else 0
+        except (ValueError, TypeError):
+            followers = 0
+
+        candidates.append({
+            "row_num": i, "handle": handle, "email": email,
+            "country": country, "followers": followers, "platform": platform,
+        })
+
+    # 팔로워 높은 순 정렬, 15건 제한
+    candidates.sort(key=lambda x: x["followers"], reverse=True)
+    targets = candidates[:15]
+
+    results = []
+    for idx, t in enumerate(targets):
+        tmpl = _get_dm_template(t["country"], idx)
+        message = tmpl.format(name=t["handle"])
+
+        # 1차: Instagram DM 시도
+        dm_result = _send_instagram_dm("", message)  # ig_user_id 조회 필요
+
+        # 2차: DM 불가 시 이메일 fallback
+        if dm_result.get("status") != "ok":
+            dm_result = _send_dm_via_email_fallback(t["handle"], t["email"], message)
+
+        method = "instagram_dm" if dm_result.get("status") == "ok" and "ig" in str(dm_result.get("method", "")) else "email" if dm_result.get("status") == "ok" else "failed"
+
+        # 발송 로그 기록
+        entry = {
+            "handle": t["handle"], "country": t["country"],
+            "followers": t["followers"], "method": method,
+            "status": dm_result.get("status", "error"),
+            "sent_at": now.isoformat(), "template_idx": idx,
+            "row_num": t["row_num"],
+        }
+        dm_log.append(entry)
+        results.append(entry)
+
+        # K열 업데이트: DM발송완료
+        if dm_result.get("status") == "ok":
+            _update_sheet_status_via_gas(
+                LUNA_SHEET_ID, "현황시트(수동매칭)",
+                t["row_num"], "K", f"DM발송완료 ({now.strftime('%m/%d')})"
+            )
+            # outreach_status 업데이트
+            key = t["email"] or t["handle"]
+            outreach[key] = {
+                "agent": "루나", "name": t["handle"], "status": "발송완료",
+                "registered_at": now.strftime("%Y-%m-%d %H:%M"),
+                "sent_at": now.strftime("%Y-%m-%d %H:%M"),
+                "template": f"DM_{t['country']}_{idx}", "followup_count": 0,
+            }
+
+    _save_luna_dm_log(dm_log)
+    save_outreach_status(outreach)
+
+    # Slack 리포트
+    ok_count = sum(1 for r in results if r.get("status") == "ok")
+    report = (
+        f"[루나 DM 아웃리치 리포트] {now.strftime('%Y-%m-%d %H:%M')}\n"
+        f"대상: {len(targets)}건 | 성공: {ok_count}건 | 실패: {len(targets)-ok_count}건\n"
+    )
+    if results:
+        top3 = results[:3]
+        report += "Top 발송:\n" + "\n".join(
+            f"  - {r['handle']} ({r['country']}, {r['followers']:,}) → {r['method']}"
+            for r in top3
+        )
+    if SLACK_WEBHOOK_URL and _slack_enabled():
+        try:
+            req_lib.post(SLACK_WEBHOOK_URL, json={"text": report}, timeout=10)
+        except Exception:
+            pass
+
+    return {"status": "ok", "targeted": len(targets), "sent": ok_count, "results": results}
+
+
+@app.post("/api/luna-dm-outreach/run")
+async def api_luna_dm_outreach_run():
+    """루나 DM 아웃리치 수동 실행."""
+    result = _luna_dm_outreach_run()
+    return result
+
+@app.get("/api/luna-dm-outreach/log")
+async def api_luna_dm_outreach_log():
+    """루나 DM 발송 로그 조회."""
+    log = _load_luna_dm_log()
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    today_log = [e for e in log if e.get("sent_at", "").startswith(today)]
+    return {
+        "total": len(log),
+        "today": len(today_log),
+        "today_ok": sum(1 for e in today_log if e.get("status") == "ok"),
+        "recent": log[-20:],
+    }
+
+@app.get("/api/luna-dm-outreach/status")
+async def api_luna_dm_outreach_status():
+    """루나 DM 스케줄 상태."""
+    return {
+        "schedule": "평일 11:00 KST",
+        "limit_per_run": 15,
+        "sort": "팔로워 높은 순",
+        "template_rotation": list(LUNA_DM_TEMPLATES.keys()),
+        "instagram_configured": bool(INSTAGRAM_TOKEN and INSTAGRAM_PAGE_ID),
+        "email_fallback": bool(os.getenv("EMAIL_WEBHOOK_URL")),
+        "sheet_write": bool(os.getenv("SHEET_WEBHOOK_URL") or os.getenv("EMAIL_WEBHOOK_URL")),
+        "slack_report": bool(SLACK_WEBHOOK_URL),
+    }
+
+
+def _dm_scheduler_loop():
+    """평일 11:00 KST에 루나 DM 아웃리치 실행."""
+    import time as _time
+    last_run_date = ""
+    while True:
+        _time.sleep(60)  # 1분마다 체크
+        try:
+            now = datetime.now(KST)
+            today_str = now.strftime("%Y-%m-%d")
+            # 평일(월~금) + 11:00~11:05 + 오늘 미실행
+            if now.weekday() < 5 and now.hour == 11 and now.minute < 5 and today_str != last_run_date:
+                print(f"[DM-SCHEDULER] 루나 DM 아웃리치 시작: {now.strftime('%Y-%m-%d %H:%M')}")
+                result = _luna_dm_outreach_run()
+                last_run_date = today_str
+                print(f"[DM-SCHEDULER] 완료: {result.get('sent', 0)}건 발송")
+        except Exception as e:
+            print(f"[DM-SCHEDULER] 에러: {e}")
+
+
+# 서버 시작 시 캐시 워밍 + 백그라운드 갱신 스레드 + DM 스케줄러
 _cache_warm()
 _bg_thread = threading.Thread(target=_cache_refresh_loop, daemon=True)
 _bg_thread.start()
+_dm_thread = threading.Thread(target=_dm_scheduler_loop, daemon=True)
+_dm_thread.start()
+print("[DM-SCHEDULER] 루나 DM 아웃리치 스케줄러 시작 (평일 11:00 KST)")
 
 
 # ===== 피치(Pitch) 파이프라인 API =====
