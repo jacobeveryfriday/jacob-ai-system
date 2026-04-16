@@ -5419,7 +5419,7 @@ async def api_luna_sequence_status():
 
 # ===== Luna DB Collector =====
 LUNA_COLLECT_TARGET = 55  # 1회 수집 목표
-LUNA_COLLECT_TOTAL_GOAL = 150  # 총 목표
+LUNA_COLLECT_TOTAL_GOAL = 1200  # 총 목표 (현재 1,143 + 55 → 1,200)
 LUNA_COLLECT_YOUTUBE_PCT = 30  # YouTube 비중 %
 LUNA_PRIORITY_COUNTRIES = ["KR", "JP", "TH", "VT", "VN", "ID", "PH", "SG", "MY", "TW", "KH"]  # KR/JP/SEA 우선
 
@@ -5445,7 +5445,7 @@ def _luna_db_collect_run() -> dict:
             platform_counts[p] = platform_counts.get(p, 0) + 1
 
     # 현재 YouTube 비중 계산
-    yt_count = sum(v for k, v in platform_counts.items() if "youtube" in k.lower() or "유튜브" in k.lower())
+    yt_count = sum(v for k, v in platform_counts.items() if any(w in k.lower() for w in ["youtube", "유튜브", "쇼츠", "shorts"]))
     yt_pct = round(yt_count / max(current_total, 1) * 100, 1)
 
     # 수집 대상 수 계산
@@ -5574,7 +5574,7 @@ async def api_luna_db_collect_status():
             country_counts[c] = country_counts.get(c, 0) + 1
         if p:
             platform_counts[p] = platform_counts.get(p, 0) + 1
-    yt = sum(v for k, v in platform_counts.items() if "youtube" in k.lower() or "유튜브" in k.lower())
+    yt = sum(v for k, v in platform_counts.items() if any(w in k.lower() for w in ["youtube", "유튜브", "쇼츠", "shorts"]))
     priority_total = sum(country_counts.get(c, 0) for c in LUNA_PRIORITY_COUNTRIES)
     return {
         "schedule": "평일 15:00 KST",
