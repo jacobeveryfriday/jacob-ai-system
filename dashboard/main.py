@@ -6247,29 +6247,35 @@ async def api_cross_sell_candidates():
 # ===== 작업6: 앰버서더 매핑 =====
 @app.get("/api/ambassador-candidates")
 async def api_ambassador_candidates():
-    """피치 인플루언서 DB 중 US/JP/VN 상위 20% → 밀리밀리 앰버서더 후보."""
-    inf = await api_influencer_db()
-    items = inf.get("items") or inf.get("rows", [])
+    """인플루언서 DB 중 주요 국가 상위 20% → 밀리밀리 앰버서더 후보."""
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows:
+        return {"total_filtered": 0, "top_20pct": 0, "by_country": {}, "candidates": []}
 
-    target_countries = {"US", "JP", "VN", "VT", "KR", "TH", "ID", "PH", "SG", "TW",
-                         "미국", "일본", "베트남", "한국", "태국", "인도네시아"}
+    target_countries = {"US", "JP", "VN", "VT", "KR", "TH", "ID", "PH", "SG", "TW", "IDN", "KH", "MY",
+                        "미국", "일본", "베트남", "한국", "태국", "인도네시아", "북미", "동남아"}
     filtered = []
-    for item in items:
-        if not isinstance(item, dict):
+    for row in rows[1:]:
+        if len(row) < 8:
             continue
-        country = str(item.get("country", "")).strip().upper()
-        if country not in {c.upper() for c in target_countries}:
+        country = str(row[2]).strip() if len(row) > 2 else ""
+        if country.upper() not in {c.upper() for c in target_countries} and country not in target_countries:
             continue
-        fw_str = str(item.get("followers", "0")).replace(",", "").strip().upper()
+        handle = str(row[5]).strip() if len(row) > 5 else ""
+        platform = str(row[4]).strip() if len(row) > 4 else ""
+        category = str(row[3]).strip() if len(row) > 3 else ""
+        email = str(row[8]).strip() if len(row) > 8 else ""
+        fw_str = str(row[7]).strip().replace(",", "").upper() if len(row) > 7 else "0"
         try:
             if "M" in fw_str: fw = float(fw_str.replace("M", "")) * 1000000
             elif "K" in fw_str: fw = float(fw_str.replace("K", "")) * 1000
             else: fw = float(fw_str) if fw_str else 0
         except ValueError:
             fw = 0
-        filtered.append({**item, "_fw_num": fw})
+        filtered.append({"account": handle, "country": country, "platform": platform,
+                         "category": category, "email": email, "followers": str(row[7]).strip() if len(row) > 7 else "0",
+                         "_fw_num": fw})
 
-    # 팔로워 상위 20%
     filtered.sort(key=lambda x: x["_fw_num"], reverse=True)
     top_pct = max(1, len(filtered) // 5)
     ambassadors = filtered[:top_pct]
@@ -6277,13 +6283,9 @@ async def api_ambassador_candidates():
     result = []
     for a in ambassadors:
         result.append({
-            "account": a.get("account", ""),
-            "country": a.get("country", ""),
-            "platform": a.get("platform", ""),
-            "followers": a.get("followers", ""),
-            "category": a.get("category", ""),
-            "email": a.get("email", ""),
-            "status": a.get("status", ""),
+            "account": a["account"], "country": a["country"],
+            "platform": a["platform"], "followers": a["followers"],
+            "category": a["category"], "email": a["email"],
             "recommendation": "유료협찬" if a["_fw_num"] >= 100000 else "무료협찬+성과보수",
         })
 
