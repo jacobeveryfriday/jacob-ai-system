@@ -153,6 +153,34 @@ def _pitch_c_html(brand: str, contact: str) -> str:
     )
 
 
+def _pitch_b2_html(brand: str, contact: str) -> str:
+    """A/B 테스트용 개인화 강화 템플릿 B2."""
+    mc = MONTHLY_CONFIG
+    return _wrap_html(
+        _header(f"{brand} 해외 진출, 인플루언서로 시작하세요")
+        + _text(
+            f"안녕하세요 {contact}님,<br>"
+            f"공팔리터(0.8L) 피치입니다.<br><br>"
+            f"<strong>{brand}</strong>의 최근 제품 라인업과 올리브영 리뷰를 인상 깊게 봤습니다.<br>"
+            f"특히 해외 시장(US/동남아/JP) 진출 관점에서 인플루언서 마케팅이<br>"
+            f"가장 효율적인 첫 걸음이 될 수 있습니다."
+        )
+        + _box(
+            "<strong>08liter x Mili Mili 공동 캠페인 제안</strong><br><br>"
+            "✅ 08liter 140만 글로벌 인플루언서 네트워크 활용<br>"
+            "✅ Mili Mili 해외 유통 채널(Amazon/TikTok Shop) 연계<br>"
+            "✅ 인플루언서 콘텐츠 → 해외 마켓플레이스 광고 소재 전환<br><br>"
+            f"<strong>{mc['promo_month']} 한정:</strong> 공동 캠페인 시 인플루언서 비용 30% 추가 할인"
+        )
+        + _text(
+            f"{brand}에 맞춤 제안서를 15분 미팅에서 바로 보여드립니다.<br>"
+            "아래 링크로 편하신 시간 잡아주세요."
+        )
+        + _buttons([("15분 미팅 예약", MEETING_LINK), ("상품소개서 보기", PROMO_LINK)])
+        + _footer(["공팔리터 주니어 컨설턴트 피치", "pitch@08liter.com | 08liter.com"])
+    )
+
+
 PITCH_TEMPLATES = {
     "A": {
         "label": "Meeting Hook",
@@ -163,6 +191,11 @@ PITCH_TEMPLATES = {
         "label": "Promo",
         "subject": f"{MONTHLY_CONFIG['promo_deadline']} 마감 — 숏폼 100건 {MONTHLY_CONFIG['domestic_price']}, " + "{brand} 신청 가능합니다",
         "build_html": _pitch_b_html,
+    },
+    "B2": {
+        "label": "Personalized + Cross-sell (A/B Test)",
+        "subject": "{brand}, 해외 진출 첫 걸음 — 08liter x Mili Mili 공동 캠페인 제안",
+        "build_html": _pitch_b2_html,
     },
     "C": {
         "label": "Competitor Hook",

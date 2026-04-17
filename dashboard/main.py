@@ -1355,7 +1355,9 @@ async def api_ads_performance():
             ct_amount_idx = _find_col(headers, "공급가액")
             ct_ch_idx = _find_col(headers, "유입채널")
             if ct_date_idx is None: ct_date_idx = 1
-            if ct_amount_idx is None and len(headers) > 21: ct_amount_idx = 21  # V열
+            if ct_amount_idx is None and len(headers) > 19: ct_amount_idx = 19  # T열 = 공급가액
+            if ct_amount_idx is None:
+                print(f"[ads-perf] WARNING: 공급가액 컬럼 미검출. headers={headers[:22]}")
             print(f"[ads-perf] 계약 cols: date={ct_date_idx} amount={ct_amount_idx} ch={ct_ch_idx}")
             for row in ct_rows[hdr_idx+1:]:
                 if not row or len(row) < 3: continue
@@ -5908,6 +5910,387 @@ async def api_pitch_pipeline():
         "staff_counts": staff_counts,
         "recent_brands": recent_brands[-20:],
         "updated_at": now.isoformat(),
+    }
+
+
+# ===== 작업1: 루나 155건 분할 발송 스케줄 (타임존 기반) =====
+LUNA_DAILY_SEND_LIMIT = 50
+LUNA_TIMEZONE_WINDOWS = {
+    # 국가 → (시작시, 종료시) UTC 기준 발송 윈도우 (현지 08:00-10:00)
+    "KR": (23, 1),   # KST 08:00-10:00 = UTC 23:00-01:00
+    "JP": (23, 1),   # JST 08:00-10:00 = UTC 23:00-01:00
+    "TH": (1, 3),    # ICT 08:00-10:00 = UTC 01:00-03:00
+    "VT": (1, 3),    # ICT
+    "VN": (1, 3),
+    "ID": (1, 3),    # WIB
+    "PH": (0, 2),    # PHT
+    "SG": (0, 2),    # SGT
+    "TW": (0, 2),    # CST
+    "US": (13, 18),  # EST-PST 08:00-10:00 range
+    "DEFAULT": (2, 4),  # UTC 02:00-04:00
+}
+
+@app.post("/api/luna-batch-schedule")
+async def api_luna_batch_schedule(request: Request):
+    """루나 155건 분할 발송 스케줄 생성. 일 50건 × 3일, 타임존 기반."""
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    daily_limit = body.get("daily_limit", LUNA_DAILY_SEND_LIMIT)
+
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows:
+        return {"status": "no_data"}
+
+    outreach = load_outreach_status()
+    dm_log = _load_luna_dm_log()
+    sent = {e.get("email") or e.get("handle") for e in dm_log}
+    sent.update(outreach.keys())
+
+    unsent = []
+    for i, row in enumerate(rows[1:], start=2):
+        if len(row) < 11:
+            continue
+        email = str(row[8]).strip() if len(row) > 8 else ""
+        handle = str(row[5]).strip() if len(row) > 5 else ""
+        status = str(row[10]).strip() if len(row) > 10 else ""
+        country = str(row[2]).strip() if len(row) > 2 else ""
+
+        if not email or "@" not in email:
+            continue
+        if email in sent or handle in sent:
+            continue
+        if "발송" in status or "계약" in status or "진행확정" in status:
+            continue
+        unsent.append({"row": i, "email": email, "handle": handle, "country": country})
+
+    # 국가별 그룹핑 후 타임존 기반 일자 배분
+    by_country = {}
+    for u in unsent:
+        c = u["country"].upper() if u["country"] else "DEFAULT"
+        by_country.setdefault(c, []).append(u)
+
+    schedule = []
+    day = 1
+    day_count = 0
+    for country in ["KR", "JP", "TH", "VT", "VN", "ID", "PH", "SG", "TW", "US", "CN", "DEFAULT"]:
+        for c_key in [k for k in by_country if k.upper().startswith(country[:2]) or k == country]:
+            for item in by_country.pop(c_key, []):
+                if day_count >= daily_limit:
+                    day += 1
+                    day_count = 0
+                tz_window = LUNA_TIMEZONE_WINDOWS.get(country, LUNA_TIMEZONE_WINDOWS["DEFAULT"])
+                schedule.append({**item, "day": day, "tz_send_hour_utc": tz_window[0]})
+                day_count += 1
+    # 나머지 국가
+    for c_key, items in by_country.items():
+        for item in items:
+            if day_count >= daily_limit:
+                day += 1
+                day_count = 0
+            schedule.append({**item, "day": day, "tz_send_hour_utc": 2})
+            day_count += 1
+
+    # 스케줄 저장
+    schedule_file = DATA_DIR / "luna_batch_schedule.json"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    schedule_file.write_text(json.dumps({"created": datetime.now(KST).isoformat(),
+        "total": len(schedule), "days": day, "daily_limit": daily_limit,
+        "items": schedule}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    by_day = {}
+    for s in schedule:
+        by_day.setdefault(s["day"], []).append(s)
+
+    return {
+        "status": "ok", "total_unsent": len(schedule), "days_needed": day,
+        "daily_limit": daily_limit,
+        "by_day": {f"Day{d}": len(items) for d, items in by_day.items()},
+        "by_country": {c: len([s for s in schedule if s["country"] == c]) for c in set(s["country"] for s in schedule)},
+    }
+
+
+# ===== 작업2: 피치 A/B 테스트 =====
+AB_TEST_FILE = DATA_DIR / "pitch_ab_test.json"
+
+@app.post("/api/pitch-ab-test/create")
+async def api_pitch_ab_test_create(request: Request):
+    """피치 A/B 테스트 생성. 미발송 181건 중 60건 추출 → A:30 / B2:30."""
+    import traceback as _tb
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    total = body.get("total", 60)
+    half = total // 2
+
+    try:
+        from pitch_templates import PITCH_TEMPLATES
+        rows = fetch_sheet(SHEET_PITCH, "A:N", PITCH_TAB, ttl_key="default")
+        if not rows or len(rows) < 2:
+            return {"status": "error", "message": "피치 시트 데이터 없음"}
+
+        headers = [str(c).strip() for c in rows[0]]
+        col_email = _find_col(headers, "이메일")
+        col_brand = _find_col(headers, "브랜드명", "브랜드")
+        col_status = _find_col(headers, "발송상태", "상태")
+        col_contact = _find_col(headers, "담당자")
+
+        unsent = []
+        for i, row in enumerate(rows[1:], start=2):
+            def _g(idx):
+                return str(row[idx]).strip() if idx is not None and len(row) > idx else ""
+            status = _g(col_status)
+            email = _g(col_email)
+            if not email or "@" not in email:
+                continue
+            if "발송" in status or "성공" in status:
+                continue
+            unsent.append({"row": i, "email": email, "brand": _g(col_brand), "contact": _g(col_contact) or "담당자"})
+
+        if len(unsent) < total:
+            total = len(unsent)
+            half = total // 2
+
+        import random
+        random.shuffle(unsent)
+        group_a = unsent[:half]
+        group_b2 = unsent[half:half*2]
+
+        now = datetime.now(KST)
+        test_data = {
+            "created": now.isoformat(),
+            "status": "created",
+            "total": len(group_a) + len(group_b2),
+            "group_a": {"template": "A", "count": len(group_a), "items": group_a, "sent": 0, "replied": 0},
+            "group_b2": {"template": "B2", "count": len(group_b2), "items": group_b2, "sent": 0, "replied": 0},
+            "report_due": (now + timedelta(days=7)).strftime("%Y-%m-%d"),
+        }
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        AB_TEST_FILE.write_text(json.dumps(test_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        return {
+            "status": "ok",
+            "group_a": {"template": "A (Meeting Hook)", "count": len(group_a)},
+            "group_b2": {"template": "B2 (Personalized + Cross-sell)", "count": len(group_b2)},
+            "total": len(group_a) + len(group_b2),
+            "report_due": test_data["report_due"],
+        }
+    except Exception as e:
+        _slack_error_report("pitch-ab-test", _tb.format_exc())
+        return {"status": "error", "traceback": _tb.format_exc()[-300:]}
+
+@app.post("/api/pitch-ab-test/send")
+async def api_pitch_ab_test_send():
+    """A/B 테스트 발송 실행."""
+    if not AB_TEST_FILE.exists():
+        return {"status": "error", "message": "A/B 테스트 미생성. /api/pitch-ab-test/create 먼저 실행"}
+
+    test_data = json.loads(AB_TEST_FILE.read_text(encoding="utf-8"))
+    from pitch_templates import PITCH_TEMPLATES
+    now = datetime.now(KST)
+    results = {"a_sent": 0, "a_fail": 0, "b2_sent": 0, "b2_fail": 0}
+
+    for group_key, tmpl_key in [("group_a", "A"), ("group_b2", "B2")]:
+        group = test_data[group_key]
+        tmpl = PITCH_TEMPLATES[tmpl_key]
+        for item in group["items"]:
+            if item.get("sent_at"):
+                continue
+            brand = item["brand"] or "귀사"
+            contact = item.get("contact", "담당자")
+            subject = _clean_surrogates(tmpl["subject"].format(brand=brand, contact=contact))
+            html = tmpl["build_html"](brand, contact)
+            body_text = _clean_surrogates(_html_to_text(html))
+
+            r = _send_email_smtp(item["email"], subject, body_text, agent="pitch", html_body=html)
+            if r.get("status") != "ok":
+                r = _send_email_webhook(item["email"], subject, body_text, agent_name="Pitch | 08liter(0.8L)")
+
+            if r.get("status") == "ok":
+                item["sent_at"] = now.isoformat()
+                item["template"] = tmpl_key
+                results[f"{group_key.split('_')[1]}_sent"] = results.get(f"{group_key.split('_')[1]}_sent", 0) + 1
+                group["sent"] = group.get("sent", 0) + 1
+                _log_email("피치", item["email"], subject, "sent", {"ab_test": tmpl_key, "brand": brand})
+            else:
+                results[f"{group_key.split('_')[1]}_fail"] = results.get(f"{group_key.split('_')[1]}_fail", 0) + 1
+
+    test_data["status"] = "sent"
+    test_data["sent_at"] = now.isoformat()
+    AB_TEST_FILE.write_text(json.dumps(test_data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Slack
+    report = (f"[피치 A/B 테스트 발송 완료] {now.strftime('%m/%d %H:%M')}\n"
+              f"A(Meeting Hook): {results.get('a_sent',0)}건 성공 / {results.get('a_fail',0)}건 실패\n"
+              f"B2(Personalized): {results.get('b2_sent',0)}건 성공 / {results.get('b2_fail',0)}건 실패\n"
+              f"7일 후 리포트: {test_data['report_due']}")
+    if SLACK_WEBHOOK_URL:
+        try: req_lib.post(SLACK_WEBHOOK_URL, json={"text": report}, timeout=10)
+        except Exception: pass
+
+    return {"status": "ok", **results, "report_due": test_data["report_due"]}
+
+@app.get("/api/pitch-ab-test/report")
+async def api_pitch_ab_test_report():
+    """A/B 테스트 7일 리포트."""
+    if not AB_TEST_FILE.exists():
+        return {"status": "no_test"}
+    test_data = json.loads(AB_TEST_FILE.read_text(encoding="utf-8"))
+    log = load_email_log()
+    a_emails = {i["email"] for i in test_data["group_a"]["items"] if i.get("sent_at")}
+    b2_emails = {i["email"] for i in test_data["group_b2"]["items"] if i.get("sent_at")}
+    a_replied = sum(1 for e in log if e.get("to") in a_emails and e.get("replied"))
+    b2_replied = sum(1 for e in log if e.get("to") in b2_emails and e.get("replied"))
+    a_sent = test_data["group_a"].get("sent", 0)
+    b2_sent = test_data["group_b2"].get("sent", 0)
+    return {
+        "A": {"sent": a_sent, "replied": a_replied, "rate": round(a_replied/max(a_sent,1)*100,1)},
+        "B2": {"sent": b2_sent, "replied": b2_replied, "rate": round(b2_replied/max(b2_sent,1)*100,1)},
+        "winner": "B2" if b2_replied > a_replied else ("A" if a_replied > b2_replied else "tie"),
+        "report_due": test_data.get("report_due"),
+        "created": test_data.get("created"),
+    }
+
+
+# ===== 작업4: 매출 크로스체크 =====
+@app.get("/api/revenue-crosscheck")
+async def api_revenue_crosscheck():
+    """계산서발행 vs 월별매출&로하스 탭 간 합계 크로스체크. 오차 5%이상 Slack 경고."""
+    brand = await api_brand_pipeline()
+    ads = await api_ads_performance()
+    month_rev_brand = brand.get("month", {}).get("revenue", 0)
+    month_rev_ads = ads.get("total_revenue", 0)
+
+    if month_rev_brand == 0 and month_rev_ads == 0:
+        return {"status": "no_data"}
+
+    diff = abs(month_rev_brand - month_rev_ads)
+    base = max(month_rev_brand, month_rev_ads, 1)
+    pct = round(diff / base * 100, 1)
+
+    result = {
+        "brand_pipeline_revenue": month_rev_brand,
+        "ads_performance_revenue": month_rev_ads,
+        "difference": diff, "pct": pct,
+        "status": "OK" if pct < 5 else "WARNING",
+    }
+
+    if pct >= 5 and SLACK_WEBHOOK_URL and _slack_enabled():
+        msg = (f"[매출 크로스체크 경고] 오차 {pct}%\n"
+               f"brand-pipeline: {month_rev_brand:,}원\n"
+               f"ads-performance: {month_rev_ads:,}원\n"
+               f"차이: {diff:,}원")
+        try: req_lib.post(SLACK_WEBHOOK_URL, json={"text": msg}, timeout=10)
+        except Exception: pass
+
+    return result
+
+
+# ===== 작업5: 크로스 셀링 파이프라인 =====
+@app.get("/api/cross-sell-candidates")
+async def api_cross_sell_candidates():
+    """루나 160개 브랜드 중 K-뷰티 → 밀리밀리 크로스 셀링 후보 추출."""
+    rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+    if not rows:
+        return {"status": "no_data"}
+
+    # 밀리밀리 카테고리 (경쟁재 회피용)
+    milimili_categories = {"립밤", "립케어", "lip", "밀리밀리"}
+    complement_categories = {"스킨케어", "skincare", "뷰티", "beauty", "메이크업", "makeup",
+                             "헤어", "hair", "바디", "body", "향수", "fragrance", "패션", "fashion"}
+
+    candidates = []
+    for row in rows[1:]:
+        if len(row) < 11:
+            continue
+        handle = str(row[5]).strip() if len(row) > 5 else ""
+        country = str(row[2]).strip() if len(row) > 2 else ""
+        category = str(row[3]).strip().lower() if len(row) > 3 else ""
+        platform = str(row[4]).strip() if len(row) > 4 else ""
+        email = str(row[8]).strip() if len(row) > 8 else ""
+        followers = str(row[7]).strip() if len(row) > 7 else "0"
+        status = str(row[10]).strip() if len(row) > 10 else ""
+
+        # 경쟁재 회피
+        if any(mc in category for mc in milimili_categories):
+            relation = "competitor"
+        elif any(cc in category for cc in complement_categories):
+            relation = "complement"
+        else:
+            relation = "other"
+
+        # 해외 진출 희망 (US/JP/SEA 크리에이터)
+        is_global = country.upper() in ("US", "JP", "TH", "VT", "VN", "ID", "PH", "SG", "TW")
+
+        if relation == "competitor":
+            continue
+
+        candidates.append({
+            "handle": handle, "country": country, "category": category,
+            "platform": platform, "followers": followers, "email": email,
+            "relation": relation, "global_reach": is_global,
+            "recommendation": "공동프로모션" if relation == "complement" else ("해외채널공유" if is_global else "관찰"),
+        })
+
+    # 우선순위 정렬: complement + global 먼저
+    candidates.sort(key=lambda x: (x["relation"] != "complement", not x["global_reach"]))
+
+    return {
+        "total": len(candidates),
+        "complement": sum(1 for c in candidates if c["relation"] == "complement"),
+        "global_reach": sum(1 for c in candidates if c["global_reach"]),
+        "recommendations": {
+            "공동프로모션": sum(1 for c in candidates if c["recommendation"] == "공동프로모션"),
+            "해외채널공유": sum(1 for c in candidates if c["recommendation"] == "해외채널공유"),
+            "관찰": sum(1 for c in candidates if c["recommendation"] == "관찰"),
+        },
+        "candidates": candidates[:50],
+    }
+
+
+# ===== 작업6: 앰버서더 매핑 =====
+@app.get("/api/ambassador-candidates")
+async def api_ambassador_candidates():
+    """피치 인플루언서 DB 중 US/JP/VN 상위 20% → 밀리밀리 앰버서더 후보."""
+    inf = await api_influencer_db()
+    items = inf.get("items") or inf.get("rows", [])
+
+    target_countries = {"US", "JP", "VN", "VT", "미국", "일본", "베트남"}
+    filtered = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        country = str(item.get("country", "")).strip().upper()
+        if country not in target_countries and country not in {c.upper() for c in target_countries}:
+            continue
+        fw_str = str(item.get("followers", "0")).replace(",", "").strip().upper()
+        try:
+            if "M" in fw_str: fw = float(fw_str.replace("M", "")) * 1000000
+            elif "K" in fw_str: fw = float(fw_str.replace("K", "")) * 1000
+            else: fw = float(fw_str) if fw_str else 0
+        except ValueError:
+            fw = 0
+        filtered.append({**item, "_fw_num": fw})
+
+    # 팔로워 상위 20%
+    filtered.sort(key=lambda x: x["_fw_num"], reverse=True)
+    top_pct = max(1, len(filtered) // 5)
+    ambassadors = filtered[:top_pct]
+
+    result = []
+    for a in ambassadors:
+        result.append({
+            "account": a.get("account", ""),
+            "country": a.get("country", ""),
+            "platform": a.get("platform", ""),
+            "followers": a.get("followers", ""),
+            "category": a.get("category", ""),
+            "email": a.get("email", ""),
+            "status": a.get("status", ""),
+            "recommendation": "유료협찬" if a["_fw_num"] >= 100000 else "무료협찬+성과보수",
+        })
+
+    return {
+        "total_filtered": len(filtered),
+        "top_20pct": len(result),
+        "by_country": {c: sum(1 for r in result if r["country"] == c) for c in set(r["country"] for r in result)} if result else {},
+        "candidates": result,
     }
 
 
