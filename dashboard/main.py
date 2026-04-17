@@ -5161,6 +5161,161 @@ async def api_luna_dm_outreach_run():
     result = _luna_dm_outreach_run()
     return result
 
+@app.post("/api/luna-pilot")
+async def api_luna_pilot(request: Request):
+    """루나 파일럿 발송 (5건). 시트에서 이메일 보유 + 미발송 대상 5건 발송 후 K열 기록 확인."""
+    import traceback as _tb
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    limit = min(body.get("limit", 5), 10)
+    now = datetime.now(KST)
+
+    try:
+        from pitch_templates import LUNA_KR_TEMPLATES, LUNA_US_TEMPLATES
+    except Exception as ie:
+        err = f"import error: {ie}"
+        _slack_error_report("luna-pilot", err)
+        return {"status": "error", "message": err}
+
+    try:
+        rows = fetch_sheet(LUNA_SHEET_ID, "A:R", "현황시트(수동매칭)", ttl_key="influencer")
+        if not rows or len(rows) < 2:
+            return {"status": "error", "message": "시트 데이터 없음"}
+
+        outreach = load_outreach_status()
+        dm_log = _load_luna_dm_log()
+        sent_emails = {e.get("handle") for e in dm_log}
+        sent_emails.update(outreach.keys())
+
+        targets = []
+        for i, row in enumerate(rows[1:], start=2):
+            if len(targets) >= limit:
+                break
+            if len(row) < 11:
+                continue
+            email = str(row[8]).strip() if len(row) > 8 else ""
+            handle = str(row[5]).strip() if len(row) > 5 else ""
+            status = str(row[10]).strip() if len(row) > 10 else ""
+            country = str(row[2]).strip() if len(row) > 2 else ""
+            platform = str(row[4]).strip() if len(row) > 4 else ""
+            followers = str(row[7]).strip() if len(row) > 7 else "0"
+
+            if not email or "@" not in email:
+                continue
+            if email in sent_emails or handle in sent_emails:
+                continue
+            if "발송" in status or "계약" in status or "진행확정" in status:
+                continue
+
+            targets.append({
+                "row_num": i, "email": email, "handle": handle,
+                "country": country, "platform": platform, "followers": followers,
+            })
+
+        results = []
+        for idx, t in enumerate(targets):
+            is_kr = t["country"].upper() in ("KR", "한국")
+            tmpl_dict = LUNA_KR_TEMPLATES if is_kr else LUNA_US_TEMPLATES
+            tmpl_key = "A" if idx % 2 == 0 else "B"
+            tmpl = tmpl_dict.get(tmpl_key, {})
+
+            name = t["handle"] or t["email"].split("@")[0]
+            subject = tmpl.get("subject", "").format(name=name)
+            build_html = tmpl.get("build_html")
+            if build_html:
+                html_body = build_html(name)
+                body_text = _html_to_text(html_body)
+            else:
+                body_text = f"Hi {name}, Luna from 08liter Global here. We'd love to work with you!"
+                html_body = ""
+
+            subject = _clean_surrogates(subject)
+            body_text = _clean_surrogates(body_text)
+
+            send_result = _send_email_smtp(t["email"], subject, body_text, agent="luna", html_body=html_body)
+            if send_result.get("status") != "ok":
+                send_result = _send_email_webhook(t["email"], subject, body_text, agent_name="Luna | Mili Mili x 08liter(0.8L)")
+
+            entry = {
+                "email": t["email"], "handle": t["handle"], "country": t["country"],
+                "template": f"{'KR' if is_kr else 'US'}_{tmpl_key}",
+                "status": send_result.get("status", "error"),
+                "method": send_result.get("method", "unknown"),
+                "error": send_result.get("message", "")[:100] if send_result.get("status") != "ok" else "",
+                "sent_at": now.isoformat(), "row_num": t["row_num"],
+            }
+            results.append(entry)
+
+            # 발송 성공 시 K열 업데이트 + outreach_status 기록
+            if send_result.get("status") == "ok":
+                _update_sheet_status_via_gas(
+                    LUNA_SHEET_ID, "현황시트(수동매칭)",
+                    t["row_num"], "K", f"제안발송 ({now.strftime('%m/%d')})"
+                )
+                outreach[t["email"]] = {
+                    "agent": "루나", "name": name, "status": "발송완료",
+                    "registered_at": now.strftime("%Y-%m-%d %H:%M"),
+                    "sent_at": now.strftime("%Y-%m-%d %H:%M"),
+                    "template": entry["template"], "followup_count": 0,
+                }
+                _log_email("루나", t["email"], subject, "sent", {"pilot": True, "template": entry["template"]})
+
+                # 미회신 시퀀스에 자동 등록
+                _enroll_in_sequence(t["email"], name, t["country"], "no_reply", now.isoformat())
+
+            dm_log.append({"handle": t["handle"], "email": t["email"],
+                           "status": send_result.get("status"), "sent_at": now.isoformat(),
+                           "method": send_result.get("method", ""), "template": entry["template"]})
+
+        _save_luna_dm_log(dm_log)
+        save_outreach_status(outreach)
+
+        ok = sum(1 for r in results if r["status"] == "ok")
+        fail = len(results) - ok
+
+        # Slack 리포트
+        report = (
+            f"[루나 파일럿 발송 리포트] {now.strftime('%Y-%m-%d %H:%M')}\n"
+            f"발송: {len(results)}건 | 성공: {ok} | 실패: {fail}\n"
+        )
+        for r in results:
+            icon = "OK" if r["status"] == "ok" else "FAIL"
+            report += f"  [{icon}] {r['handle']} ({r['country']}) → {r['method']} {r['template']}"
+            if r["error"]:
+                report += f" | {r['error'][:50]}"
+            report += "\n"
+        report += f"\nK열 업데이트: {ok}건 시도 (GAS 웹훅)"
+
+        if SLACK_WEBHOOK_URL:
+            try:
+                req_lib.post(SLACK_WEBHOOK_URL, json={"text": report}, timeout=10)
+            except Exception:
+                pass
+
+        return {
+            "status": "ok", "total": len(results), "success": ok, "fail": fail,
+            "results": results,
+            "sheet_update": f"{ok}건 K열 업데이트 시도",
+            "sequence_enrolled": f"{ok}건 미회신 시퀀스 등록",
+        }
+
+    except Exception as e:
+        err_trace = _tb.format_exc()
+        _slack_error_report("luna-pilot", err_trace)
+        return {"status": "error", "traceback": err_trace[-500:]}
+
+
+def _slack_error_report(source: str, error_text: str):
+    """에러 발생 시 Slack으로 스택트레이스 전송."""
+    if not SLACK_WEBHOOK_URL:
+        print(f"[ERROR-REPORT] {source}: {error_text[:200]}")
+        return
+    now = datetime.now(KST)
+    msg = f"[ERROR] {source} — {now.strftime('%Y-%m-%d %H:%M')}\n```\n{error_text[-800:]}\n```"
+    try:
+        req_lib.post(SLACK_WEBHOOK_URL, json={"text": msg}, timeout=10)
+    except Exception as se:
+        print(f"[ERROR-REPORT] Slack 전송 실패: {se}")
+
 @app.get("/api/luna-dm-outreach/log")
 async def api_luna_dm_outreach_log():
     """루나 DM 발송 로그 조회."""
