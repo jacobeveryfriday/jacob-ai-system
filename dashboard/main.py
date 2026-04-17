@@ -6251,13 +6251,14 @@ async def api_ambassador_candidates():
     inf = await api_influencer_db()
     items = inf.get("items") or inf.get("rows", [])
 
-    target_countries = {"US", "JP", "VN", "VT", "미국", "일본", "베트남"}
+    target_countries = {"US", "JP", "VN", "VT", "KR", "TH", "ID", "PH", "SG", "TW",
+                         "미국", "일본", "베트남", "한국", "태국", "인도네시아"}
     filtered = []
     for item in items:
         if not isinstance(item, dict):
             continue
         country = str(item.get("country", "")).strip().upper()
-        if country not in target_countries and country not in {c.upper() for c in target_countries}:
+        if country not in {c.upper() for c in target_countries}:
             continue
         fw_str = str(item.get("followers", "0")).replace(",", "").strip().upper()
         try:
