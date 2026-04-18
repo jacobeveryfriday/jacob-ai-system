@@ -83,3 +83,26 @@ Railway -> GAS webhook (EMAIL_WEBHOOK_URL) -> Naver Works SMTP
 ## Pitch Outreach Rules
 - DB source: Only from pitch_claude tab (no external)
 - CEO approval required before any send (jacob@ reply detection)
+
+## Reference Docs (docs/ 폴더)
+프로젝트 핵심 문서. 피치/루나 업무 시 참조:
+- docs/sales-script.md — 영업 스크립트 (미팅/콜드콜)
+- docs/growth-package-proposal.md — 성장 패키지 제안서
+- docs/may-promotion.md — 월별 프로모션 기획
+- docs/case-study-01~04.md — 성공사례 4건 (피치 이메일 개인화용)
+- docs/fanclub-plan.md — 팬클럽 플랜
+
+## Data Harvest APIs
+| API | 용도 | 키 |
+|-----|------|-----|
+| 식약처 CsmtcsMfcrtrInfoService01 | 화장품 제조업체 BIZRNO | env: HARVEST_API_KEY |
+| 공정위 MllBs_2Service | 통신판매사업자 이메일/대표자 | env: HARVEST_API_KEY |
+| 국세청 odcloud nts-businessman | 사업자번호 진위검증 | env: HARVEST_API_KEY |
+
+## Scheduled Tasks (Remote Triggers)
+| ID | 주기 | 설명 |
+|----|------|------|
+| bizrno-join-harvest | 3시간마다 | 식약처→공정위 BIZRNO 조인 |
+| daily-new-signups-harvest | 매일 07시 KST | 공정위 신규 통신판매사업자 |
+| masked-email-enrichment | 4시간마다 | 마스킹 이메일 웹크롤링 보강 |
+| weekly-category-rescan | 매주 일 21시 KST | 공정위+식약처 전수 재스캔 |
